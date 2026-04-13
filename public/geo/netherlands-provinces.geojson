@@ -1,0 +1,137 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Noord-Holland",
+        "code": "NH"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Zuid-Holland",
+        "code": "ZH"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Utrecht",
+        "code": "UT"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Noord-Brabant",
+        "code": "NB"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Gelderland",
+        "code": "GE"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Overijssel",
+        "code": "OV"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Flevoland",
+        "code": "FL"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Friesland",
+        "code": "FR"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Groningen",
+        "code": "GR"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Drenthe",
+        "code": "DR"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Limburg",
+        "code": "LI"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Zeeland",
+        "code": "ZE"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[]]
+      }
+    }
+  ]
+}

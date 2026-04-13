@@ -1,0 +1,68 @@
+{
+  "nav": {
+    "home": "Home",
+    "artists": "Artists",
+    "register": "Register",
+    "login": "Login",
+    "logout": "Logout",
+    "dashboard": "Dashboard",
+    "search": "Search Artists",
+    "collabs": "Collabs"
+  },
+  "home": {
+    "title": "Carnatic Artist Portal",
+    "subtitle": "Discover Carnatic musicians based in The Netherlands",
+    "totalArtists": "{count} artists",
+    "seekingCollaboration": "{count} seeking collaboration",
+    "instrumentalistOfTheDay": "Instrumentalist of the Day",
+    "singerOfTheDay": "Singer of the Day",
+    "noInstrumentalistAvailable": "No instrumentalist currently available",
+    "noSingerAvailable": "No singer currently available",
+    "viewProfile": "View Profile"
+  },
+  "register": {
+    "title": "Register as an Artist",
+    "fullName": "Full Name",
+    "email": "Email Address",
+    "contactNumber": "Contact Number",
+    "contactType": "Contact Type",
+    "contactTypeWhatsapp": "WhatsApp",
+    "contactTypeMobile": "Mobile only",
+    "profilePhoto": "Profile Photo",
+    "backgroundImage": "Background Image (optional)",
+    "specialities": "Specialities",
+    "addSpeciality": "Add Speciality",
+    "bio": "Biographical Write-up (optional)",
+    "submit": "Submit Registration",
+    "successMessage": "Your registration request has been submitted. We will review it shortly.",
+    "validation": {
+      "fullNameRequired": "Full name is required",
+      "emailRequired": "Email address is required",
+      "emailInvalid": "Please enter a valid email address",
+      "contactNumberRequired": "Contact number is required",
+      "contactTypeRequired": "Please select a contact type",
+      "profilePhotoRequired": "Profile photo is required",
+      "specialityRequired": "At least one speciality is required",
+      "specialityMax": "You may select a maximum of three specialities"
+    }
+  },
+  "auth": {
+    "loginTitle": "Request Login Link",
+    "loginDescription": "Enter your registered email address to receive a login link.",
+    "emailLabel": "Email Address",
+    "sendLink": "Send Login Link",
+    "linkSent": "A login link has been sent to your email address.",
+    "verifyTitle": "Verifying your login link…",
+    "linkExpired": "This login link has expired.",
+    "linkUsed": "This login link has already been used.",
+    "linkInvalid": "This login link is invalid.",
+    "requestNewLink": "Request a new login link"
+  },
+  "errors": {
+    "generic": "Something went wrong. Please try again.",
+    "notFound": "Page not found.",
+    "unauthorized": "You must be logged in to access this page.",
+    "forbidden": "You do not have permission to access this page.",
+    "accountSuspended": "Your account has been suspended. Please contact an administrator."
+  }
+}
