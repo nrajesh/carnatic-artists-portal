@@ -1,0 +1,68 @@
+{
+  "nav": {
+    "home": "Home",
+    "artists": "Artiesten",
+    "register": "Registreren",
+    "login": "Inloggen",
+    "logout": "Uitloggen",
+    "dashboard": "Dashboard",
+    "search": "Artiesten zoeken",
+    "collabs": "Samenwerkingen"
+  },
+  "home": {
+    "title": "Carnatic Artiesten Portaal",
+    "subtitle": "Ontdek Carnatic muzikanten in Nederland",
+    "totalArtists": "{count} artiesten",
+    "seekingCollaboration": "{count} zoeken samenwerking",
+    "instrumentalistOfTheDay": "Instrumentalist van de dag",
+    "singerOfTheDay": "Zanger van de dag",
+    "noInstrumentalistAvailable": "Momenteel geen instrumentalist beschikbaar",
+    "noSingerAvailable": "Momenteel geen zanger beschikbaar",
+    "viewProfile": "Profiel bekijken"
+  },
+  "register": {
+    "title": "Registreer als artiest",
+    "fullName": "Volledige naam",
+    "email": "E-mailadres",
+    "contactNumber": "Telefoonnummer",
+    "contactType": "Contacttype",
+    "contactTypeWhatsapp": "WhatsApp",
+    "contactTypeMobile": "Alleen mobiel",
+    "profilePhoto": "Profielfoto",
+    "backgroundImage": "Achtergrondafbeelding (optioneel)",
+    "specialities": "Specialiteiten",
+    "addSpeciality": "Specialiteit toevoegen",
+    "bio": "Biografische beschrijving (optioneel)",
+    "submit": "Registratie indienen",
+    "successMessage": "Uw registratieverzoek is ingediend. We zullen het binnenkort beoordelen.",
+    "validation": {
+      "fullNameRequired": "Volledige naam is verplicht",
+      "emailRequired": "E-mailadres is verplicht",
+      "emailInvalid": "Voer een geldig e-mailadres in",
+      "contactNumberRequired": "Telefoonnummer is verplicht",
+      "contactTypeRequired": "Selecteer een contacttype",
+      "profilePhotoRequired": "Profielfoto is verplicht",
+      "specialityRequired": "Minimaal één specialiteit is verplicht",
+      "specialityMax": "U kunt maximaal drie specialiteiten selecteren"
+    }
+  },
+  "auth": {
+    "loginTitle": "Inloglink aanvragen",
+    "loginDescription": "Voer uw geregistreerde e-mailadres in om een inloglink te ontvangen.",
+    "emailLabel": "E-mailadres",
+    "sendLink": "Inloglink versturen",
+    "linkSent": "Er is een inloglink naar uw e-mailadres gestuurd.",
+    "verifyTitle": "Uw inloglink wordt geverifieerd…",
+    "linkExpired": "Deze inloglink is verlopen.",
+    "linkUsed": "Deze inloglink is al gebruikt.",
+    "linkInvalid": "Deze inloglink is ongeldig.",
+    "requestNewLink": "Vraag een nieuwe inloglink aan"
+  },
+  "errors": {
+    "generic": "Er is iets misgegaan. Probeer het opnieuw.",
+    "notFound": "Pagina niet gevonden.",
+    "unauthorized": "U moet ingelogd zijn om deze pagina te bekijken.",
+    "forbidden": "U heeft geen toegang tot deze pagina.",
+    "accountSuspended": "Uw account is geschorst. Neem contact op met een beheerder."
+  }
+}
