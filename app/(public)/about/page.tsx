@@ -105,7 +105,7 @@ export default async function AboutPage() {
                   className="group rounded-2xl overflow-hidden border border-stone-200 hover:shadow-lg transition-all">
                   <div className="h-16 flex items-end px-4 pb-2" style={{ background: theme.background }}>
                     <div className="w-10 h-10 rounded-full border-2 border-white flex items-center justify-center text-lg font-bold translate-y-5"
-                      style={{ backgroundColor: artist.specialities[0].color, color: "#fff" }}>
+                      style={{ backgroundColor: theme.accentColor, color: "#fff" }}>
                       {artist.name[0]}
                     </div>
                   </div>

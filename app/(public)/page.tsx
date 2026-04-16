@@ -9,6 +9,7 @@ import {
   listArtistsForDirectory,
   listCollabsForHome,
 } from "@/lib/queries/artists";
+import { DEFAULT_ARTIST_ACCENT_COLOR } from "@/lib/speciality-theme";
 
 export const dynamic = "force-dynamic";
 
@@ -83,14 +84,17 @@ export default async function HomePage({
             <div className="flex items-center gap-4">
               <div
                 className="w-14 h-14 rounded-full flex items-center justify-center text-2xl font-bold flex-shrink-0"
-                style={{ backgroundColor: singer.specialities[0].color, color: "#FFFFFF" }}
+                style={{
+                  backgroundColor: singer.specialities[0]?.color ?? DEFAULT_ARTIST_ACCENT_COLOR,
+                  color: "#FFFFFF",
+                }}
               >
                 {singer.name[0]}
               </div>
               <div>
                 <p className="font-semibold text-stone-800 group-hover:text-amber-800 transition-colors">{singer.name}</p>
                 <p className="text-sm text-stone-500">
-                  {singer.specialities[0].name} · {singer.province}
+                  {singer.specialities[0]?.name ?? "Artist"} · {singer.province}
                 </p>
               </div>
             </div>
@@ -105,14 +109,17 @@ export default async function HomePage({
             <div className="flex items-center gap-4">
               <div
                 className="w-14 h-14 rounded-full flex items-center justify-center text-2xl font-bold flex-shrink-0"
-                style={{ backgroundColor: instrumentalist.specialities[0].color, color: "#FFFFFF" }}
+                style={{
+                  backgroundColor: instrumentalist.specialities[0]?.color ?? DEFAULT_ARTIST_ACCENT_COLOR,
+                  color: "#FFFFFF",
+                }}
               >
                 {instrumentalist.name[0]}
               </div>
               <div>
                 <p className="font-semibold text-stone-800 group-hover:text-amber-800 transition-colors">{instrumentalist.name}</p>
                 <p className="text-sm text-stone-500">
-                  {instrumentalist.specialities[0].name} · {instrumentalist.province}
+                  {instrumentalist.specialities[0]?.name ?? "Artist"} · {instrumentalist.province}
                 </p>
               </div>
             </div>
@@ -128,7 +135,10 @@ export default async function HomePage({
           </Link>
         </div>
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-          {previewSix.map((artist) => (
+          {previewSix.map((artist) => {
+            const accent = artist.specialities[0]?.color ?? DEFAULT_ARTIST_ACCENT_COLOR;
+            const specName = artist.specialities[0]?.name ?? "Artist";
+            return (
             <Link
               key={artist.id}
               href={`/artists/${artist.slug}`}
@@ -136,20 +146,21 @@ export default async function HomePage({
             >
               <div
                 className="w-10 h-10 rounded-full flex items-center justify-center text-lg font-bold mb-3"
-                style={{ backgroundColor: artist.specialities[0].color, color: "#FFFFFF" }}
+                style={{ backgroundColor: accent, color: "#FFFFFF" }}
               >
                 {artist.name[0]}
               </div>
               <p className="font-semibold text-stone-800 text-sm leading-tight group-hover:text-amber-800 transition-colors">{artist.name}</p>
               <span
                 className="inline-block mt-1 text-xs px-2 py-0.5 rounded-full font-medium"
-                style={{ backgroundColor: artist.specialities[0].color + "22", color: artist.specialities[0].color }}
+                style={{ backgroundColor: accent + "22", color: accent }}
               >
-                {artist.specialities[0].name}
+                {specName}
               </span>
               <p className="text-xs text-stone-400 mt-1">{artist.province}</p>
             </Link>
-          ))}
+            );
+          })}
         </div>
       </div>
 

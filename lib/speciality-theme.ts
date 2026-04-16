@@ -50,6 +50,9 @@ const FALLBACK: SpecialityThemeResult = {
   accentColor: '#6B7280',
 };
 
+/** Avatar / card accent when an artist has no speciality rows yet (matches profile fallback). */
+export const DEFAULT_ARTIST_ACCENT_COLOR = '#92400E';
+
 // ---------------------------------------------------------------------------
 // Pure function
 // ---------------------------------------------------------------------------
