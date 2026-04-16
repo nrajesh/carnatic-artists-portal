@@ -35,13 +35,30 @@ if (typeof WebSocket === "undefined") {
   }
 }
 
+/**
+ * Neon console may append `channel_binding=require` (SCRAM channel binding).
+ * That is aimed at libpq-style TCP clients; the serverless WebSocket driver +
+ * PrismaNeon on Cloudflare Workers often fails to connect with it. TLS is
+ * still enforced via `sslmode=require` (keep that in the URL).
+ */
+function normalizeDatabaseUrl(raw: string): string {
+  const trimmed = raw.trim();
+  try {
+    const u = new URL(trimmed);
+    u.searchParams.delete("channel_binding");
+    return u.toString();
+  } catch {
+    return trimmed;
+  }
+}
+
 function resolveDatabaseUrl(): string {
-  const fromProcess = process.env.DATABASE_URL;
-  if (fromProcess) return fromProcess;
+  const fromProcess = process.env.DATABASE_URL?.trim();
+  if (fromProcess) return normalizeDatabaseUrl(fromProcess);
   try {
     const { env } = getCloudflareContext();
-    const fromBinding = (env as Record<string, string | undefined>).DATABASE_URL;
-    if (fromBinding) return fromBinding;
+    const fromBinding = (env as Record<string, string | undefined>).DATABASE_URL?.trim();
+    if (fromBinding) return normalizeDatabaseUrl(fromBinding);
   } catch {
     // Not in a Cloudflare request context (e.g. `next start` without OpenNext)
   }

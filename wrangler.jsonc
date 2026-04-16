@@ -6,6 +6,9 @@
   "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
   // PostHog Cloud ingest (EU). US projects: https://us.i.posthog.com
   // Declared here so CLI deploys do not drop runtime vars (see deploy scripts --keep-vars).
+  //
+  // DATABASE_URL must be a Worker runtime secret (dashboard → Worker → Variables and Secrets,
+  // or `wrangler secret put DATABASE_URL`). Build-only secrets are not available when handling requests.
   "vars": {
     "POSTHOG_HOST": "https://eu.i.posthog.com"
   },
