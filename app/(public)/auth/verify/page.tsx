@@ -90,7 +90,9 @@ export default async function VerifyPage({ searchParams }: VerifyPageProps) {
       );
     }
 
-    // Unexpected error
+    const message = err instanceof Error ? err.message : String(err);
+    const stack = err instanceof Error ? err.stack : undefined;
+    console.error('[auth/verify] unexpected error', { message, stack });
     return (
       <main className="flex min-h-screen items-center justify-center bg-stone-50 px-4">
         <VerifyErrorCard
