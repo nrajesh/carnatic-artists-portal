@@ -1,0 +1,55 @@
+# Runs on every push to `pre-prod` and on every PR targeting `main`.
+# Use this check in GitHub branch protection: require it before merging to `main`.
+#
+# Add Actions secrets CI_DATABASE_URL + CI_DATABASE_URL_UNPOOLED (Neon) for a clean
+# build with real data at SSG time. If omitted, dummy URLs are used (build may log DB errors).
+
+name: CI (pre-prod gate)
+
+on:
+  push:
+    branches: [pre-prod]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set DATABASE_URL for CI
+        env:
+          SECRET_POOL: ${{ secrets.CI_DATABASE_URL }}
+          SECRET_DIRECT: ${{ secrets.CI_DATABASE_URL_UNPOOLED }}
+        run: |
+          if [ -n "$SECRET_POOL" ]; then echo "DATABASE_URL=$SECRET_POOL" >> "$GITHUB_ENV"
+          else echo "DATABASE_URL=postgresql://ci:ci@127.0.0.1:5432/ci?sslmode=require" >> "$GITHUB_ENV"
+          fi
+          if [ -n "$SECRET_DIRECT" ]; then echo "DATABASE_URL_UNPOOLED=$SECRET_DIRECT" >> "$GITHUB_ENV"
+          else echo "DATABASE_URL_UNPOOLED=postgresql://ci:ci@127.0.0.1:5432/ci?sslmode=require" >> "$GITHUB_ENV"
+          fi
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Generate Prisma client
+        run: npx prisma generate
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Unit tests
+        run: npm test
+
+      - name: Production build
+        run: npm run build
