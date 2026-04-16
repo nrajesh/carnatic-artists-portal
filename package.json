@@ -13,8 +13,8 @@
     "test:watch": "vitest",
     "test:e2e": "playwright test",
     "preview:cf": "opennextjs-cloudflare build && opennextjs-cloudflare preview",
-    "deploy:cf": "opennextjs-cloudflare build --skipNextBuild && opennextjs-cloudflare deploy",
-    "deploy:cf:full": "opennextjs-cloudflare build && opennextjs-cloudflare deploy",
+    "deploy:cf": "opennextjs-cloudflare build --skipNextBuild && opennextjs-cloudflare deploy -- --keep-vars",
+    "deploy:cf:full": "opennextjs-cloudflare build && opennextjs-cloudflare deploy -- --keep-vars",
     "cf-typegen": "wrangler types --env-interface CloudflareEnv cloudflare-env.d.ts"
   },
   "dependencies": {

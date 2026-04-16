@@ -1,48 +1,91 @@
 /**
  * GET|POST|HEAD|OPTIONS|PUT|DELETE /api/ph/[...path]
  *
- * Reverse-proxy for the self-hosted PostHog instance.
- * Forwards all requests to ${POSTHOG_HOST}/<path> and streams the response
- * back to the caller unchanged.
+ * Reverse-proxy to PostHog (Cloud or self-hosted). Browser talks to same origin
+ * `/api/ph/*`; we forward to POSTHOG_HOST with a correct `Host` header so
+ * PostHog Cloud accepts ingestion (forwarding the Workers hostname breaks this).
  *
- * This keeps the real PostHog host hidden from browsers and prevents
- * ad-blockers from targeting a known PostHog domain.
- *
- * Requirements: 7.1, 7.2, 7.3, 7.4, 7.5, 7.6
+ * Requirements: 7.1–7.6
  */
 
-import { NextRequest } from 'next/server';
+import { NextRequest } from "next/server";
+
+/** Headers safe to forward; Host is set to the PostHog hostname separately. */
+function buildUpstreamHeaders(request: NextRequest, posthogHostname: string): Headers {
+  const out = new Headers();
+  const pass = [
+    "content-type",
+    "content-encoding",
+    "accept",
+    "accept-encoding",
+    "accept-language",
+    "user-agent",
+    "cookie",
+    "authorization",
+    "referer",
+    "origin",
+  ];
+  for (const name of pass) {
+    const v = request.headers.get(name);
+    if (v) out.set(name, v);
+  }
+  out.set("Host", posthogHostname);
+  const xff = request.headers.get("x-forwarded-for") ?? request.headers.get("cf-connecting-ip");
+  if (xff) out.set("X-Forwarded-For", xff);
+  return out;
+}
+
+/**
+ * PostHog Cloud serves `/static/*` and `/array/*` from the regional assets host,
+ * not the main ingest API. See https://posthog.com/docs/advanced/proxy/nextjs
+ */
+function resolveUpstreamBase(posthogHost: string, targetPath: string): string {
+  const base = posthogHost.replace(/\/$/, "");
+  if (targetPath.startsWith("static/") || targetPath.startsWith("array/")) {
+    if (base.includes("eu.i.posthog")) return "https://eu-assets.i.posthog.com";
+    if (base.includes("us.i.posthog")) return "https://us-assets.i.posthog.com";
+  }
+  return base;
+}
 
 async function handler(
   request: NextRequest,
   { params }: { params: { path: string[] } },
 ): Promise<Response> {
-  const posthogHost = process.env.POSTHOG_HOST;
+  const posthogHost = process.env.POSTHOG_HOST?.replace(/\/$/, "");
 
-  // 7.4 — Return 503 when POSTHOG_HOST is not configured.
   if (!posthogHost) {
-    return Response.json({ error: 'analytics unavailable' }, { status: 503 });
+    return Response.json({ error: "analytics unavailable" }, { status: 503 });
   }
 
-  // 7.1 — Reconstruct the target URL, preserving the original query string.
-  const targetPath = params.path.join('/');
-  const { search } = new URL(request.url);
-  const targetUrl = `${posthogHost}/${targetPath}${search}`;
+  try {
+    new URL(posthogHost);
+  } catch {
+    return Response.json({ error: "invalid POSTHOG_HOST" }, { status: 503 });
+  }
 
-  // 7.2 — Forward method, headers, and body unchanged.
-  // The `body` of a GET/HEAD request must be null; for all other methods we
-  // pass the raw body stream through so PostHog receives it unmodified.
-  const hasBody = request.method !== 'GET' && request.method !== 'HEAD';
+  const targetPath = params.path.join("/");
+  const { search } = new URL(request.url);
+  const upstreamBase = resolveUpstreamBase(posthogHost, targetPath);
+  const targetUrl = `${upstreamBase}/${targetPath}${search}`;
+
+  let upstreamHostname: string;
+  try {
+    upstreamHostname = new URL(upstreamBase).hostname;
+  } catch {
+    return Response.json({ error: "invalid POSTHOG_HOST" }, { status: 503 });
+  }
+
+  const hasBody = request.method !== "GET" && request.method !== "HEAD";
+  const upstreamHeaders = buildUpstreamHeaders(request, upstreamHostname);
 
   try {
-    // 7.3 — Stream the PostHog response back (status, headers, body).
     const upstreamResponse = await fetch(targetUrl, {
       method: request.method,
-      headers: request.headers,
+      headers: upstreamHeaders,
       body: hasBody ? request.body : null,
-      // Required so the body ReadableStream is forwarded without buffering.
-      // @ts-expect-error — duplex is a valid fetch option in Node 18+ but not yet in the TS lib types.
-      duplex: 'half',
+      // @ts-expect-error duplex for streaming body
+      duplex: "half",
     });
 
     return new Response(upstreamResponse.body, {
@@ -50,12 +93,10 @@ async function handler(
       headers: upstreamResponse.headers,
     });
   } catch {
-    // 7.5 — Return 502 on network / connection errors.
-    return Response.json({ error: 'upstream unreachable' }, { status: 502 });
+    return Response.json({ error: "upstream unreachable" }, { status: 502 });
   }
 }
 
-// 7.6 — Export a named handler for every HTTP method the proxy must support.
 export const GET = handler;
 export const POST = handler;
 export const HEAD = handler;

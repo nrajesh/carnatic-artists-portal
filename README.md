@@ -250,11 +250,12 @@ The app is built for production with **Next.js** (`npm run build`, `output: "sta
 1. Connect the repo in the [Cloudflare dashboard](https://dash.cloudflare.com/) (Workers & Pages → your project → Builds).
 2. **Build command:** `npm run build`
 3. **Deploy command:** `npm run deploy:cf`  
-   This runs `opennextjs-cloudflare build --skipNextBuild` (consumes the `.next` output from the build step) and then `opennextjs-cloudflare deploy`.
-4. **Non-production uploads (optional):** e.g. `opennextjs-cloudflare build --skipNextBuild && opennextjs-cloudflare upload` for version uploads / preview pipelines.
-5. Add all variables from `env.example` under **Build variables and secrets** (including `DATABASE_URL`, `SESSION_SECRET`, R2, Resend, etc.).
-6. Set `DATABASE_URL` to your Neon **pooled** connection string; use the **direct** string for migrations (`prisma migrate deploy`) in CI or locally.
-7. Ensure Prisma client is generated during install/build (`npx prisma generate` in postinstall or build if needed).
+   This runs `opennextjs-cloudflare build --skipNextBuild` (consumes the `.next` output from the build step) and then `opennextjs-cloudflare deploy` with **`--keep-vars`** so Wrangler does not remove [runtime variables](https://developers.cloudflare.com/workers/configuration/environment-variables/) you set only in the dashboard.
+4. **PostHog:** `POSTHOG_HOST` is set in `wrangler.jsonc` (`vars`) so the `/api/ph` proxy always has an ingest URL at runtime. For **PostHog Cloud US**, change it to `https://us.i.posthog.com`. If you rely on dashboard-only vars for other secrets, keep using `--keep-vars` (already in the npm scripts).
+5. **Non-production uploads (optional):** e.g. `opennextjs-cloudflare build --skipNextBuild && opennextjs-cloudflare upload` for version uploads / preview pipelines.
+6. Add all variables from `env.example` under **Build variables and secrets** (including `DATABASE_URL`, `SESSION_SECRET`, R2, Resend, etc.).
+7. Set `DATABASE_URL` to your Neon **pooled** connection string; use the **direct** string for migrations (`prisma migrate deploy`) in CI or locally.
+8. Ensure Prisma client is generated during install/build (`npx prisma generate` in postinstall or build if needed).
 
 ### Local preview (Workers runtime)
 
