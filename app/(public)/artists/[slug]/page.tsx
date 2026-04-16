@@ -2,8 +2,10 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { cookies } from "next/headers";
 import { verifySession } from "@/lib/session-jwt";
-import { DUMMY_ARTISTS_BY_SLUG } from "@/lib/dummy-artists";
+import { getArtistBySlug } from "@/lib/queries/artists";
 import { ArtistProfileTracker } from "./artist-profile-tracker";
+
+export const dynamic = "force-dynamic";
 
 function StarRating({ rating }: { rating: number }) {
   return (
@@ -32,7 +34,7 @@ interface PageProps {
 }
 
 export default async function ArtistProfilePage({ params, searchParams }: PageProps) {
-  const artist = DUMMY_ARTISTS_BY_SLUG[params.slug];
+  const artist = await getArtistBySlug(params.slug);
   if (!artist) notFound();
 
   const sessionCookie = cookies().get("session")?.value ?? null;

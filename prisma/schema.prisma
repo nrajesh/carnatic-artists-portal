@@ -35,6 +35,7 @@ model Artist {
   backgroundImageUrl String?
   bioRichText        String?
   province           String
+  openToCollab       Boolean            @default(true)
   isSuspended        Boolean            @default(false)
   createdAt          DateTime           @default(now())
   updatedAt          DateTime           @updatedAt

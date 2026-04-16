@@ -1,6 +1,8 @@
 import Link from "next/link";
-import { DUMMY_ARTISTS } from "@/lib/dummy-artists";
+import { getArtistBySlug, listArtistsForDirectory } from "@/lib/queries/artists";
 import { getThemeForSpecialities } from "@/lib/speciality-theme";
+
+export const dynamic = "force-dynamic";
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -32,8 +34,13 @@ function USPBadge({ label }: { label: string }) {
 // Page
 // ---------------------------------------------------------------------------
 
-export default function AboutPage() {
-  const sampleArtists = DUMMY_ARTISTS.slice(0, 6);
+export default async function AboutPage() {
+  const [allArtists, lakshmi] = await Promise.all([
+    listArtistsForDirectory(),
+    getArtistBySlug("lakshmi-narayanan"),
+  ]);
+  const sampleArtists = allArtists.slice(0, 6);
+  const demoReviews = lakshmi?.reviews ?? [];
 
   return (
     <main className="min-h-screen bg-stone-50">
@@ -234,7 +241,7 @@ export default function AboutPage() {
           subtitle="Star ratings (mandatory) + optional rich-text comments, paginated with stable per-review URLs.">
           <div className="bg-white rounded-2xl border border-stone-200 shadow-sm p-6 mb-6">
             <div className="flex flex-col gap-4">
-              {DUMMY_ARTISTS[0].reviews.map(r => (
+              {demoReviews.map(r => (
                 <div key={r.id} id={r.id} className="border border-stone-100 rounded-lg p-4">
                   <div className="flex items-start justify-between gap-3 mb-2">
                     <div>
