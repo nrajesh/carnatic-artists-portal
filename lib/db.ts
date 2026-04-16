@@ -1,19 +1,30 @@
 /**
  * Prisma + Neon on Cloudflare Workers (OpenNext).
  *
- * Do **not** create a global PrismaClient at module load: `process.env` is bound
- * per request in the Worker. Use `getDb()` (React `cache`) so the URL is read
- * inside the request and each invocation gets a fresh pool (Workers cannot
- * safely share pooled connections across requests).
+ * Do **not** create PrismaClient at module load — `process.env.DATABASE_URL` is
+ * bound per request in the Worker.
+ *
+ * Use React `cache()` when available (React 19+) to dedupe one client per
+ * request. On React 18, `cache` is missing — we fall back to creating a client
+ * per `getDb()` call (multiple pools per request under heavy parallel queries;
+ * acceptable for Neon serverless at moderate traffic).
  *
  * @see https://opennext.js.org/cloudflare/howtos/db
  */
 
-import { cache } from "react";
+import * as React from "react";
 import { PrismaClient } from "@prisma/client";
 import { PrismaNeon } from "@prisma/adapter-neon";
 import { neonConfig, Pool } from "@neondatabase/serverless";
 import { getCloudflareContext } from "@opennextjs/cloudflare";
+
+/** React 19+ `cache`; identity on React 18 so we never call `undefined(...)`. */
+function requestMemo<T extends () => unknown>(factory: T): T {
+  if (typeof React.cache === "function") {
+    return React.cache(factory as never) as T;
+  }
+  return factory;
+}
 
 if (typeof WebSocket === "undefined") {
   try {
@@ -37,7 +48,7 @@ function resolveDatabaseUrl(): string {
   throw new Error("DATABASE_URL environment variable is not set.");
 }
 
-export const getDb = cache((): PrismaClient => {
+export const getDb = requestMemo((): PrismaClient => {
   const connectionString = resolveDatabaseUrl();
   const pool = new Pool({ connectionString });
   const adapter = new PrismaNeon(pool);
