@@ -15,7 +15,7 @@
 import * as React from "react";
 import { PrismaClient } from "@prisma/client";
 import { PrismaNeon } from "@prisma/adapter-neon";
-import { neonConfig, Pool } from "@neondatabase/serverless";
+import { neonConfig } from "@neondatabase/serverless";
 import { getCloudflareContext } from "@opennextjs/cloudflare";
 
 /** React 19+ `cache`; identity on React 18 so we never call `undefined(...)`. */
@@ -64,21 +64,25 @@ function normalizeDatabaseUrl(raw: string): string {
 }
 
 function resolveDatabaseUrl(): string {
-  const fromProcess = process.env.DATABASE_URL?.trim();
-  if (fromProcess) return normalizeDatabaseUrl(fromProcess);
+  // Prefer Worker bindings (secrets / vars) — matches OpenNext Postgres + Hyperdrive patterns.
+  // `populateProcessEnv` also mirrors string bindings onto `process.env`, but ordering bugs or
+  // internal fetches should still see `env.DATABASE_URL` when sync context is available.
   try {
     const { env } = getCloudflareContext();
     const fromBinding = (env as Record<string, string | undefined>).DATABASE_URL?.trim();
     if (fromBinding) return normalizeDatabaseUrl(fromBinding);
   } catch {
-    // Not in a Cloudflare request context (e.g. `next start` without OpenNext)
+    // Not in a Cloudflare request context (e.g. `next dev` / `next start` without OpenNext)
   }
+  const fromProcess = process.env.DATABASE_URL?.trim();
+  if (fromProcess) return normalizeDatabaseUrl(fromProcess);
   throw new Error("DATABASE_URL environment variable is not set.");
 }
 
 export const getDb = requestMemo((): PrismaClient => {
   const connectionString = resolveDatabaseUrl();
-  const pool = new Pool({ connectionString });
-  const adapter = new PrismaNeon(pool);
+  // Pass `PoolConfig`, not a `Pool` — the adapter does `new Pool(config)` internally; a Pool
+  // instance is invalid config and Neon falls back to localhost (your Worker log error).
+  const adapter = new PrismaNeon({ connectionString, maxUses: 1 });
   return new PrismaClient({ adapter } as ConstructorParameters<typeof PrismaClient>[0]);
 });
