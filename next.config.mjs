@@ -2,6 +2,9 @@ import { initOpenNextCloudflareForDev } from "@opennextjs/cloudflare";
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  // PostHog ingest uses trailing slashes (e.g. `/e/`); avoid Next redirecting those requests.
+  // @see https://posthog.com/docs/advanced/proxy/nextjs
+  skipTrailingSlashRedirect: true,
   // Required by @opennextjs/cloudflare to produce the server bundle under .next/standalone
   output: "standalone",
   // Prisma on Workers: keep generated client external so OpenNext can patch for workerd
