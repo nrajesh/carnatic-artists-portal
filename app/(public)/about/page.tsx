@@ -420,16 +420,33 @@ export default async function AboutPage() {
         </Section>
 
         {/* Footer */}
-        <div className="text-center pt-8 border-t border-stone-200">
-          <p className="text-stone-400 text-sm">
-            Carnatic Artist Portal · Built with Next.js 14, Tailwind CSS, Neon PostgreSQL, Cloudflare R2 & KV
-          </p>
-          <p className="text-stone-300 text-xs mt-1">
-            Spec-driven development · 18 requirements · 28 correctness properties · Property-based tests via fast-check
-          </p>
-          <Link href="/" className="inline-block mt-4 text-amber-700 hover:text-amber-900 text-sm font-medium underline underline-offset-2">
-            ← Back to portal
-          </Link>
+        <div className="pt-8 border-t border-stone-200">
+          <div className="flex flex-wrap items-center justify-center gap-2">
+            {[
+              ["Next.js",   "https://nextjs.org"],
+              ["Tailwind CSS", "https://tailwindcss.com"],
+              ["Neon",      "https://neon.tech"],
+              ["Prisma",    "https://www.prisma.io"],
+              ["Cloudflare Workers", "https://developers.cloudflare.com/workers"],
+              ["R2",        "https://developers.cloudflare.com/r2"],
+              ["PostHog",   "https://posthog.com"],
+            ].map(([label, href]) => (
+              <a
+                key={label}
+                href={href}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center rounded-full border border-stone-200 bg-white px-3 py-1 text-xs font-medium text-stone-600 transition-colors hover:border-amber-300 hover:text-amber-800"
+              >
+                {label}
+              </a>
+            ))}
+          </div>
+          <div className="mt-5 text-center">
+            <Link href="/" className="text-sm font-medium text-amber-700 underline-offset-2 hover:text-amber-900 hover:underline">
+              ← Back to portal
+            </Link>
+          </div>
         </div>
       </div>
     </main>

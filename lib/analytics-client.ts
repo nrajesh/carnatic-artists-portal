@@ -44,6 +44,12 @@ export function initPostHog(): void {
     mask_all_text: true,
     persistence: 'localStorage+cookie',
     disable_session_recording: process.env.NEXT_PUBLIC_POSTHOG_ENABLE_RECORDING !== 'true',
+    // Not used by this app - disabling prevents a `/flags` POST and a `/array/<key>/config.js`
+    // fetch on every page load. Each is a potential source of the Safari "network connection
+    // was lost" console error when the browser navigates before the request completes.
+    advanced_disable_feature_flags: true,
+    advanced_disable_feature_flags_on_first_load: true,
+    disable_surveys: true,
     debug: process.env.NODE_ENV === 'development',
   })
 }

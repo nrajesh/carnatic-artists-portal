@@ -23,7 +23,6 @@ function buildUpstreamHeaders(request: NextRequest, posthogHostname: string): He
     "cookie",
     "authorization",
     "referer",
-    "origin",
   ];
   for (const name of pass) {
     const v = request.headers.get(name);
@@ -32,6 +31,27 @@ function buildUpstreamHeaders(request: NextRequest, posthogHostname: string): He
   out.set("Host", posthogHostname);
   const xff = request.headers.get("x-forwarded-for") ?? request.headers.get("cf-connecting-ip");
   if (xff) out.set("X-Forwarded-For", xff);
+  return out;
+}
+
+/**
+ * Hop-by-hop / encoding headers to strip when re-emitting the upstream response.
+ *
+ * Cloudflare `fetch()` auto-decompresses gzip/br responses — forwarding the original
+ * `content-encoding` header would make the browser try to decode raw (already-decoded)
+ * bytes and Safari logs "The network connection was lost. (e, line 0)".
+ */
+const STRIP_RESPONSE_HEADERS = [
+  "content-encoding",
+  "content-length",
+  "transfer-encoding",
+  "connection",
+  "keep-alive",
+];
+
+function sanitizeResponseHeaders(h: Headers): Headers {
+  const out = new Headers(h);
+  for (const name of STRIP_RESPONSE_HEADERS) out.delete(name);
   return out;
 }
 
@@ -95,7 +115,7 @@ async function handler(
 
     return new Response(upstreamResponse.body, {
       status: upstreamResponse.status,
-      headers: upstreamResponse.headers,
+      headers: sanitizeResponseHeaders(upstreamResponse.headers),
     });
   } catch {
     return Response.json({ error: "upstream unreachable" }, { status: 502 });
