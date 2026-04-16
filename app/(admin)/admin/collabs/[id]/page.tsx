@@ -28,10 +28,15 @@ const DUMMY_MESSAGES: Record<string, { sender: string; text: string; time: strin
   ],
 };
 
-export default function AdminCollabDetailPage({ params }: { params: { id: string } }) {
-  const collab = DUMMY_COLLABS[params.id];
+export default async function AdminCollabDetailPage({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
+  const { id } = await params;
+  const collab = DUMMY_COLLABS[id];
   if (!collab) notFound();
-  const messages = DUMMY_MESSAGES[params.id] ?? [];
+  const messages = DUMMY_MESSAGES[id] ?? [];
 
   return (
     <main className="min-h-screen bg-stone-50 px-4 py-8 sm:px-8">

@@ -253,9 +253,10 @@ The app is built for production with **Next.js** (`npm run build`, `output: "sta
    This runs `opennextjs-cloudflare build --skipNextBuild` (consumes the `.next` output from the build step) and then `opennextjs-cloudflare deploy` with **`--keep-vars`** so Wrangler does not remove [runtime variables](https://developers.cloudflare.com/workers/configuration/environment-variables/) you set only in the dashboard.
 4. **PostHog:** `POSTHOG_HOST` is set in `wrangler.jsonc` (`vars`) so the `/api/ph` proxy always has an ingest URL at runtime. For **PostHog Cloud US**, change it to `https://us.i.posthog.com`. If you rely on dashboard-only vars for other secrets, keep using `--keep-vars` (already in the npm scripts).
 5. **Non-production uploads (optional):** e.g. `opennextjs-cloudflare build --skipNextBuild && opennextjs-cloudflare upload` for version uploads / preview pipelines.
-6. Add all variables from `env.example` under **Build variables and secrets** (including `DATABASE_URL`, `SESSION_SECRET`, R2, Resend, etc.).
-7. Set `DATABASE_URL` to your Neon **pooled** connection string; use the **direct** string for migrations (`prisma migrate deploy`) in CI or locally.
-8. Ensure Prisma client is generated during install/build (`npx prisma generate` in postinstall or build if needed).
+6. Add variables from `env.example` under **Build variables and secrets** for the Next.js build (`NEXT_PUBLIC_*`, etc.).
+7. Under the Worker’s **Variables and secrets** (runtime), set **`DATABASE_URL`** (Neon **pooled** string), `SESSION_SECRET`, and any other secrets the app reads at request time. If runtime `DATABASE_URL` is missing, database-backed routes return **500**. Wrangler deploy without `--keep-vars` can delete dashboard-only secrets — the deploy scripts pass **`--keep-vars`** so re-add secrets once if needed.
+8. Use the **direct** (non-pooled) URL for `prisma migrate deploy` in CI or locally (`DATABASE_URL_UNPOOLED` / `directUrl` in Prisma).
+9. Ensure Prisma client is generated during install/build (`npx prisma generate` in postinstall or build if needed).
 
 ### Local preview (Workers runtime)
 

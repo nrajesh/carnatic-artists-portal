@@ -7,11 +7,11 @@ import { listArtistsForDirectory } from "@/lib/queries/artists";
 export const dynamic = "force-dynamic";
 
 interface PageProps {
-  searchParams: { q?: string; speciality?: string; province?: string };
+  searchParams: Promise<{ q?: string; speciality?: string; province?: string }>;
 }
 
 export default async function ArtistsPage({ searchParams }: PageProps) {
-  const { q = "", speciality = "", province = "" } = searchParams;
+  const { q = "", speciality = "", province = "" } = await searchParams;
   const allArtists = await listArtistsForDirectory();
   const PROVINCES = Array.from(new Set(allArtists.map((a) => a.province))).sort();
   const SPECIALITY_NAMES = Array.from(

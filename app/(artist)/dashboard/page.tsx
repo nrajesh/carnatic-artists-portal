@@ -19,14 +19,15 @@ const DUMMY_NOTIFICATIONS = [
 export default async function ArtistDashboardPage({
   searchParams,
 }: {
-  searchParams: { ph_identify?: string };
+  searchParams: Promise<{ ph_identify?: string }>;
 }) {
-  const sessionCookie = cookies().get("session")?.value ?? null;
+  const sessionCookie = (await cookies()).get("session")?.value ?? null;
   const session = sessionCookie ? await verifySession(sessionCookie) : null;
+  const { ph_identify } = await searchParams;
 
   // Fetch province for identity stitching when ph_identify=1
   let province: string | null = null;
-  if (searchParams.ph_identify === "1" && session?.artistId) {
+  if (ph_identify === "1" && session?.artistId) {
     try {
       const artist = await db.artist.findUnique({
         where: { id: session.artistId },
@@ -50,7 +51,7 @@ export default async function ArtistDashboardPage({
       <div className="max-w-4xl mx-auto">
 
         {/* Identity stitching: runs once after magic-link login */}
-        {searchParams.ph_identify === "1" && session?.artistId && (
+        {ph_identify === "1" && session?.artistId && (
           <PostHogIdentify artistId={session.artistId} province={province} />
         )}
 

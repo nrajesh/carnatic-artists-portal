@@ -29,15 +29,17 @@ function SectionCard({ id, title, children }: { id?: string; title: string; chil
 const REVIEWS_PER_PAGE = 5;
 
 interface PageProps {
-  params: { slug: string };
-  searchParams: { reviewPage?: string };
+  params: Promise<{ slug: string }>;
+  searchParams: Promise<{ reviewPage?: string }>;
 }
 
 export default async function ArtistProfilePage({ params, searchParams }: PageProps) {
-  const artist = await getArtistBySlug(params.slug);
+  const { slug } = await params;
+  const searchParamsResolved = await searchParams;
+  const artist = await getArtistBySlug(slug);
   if (!artist) notFound();
 
-  const sessionCookie = cookies().get("session")?.value ?? null;
+  const sessionCookie = (await cookies()).get("session")?.value ?? null;
   const session = sessionCookie ? await verifySession(sessionCookie) : null;
   const isLoggedIn = !!session;
   // For demo: treat the dev artist session as "Lakshmi Narayanan" (id: dev-artist-id)
@@ -52,7 +54,7 @@ export default async function ArtistProfilePage({ params, searchParams }: PagePr
   const completedCollabs = artist.collabs.filter(c => c.status === "completed");
 
   // Pagination
-  const reviewPage = Math.max(1, parseInt(searchParams.reviewPage ?? "1", 10));
+  const reviewPage = Math.max(1, parseInt(searchParamsResolved.reviewPage ?? "1", 10));
   const totalPages = Math.ceil(artist.reviews.length / REVIEWS_PER_PAGE);
   const pagedReviews = artist.reviews.slice(
     (reviewPage - 1) * REVIEWS_PER_PAGE,
@@ -61,7 +63,7 @@ export default async function ArtistProfilePage({ params, searchParams }: PagePr
 
   return (
     <main className="min-h-screen bg-amber-50">
-      <ArtistProfileTracker artistSlug={params.slug} />
+      <ArtistProfileTracker artistSlug={slug} />
       {/* Hero */}
       <div className="px-6 pt-10 pb-20 text-white"
         style={{ background: `linear-gradient(135deg, ${primaryColor}, ${primaryColor}bb)` }}>

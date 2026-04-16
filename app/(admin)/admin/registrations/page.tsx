@@ -25,10 +25,12 @@ function StatusBadge({ status }: { status: string }) {
   );
 }
 
-interface PageProps { searchParams: { status?: string; from?: string; to?: string } }
+interface PageProps {
+  searchParams: Promise<{ status?: string; from?: string; to?: string }>;
+}
 
-export default function RegistrationsPage({ searchParams }: PageProps) {
-  const { status, from, to } = searchParams;
+export default async function RegistrationsPage({ searchParams }: PageProps) {
+  const { status, from, to } = await searchParams;
 
   let registrations = DUMMY_REGISTRATIONS;
   if (status && ["pending","approved","rejected"].includes(status)) {

@@ -21,8 +21,13 @@ function SectionCard({ title, children }: { title: string; children: React.React
   );
 }
 
-export default function AdminArtistDetailPage({ params }: { params: { id: string } }) {
-  const artist = DUMMY_ARTISTS_MAP[params.id];
+export default async function AdminArtistDetailPage({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
+  const { id } = await params;
+  const artist = DUMMY_ARTISTS_MAP[id];
   if (!artist) notFound();
 
   const completedCollabs = artist.collabs.filter(c => c.status === "completed");

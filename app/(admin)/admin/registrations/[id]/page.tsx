@@ -22,8 +22,13 @@ function StatusBadge({ status }: { status: string }) {
   return <span className={`inline-block rounded-full px-3 py-1 text-sm font-semibold ${styles[status] ?? "bg-stone-100 text-stone-600"}`}>{labels[status] ?? status}</span>;
 }
 
-export default function ReviewRegistrationPage({ params }: { params: { id: string } }) {
-  const reg = DUMMY_REGISTRATIONS[params.id];
+export default async function ReviewRegistrationPage({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
+  const { id } = await params;
+  const reg = DUMMY_REGISTRATIONS[id];
   if (!reg) notFound();
 
   const isProcessed = reg.status !== "pending";

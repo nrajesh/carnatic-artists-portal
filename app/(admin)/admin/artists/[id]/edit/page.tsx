@@ -8,8 +8,9 @@ const DUMMY_ARTISTS: Record<string, { id: string; name: string; email: string; p
   "8":  { id: "8",  name: "Divya Ramachandran",     email: "divya@example.com",    province: "Utrecht",       specialities: ["Kanjira"],          status: "suspended" },
 };
 
-export default function EditArtistPage({ params }: { params: { id: string } }) {
-  const artist = DUMMY_ARTISTS[params.id];
+export default async function EditArtistPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
+  const artist = DUMMY_ARTISTS[id];
   if (!artist) notFound();
 
   return (

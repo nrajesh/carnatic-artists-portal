@@ -15,8 +15,9 @@ export const dynamic = "force-dynamic";
 export default async function HomePage({
   searchParams,
 }: {
-  searchParams: { ph_reset?: string };
+  searchParams: Promise<{ ph_reset?: string }>;
 }) {
+  const { ph_reset } = await searchParams;
   const [
     totalArtists,
     seekingCollab,
@@ -38,7 +39,7 @@ export default async function HomePage({
 
   return (
     <main className="min-h-screen bg-amber-50">
-      {searchParams.ph_reset === "1" && <PostHogReset />}
+      {ph_reset === "1" && <PostHogReset />}
 
       <div className="bg-gradient-to-br from-amber-900 via-amber-800 to-amber-700 text-white px-6 py-20 text-center">
         <div className="text-5xl mb-4">🎵</div>

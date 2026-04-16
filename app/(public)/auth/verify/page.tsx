@@ -13,11 +13,11 @@ import { signSession } from '@/lib/session-jwt';
 import { analyticsServer } from '@/lib/analytics-server';
 
 interface VerifyPageProps {
-  searchParams: { token?: string };
+  searchParams: Promise<{ token?: string }>;
 }
 
 export default async function VerifyPage({ searchParams }: VerifyPageProps) {
-  const { token } = searchParams;
+  const { token } = await searchParams;
 
   if (!token) {
     return (
@@ -35,7 +35,7 @@ export default async function VerifyPage({ searchParams }: VerifyPageProps) {
 
     // Sign session as JWT and set cookie
     const jwt = await signSession(session);
-    const cookieStore = cookies();
+    const cookieStore = await cookies();
     cookieStore.set('session', jwt, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',

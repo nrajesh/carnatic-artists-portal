@@ -1,11 +1,12 @@
 interface CollabChatPageProps {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }
 
-export default function CollabChatPage({ params }: CollabChatPageProps) {
+export default async function CollabChatPage({ params }: CollabChatPageProps) {
+  const { id } = await params;
   return (
     <main>
-      <h1>Collab Chat: {params.id}</h1>
+      <h1>Collab Chat: {id}</h1>
     </main>
   );
 }
