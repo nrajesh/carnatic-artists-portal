@@ -35,6 +35,17 @@ if (typeof WebSocket === "undefined") {
   }
 }
 
+/** Dashboard paste mistakes: values saved as `"postgresql://..."` break `new URL()`. */
+function stripSurroundingQuotes(s: string): string {
+  const t = s.trim();
+  if (t.length >= 2) {
+    if ((t.startsWith('"') && t.endsWith('"')) || (t.startsWith("'") && t.endsWith("'"))) {
+      return t.slice(1, -1).trim();
+    }
+  }
+  return t;
+}
+
 /**
  * Neon console may append `channel_binding=require` (SCRAM channel binding).
  * That is aimed at libpq-style TCP clients; the serverless WebSocket driver +
@@ -42,7 +53,7 @@ if (typeof WebSocket === "undefined") {
  * still enforced via `sslmode=require` (keep that in the URL).
  */
 function normalizeDatabaseUrl(raw: string): string {
-  const trimmed = raw.trim();
+  const trimmed = stripSurroundingQuotes(raw);
   try {
     const u = new URL(trimmed);
     u.searchParams.delete("channel_binding");
