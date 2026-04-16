@@ -216,10 +216,14 @@ export default async function ArtistDashboardPage({
               </EditProfileLink>
             </div>
             <div className="mt-4 pt-4 border-t border-stone-100">
-              <Link href="/api/auth/logout"
-                className="text-xs text-stone-400 hover:text-red-500 transition-colors">
-                Log out
-              </Link>
+              <form action="/api/auth/logout" method="POST" className="inline">
+                <button
+                  type="submit"
+                  className="cursor-pointer border-0 bg-transparent p-0 text-xs text-stone-400 transition-colors hover:text-red-500"
+                >
+                  Log out
+                </button>
+              </form>
             </div>
           </div>
         </div>

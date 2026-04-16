@@ -39,7 +39,14 @@ export default function AdminDashboardPage() {
 
         <div className="mt-8 flex gap-4">
           <Link href="/" className="text-sm text-stone-500 hover:text-stone-700 underline underline-offset-2">← Back to portal</Link>
-          <Link href="/api/auth/logout" className="text-sm text-red-500 hover:text-red-700 underline underline-offset-2">Log out</Link>
+          <form action="/api/auth/logout" method="POST" className="inline">
+            <button
+              type="submit"
+              className="cursor-pointer border-0 bg-transparent p-0 text-sm text-red-500 underline underline-offset-2 hover:text-red-700"
+            >
+              Log out
+            </button>
+          </form>
         </div>
       </div>
     </main>
