@@ -42,7 +42,6 @@ export default async function ArtistProfilePage({ params, searchParams }: PagePr
   const sessionCookie = (await cookies()).get("session")?.value ?? null;
   const session = sessionCookie ? await verifySession(sessionCookie) : null;
   const isLoggedIn = !!session;
-  // For demo: treat the dev artist session as "Lakshmi Narayanan" (id: dev-artist-id)
   const currentArtistId = session?.artistId ?? null;
 
   const avgRating = artist.reviews.length
@@ -203,12 +202,8 @@ export default async function ArtistProfilePage({ params, searchParams }: PagePr
             <>
               <div className="flex flex-col gap-4">
               {pagedReviews.map((r) => {
-                  // Edit is shown if: logged-in artist wrote this review, OR admin
                   const canEdit = isLoggedIn && (
-                    session?.role === "admin" ||
-                    session?.artistId === `dev-artist-id` // demo: dev session maps to lakshmi
-                      ? r.reviewerSlug === "lakshmi-narayanan"
-                      : false
+                    session?.role === "admin" || currentArtistId === r.reviewerId
                   );
 
                   return (
@@ -225,7 +220,7 @@ export default async function ArtistProfilePage({ params, searchParams }: PagePr
                           <StarRating rating={r.rating} />
                           {canEdit && (
                             <Link
-                              href={`/artists/${artist.slug}?reviewPage=${reviewPage}#${r.id}`}
+                              href={`/collabs/${r.collabId}?editReviewFor=${artist.id}`}
                               className="text-xs text-amber-600 hover:text-amber-800 font-medium border border-amber-200 rounded px-2 py-0.5 hover:bg-amber-50 transition-colors"
                             >
                               Edit

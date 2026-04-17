@@ -63,6 +63,8 @@ export type ArtistProfileView = {
   }[];
   reviews: {
     id: string;
+    collabId: string;
+    reviewerId: string;
     reviewerSlug: string;
     from: string;
     rating: number;
@@ -121,6 +123,8 @@ export async function getArtistBySlug(slug: string): Promise<ArtistProfileView |
 
   const reviews = artist.receivedFeedback.map((f) => ({
     id: f.id,
+    collabId: f.collabId,
+    reviewerId: f.reviewerId,
     reviewerSlug: f.reviewer.slug,
     from: f.reviewer.fullName,
     rating: f.starRating,
@@ -185,6 +189,231 @@ export async function listCollabsForHome(limit: number): Promise<HomeCollabPrevi
     members: c._count.members,
     status: c.status,
   }));
+}
+
+// ---------------------------------------------------------------------------
+// Current-artist queries (dashboard + profile edit)
+// ---------------------------------------------------------------------------
+
+export type DashboardCollab = {
+  id: string;
+  name: string;
+  role: "Owner" | "Member";
+  status: "active" | "completed" | "completed_other" | "incomplete";
+  closedAt?: string;
+};
+
+export type DashboardNotification = {
+  id: string;
+  type: string;
+  text: string;
+  time: string;
+  read: boolean;
+  href: string;
+};
+
+export type ArtistDashboardView = {
+  id: string;
+  slug: string;
+  name: string;
+  province: string;
+  specialities: { name: string; color: string }[];
+  openToCollab: boolean;
+  collabs: DashboardCollab[];
+  availabilityDates: { from: string; to: string }[];
+  avgRating: string | null;
+  notifications: DashboardNotification[];
+  unreadNotificationCount: number;
+};
+
+function formatRelativeTime(from: Date, now: Date): string {
+  const deltaMs = now.getTime() - from.getTime();
+  const minute = 60 * 1000;
+  const hour = 60 * minute;
+  const day = 24 * hour;
+  const week = 7 * day;
+  if (deltaMs < minute) return "just now";
+  if (deltaMs < hour) {
+    const m = Math.floor(deltaMs / minute);
+    return `${m} minute${m === 1 ? "" : "s"} ago`;
+  }
+  if (deltaMs < day) {
+    const h = Math.floor(deltaMs / hour);
+    return `${h} hour${h === 1 ? "" : "s"} ago`;
+  }
+  if (deltaMs < week) {
+    const d = Math.floor(deltaMs / day);
+    return `${d} day${d === 1 ? "" : "s"} ago`;
+  }
+  const w = Math.floor(deltaMs / week);
+  return `${w} week${w === 1 ? "" : "s"} ago`;
+}
+
+/**
+ * Turn a Notification row into the shape the dashboard renders.
+ * Payload is JSON and schema-less per the Notification model, so we
+ * defensively pick `text` and `href` fields when present.
+ */
+function shapeNotification(n: {
+  id: string;
+  type: string;
+  payload: unknown;
+  isRead: boolean;
+  createdAt: Date;
+}, now: Date): DashboardNotification {
+  const payload =
+    n.payload && typeof n.payload === "object" ? (n.payload as Record<string, unknown>) : {};
+  const text = typeof payload.text === "string" ? payload.text : `(${n.type})`;
+  const href = typeof payload.href === "string" ? payload.href : "#";
+  return {
+    id: n.id,
+    type: n.type,
+    text,
+    time: formatRelativeTime(n.createdAt, now),
+    read: n.isRead,
+    href,
+  };
+}
+
+export async function getArtistDashboardView(artistId: string): Promise<ArtistDashboardView | null> {
+  const db = getDb();
+  const artist = await db.artist.findUnique({
+    where: { id: artistId },
+    include: {
+      specialities: {
+        orderBy: { displayOrder: "asc" },
+        include: { speciality: true },
+      },
+      availabilityEntries: { orderBy: { startDate: "asc" } },
+      collabMemberships: {
+        where: { leftAt: null },
+        include: { collab: true },
+      },
+      ownedCollabs: true,
+      receivedFeedback: { select: { starRating: true } },
+      notifications: {
+        orderBy: { createdAt: "desc" },
+        take: 10,
+      },
+    },
+  });
+  if (!artist) return null;
+
+  // Merge owned and member collabs, deduplicating by collab id. Owner wins on
+  // role when an artist is both creator and member.
+  const collabMap = new Map<string, DashboardCollab>();
+  for (const m of artist.collabMemberships) {
+    const c = m.collab;
+    const isOwner = c.ownerId === artist.id;
+    collabMap.set(c.id, {
+      id: c.id,
+      name: c.name,
+      role: isOwner ? "Owner" : "Member",
+      status:
+        c.status === "completed"
+          ? "completed"
+          : c.status === "completed_other"
+            ? "completed_other"
+            : c.status === "incomplete"
+              ? "incomplete"
+              : "active",
+      closedAt: c.closedAt
+        ? c.closedAt.toLocaleString("en-GB", { month: "short", year: "numeric" })
+        : undefined,
+    });
+  }
+  for (const c of artist.ownedCollabs) {
+    if (!collabMap.has(c.id)) {
+      collabMap.set(c.id, {
+        id: c.id,
+        name: c.name,
+        role: "Owner",
+        status:
+          c.status === "completed"
+            ? "completed"
+            : c.status === "completed_other"
+              ? "completed_other"
+              : c.status === "incomplete"
+                ? "incomplete"
+                : "active",
+        closedAt: c.closedAt
+          ? c.closedAt.toLocaleString("en-GB", { month: "short", year: "numeric" })
+          : undefined,
+      });
+    }
+  }
+
+  const avgRating =
+    artist.receivedFeedback.length > 0
+      ? (
+          artist.receivedFeedback.reduce((s, r) => s + r.starRating, 0) /
+          artist.receivedFeedback.length
+        ).toFixed(1)
+      : null;
+
+  const now = new Date();
+  const notifications = artist.notifications.map((n) => shapeNotification(n, now));
+  const unreadNotificationCount = notifications.filter((n) => !n.read).length;
+
+  return {
+    id: artist.id,
+    slug: artist.slug,
+    name: artist.fullName,
+    province: artist.province,
+    specialities: artist.specialities.map((j) => specColor(j.speciality)),
+    openToCollab: artist.openToCollab,
+    collabs: Array.from(collabMap.values()),
+    availabilityDates: artist.availabilityEntries.map((e) => ({
+      from: e.startDate.toISOString().slice(0, 10),
+      to: e.endDate.toISOString().slice(0, 10),
+    })),
+    avgRating,
+    notifications,
+    unreadNotificationCount,
+  };
+}
+
+export type ArtistEditView = {
+  id: string;
+  fullName: string;
+  email: string;
+  contactNumber: string;
+  contactType: "whatsapp" | "mobile";
+  province: string;
+  specialities: string[];
+  availabilityWindowCount: number;
+};
+
+export async function getArtistForEdit(artistId: string): Promise<ArtistEditView | null> {
+  const artist = await getDb().artist.findUnique({
+    where: { id: artistId },
+    include: {
+      specialities: {
+        orderBy: { displayOrder: "asc" },
+        include: { speciality: { select: { name: true } } },
+      },
+      _count: { select: { availabilityEntries: true } },
+    },
+  });
+  if (!artist) return null;
+  return {
+    id: artist.id,
+    fullName: artist.fullName,
+    email: artist.email,
+    contactNumber: artist.contactNumber,
+    contactType: artist.contactType,
+    province: artist.province,
+    specialities: artist.specialities.map((j) => j.speciality.name),
+    availabilityWindowCount: artist._count.availabilityEntries,
+  };
+}
+
+export async function listSpecialities(): Promise<{ name: string; color: string }[]> {
+  const rows = await getDb().speciality.findMany({
+    orderBy: { name: "asc" },
+    select: { name: true, primaryColor: true },
+  });
+  return rows.map((s) => ({ name: s.name, color: s.primaryColor }));
 }
 
 export async function getArtistListingBySlug(slug: string): Promise<ArtistListing | null> {

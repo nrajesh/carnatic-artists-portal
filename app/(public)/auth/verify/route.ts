@@ -36,8 +36,16 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     const session = await verifyMagicLink(token);
     const jwt = await signSession(session);
 
-    const destination = new URL('/dashboard', request.url);
-    destination.searchParams.set('ph_identify', '1');
+    // Admins land on the admin dashboard; artists land on their own dashboard
+    // with the PostHog identity-stitching flag.
+    const destination =
+      session.role === 'admin'
+        ? new URL('/admin/dashboard', request.url)
+        : (() => {
+            const url = new URL('/dashboard', request.url);
+            url.searchParams.set('ph_identify', '1');
+            return url;
+          })();
 
     const response = NextResponse.redirect(destination);
     response.cookies.set('session', jwt, {

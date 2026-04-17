@@ -49,6 +49,8 @@ model Artist {
   givenFeedback       Feedback[]          @relation("Reviewer")
   receivedFeedback    Feedback[]          @relation("Reviewee")
   notifications       Notification[]
+  notificationPreference NotificationPreference?
+  pushSubscriptions   PushSubscription[]
   magicLinkTokens     MagicLinkToken[]
   sessions            Session[]
   dailyFeatures       DailyFeatured[]
@@ -272,6 +274,32 @@ model Notification {
   payload   Json
   isRead    Boolean  @default(false)
   createdAt DateTime @default(now())
+
+  artist Artist @relation(fields: [artistId], references: [id], onDelete: Cascade)
+}
+
+model NotificationPreference {
+  artistId             String  @id
+  inAppEnabled         Boolean @default(true)
+  emailEnabled         Boolean @default(true)
+  webPushEnabled       Boolean @default(false)
+  reviewAddedEnabled   Boolean @default(true)
+  reviewUpdatedEnabled Boolean @default(true)
+  reviewDeletedEnabled Boolean @default(true)
+  updatedAt            DateTime @updatedAt
+
+  artist Artist @relation(fields: [artistId], references: [id], onDelete: Cascade)
+}
+
+model PushSubscription {
+  id        String   @id @default(uuid())
+  artistId  String
+  endpoint  String   @unique
+  p256dh    String
+  auth      String
+  userAgent String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   artist Artist @relation(fields: [artistId], references: [id], onDelete: Cascade)
 }
