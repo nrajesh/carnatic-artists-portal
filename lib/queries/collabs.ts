@@ -220,7 +220,7 @@ export type AdminCollabDetailView = {
   id: string;
   name: string;
   owner: string;
-  members: string[];
+  members: { artistId: string; fullName: string; slug: string }[];
   status: string;
   createdAt: string;
   messages: { sender: string; text: string; time: string }[];
@@ -236,7 +236,7 @@ export async function getCollabDetailForAdmin(idOrSlug: string): Promise<AdminCo
       owner: { select: { fullName: true } },
       members: {
         where: { leftAt: null },
-        include: { artist: { select: { fullName: true } } },
+        include: { artist: { select: { id: true, fullName: true, slug: true } } },
       },
       messages: {
         where: { isDeleted: false },
@@ -251,7 +251,11 @@ export async function getCollabDetailForAdmin(idOrSlug: string): Promise<AdminCo
     id: collab.id,
     name: collab.name,
     owner: collab.owner.fullName,
-    members: collab.members.map((m) => m.artist.fullName),
+    members: collab.members.map((m) => ({
+      artistId: m.artist.id,
+      fullName: m.artist.fullName,
+      slug: m.artist.slug,
+    })),
     status: collab.status,
     createdAt: collab.createdAt.toLocaleDateString("en-GB", {
       day: "2-digit",
