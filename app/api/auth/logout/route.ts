@@ -34,6 +34,15 @@ export async function POST(request: NextRequest) {
 
   // 303 See Other: browser follows POST -> GET on the redirect target.
   const response = NextResponse.redirect(url, 303);
-  response.cookies.set("session", "", { maxAge: 0, path: "/" });
+  // Match the original cookie attributes used during login so the browser
+  // reliably overwrites and expires the exact same cookie.
+  response.cookies.set("session", "", {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax",
+    path: "/",
+    maxAge: 0,
+    expires: new Date(0),
+  });
   return response;
 }

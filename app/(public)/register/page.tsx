@@ -5,7 +5,7 @@
  * Requirements: 1.1, 1.2, 1.3, 1.4, 1.5, 1.7, 1.8
  */
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useForm, useFieldArray, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -128,6 +128,16 @@ function EditorToolbar({ editor }: { editor: ReturnType<typeof useEditor> }) {
 export default function RegisterPage() {
   const [submitted, setSubmitted] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const [sessionState, setSessionState] = useState<{
+    loading: boolean;
+    authenticated: boolean;
+    role: 'artist' | 'admin' | null;
+  }>({
+    loading: true,
+    authenticated: false,
+    role: null,
+  });
+  const [registeringSomeoneElse, setRegisteringSomeoneElse] = useState(false);
   const posthog = usePostHog();
 
   const {
@@ -150,6 +160,31 @@ export default function RegisterPage() {
     name: 'websiteUrls',
   });
 
+  useEffect(() => {
+    let active = true;
+    (async () => {
+      try {
+        const res = await fetch('/api/auth/session', { cache: 'no-store' });
+        const data = (await res.json()) as {
+          authenticated?: boolean;
+          role?: 'artist' | 'admin';
+        };
+        if (!active) return;
+        setSessionState({
+          loading: false,
+          authenticated: data.authenticated === true,
+          role: data.role ?? null,
+        });
+      } catch {
+        if (!active) return;
+        setSessionState({ loading: false, authenticated: false, role: null });
+      }
+    })();
+    return () => {
+      active = false;
+    };
+  }, []);
+
   // Tiptap editor - immediatelyRender: false prevents SSR hydration mismatch
   const editor = useEditor({
     immediatelyRender: false,
@@ -166,6 +201,10 @@ export default function RegisterPage() {
 
   const onSubmit = async (data: RegistrationFormData) => {
     setSubmitError(null);
+    if (sessionState.authenticated && !registeringSomeoneElse) {
+      setSubmitError('You are already signed in. Check "I am registering someone else" to continue.');
+      return;
+    }
     try {
       const formData = new FormData();
       formData.append('fullName', data.fullName);
@@ -234,6 +273,23 @@ export default function RegisterPage() {
             Register as a Carnatic musician to create your portfolio and connect with fellow artists.
           </p>
         </div>
+        {!sessionState.loading && sessionState.authenticated && (
+          <div className="mb-6 rounded-xl border border-amber-200 bg-amber-50 px-5 py-4 text-sm text-amber-800">
+            You are currently signed in as {sessionState.role}. By default, registration is intended for new artists.
+            <div className="mt-2 flex items-center gap-2">
+              <input
+                id="registering-someone-else"
+                type="checkbox"
+                checked={registeringSomeoneElse}
+                onChange={(e) => setRegisteringSomeoneElse(e.target.checked)}
+                className="accent-amber-700"
+              />
+              <label htmlFor="registering-someone-else" className="text-xs font-semibold">
+                I am registering someone else.
+              </label>
+            </div>
+          </div>
+        )}
 
         <form
           onSubmit={handleSubmit(onSubmit)}
@@ -482,7 +538,7 @@ export default function RegisterPage() {
           {/* Submit button */}
           <button
             type="submit"
-            disabled={isSubmitting}
+            disabled={isSubmitting || (sessionState.authenticated && !registeringSomeoneElse)}
             className="w-full py-3 px-6 bg-amber-700 text-white font-semibold rounded-lg hover:bg-amber-800 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed min-h-[44px] transition-colors"
           >
             {isSubmitting ? 'Submitting…' : 'Submit Registration Request'}
