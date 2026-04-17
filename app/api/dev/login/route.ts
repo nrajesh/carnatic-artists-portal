@@ -11,6 +11,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { signSession } from '@/lib/session-jwt';
+import { getDb } from '@/lib/db';
 
 export async function GET(request: NextRequest) {
   if (process.env.NODE_ENV === 'production') {
@@ -19,10 +20,51 @@ export async function GET(request: NextRequest) {
 
   const role = (request.nextUrl.searchParams.get('role') ?? 'admin') as 'admin' | 'artist';
   const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+  let artistId = `dev-${role}-id`;
+
+  // For dev-login, prefer a real artist id so pages that rely on DB relations
+  // (dashboard/collabs/highlighting) behave like production.
+  if (role === 'artist') {
+    try {
+      const artist = await getDb().artist.findFirst({
+        where: { isSuspended: false },
+        orderBy: { createdAt: 'asc' },
+        select: { id: true },
+      });
+      if (artist) {
+        artistId = artist.id;
+      }
+    } catch {
+      // Keep fallback synthetic id for DB-less local dev.
+    }
+  }
+  if (role === 'admin') {
+    try {
+      const adminEmails = (process.env.ADMIN_EMAILS ?? '')
+        .split(',')
+        .map((e) => e.trim().toLowerCase())
+        .filter(Boolean);
+      const adminArtist = adminEmails.length
+        ? await getDb().artist.findFirst({
+            where: {
+              isSuspended: false,
+              email: { in: adminEmails },
+            },
+            orderBy: { createdAt: 'asc' },
+            select: { id: true },
+          })
+        : null;
+      if (adminArtist) {
+        artistId = adminArtist.id;
+      }
+    } catch {
+      // Keep fallback synthetic id for DB-less local dev.
+    }
+  }
 
   const sessionData = {
     sessionId: `dev-${role}-${Date.now()}`,
-    artistId: `dev-${role}-id`,
+    artistId,
     role,
     expiresAt,
   };

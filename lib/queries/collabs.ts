@@ -182,12 +182,15 @@ export type AdminCollabListItem = {
   messages: number;
   status: string;
   createdAt: string;
+  isCurrentAdminOwner: boolean;
+  isCurrentAdminMember: boolean;
 };
 
-export async function listCollabsForAdmin(): Promise<AdminCollabListItem[]> {
+export async function listCollabsForAdmin(viewerArtistId?: string): Promise<AdminCollabListItem[]> {
   const collabs = await getDb().collab.findMany({
     include: {
       owner: { select: { fullName: true } },
+      members: { select: { artistId: true, leftAt: true } },
       _count: { select: { members: true, messages: true } },
     },
     orderBy: { createdAt: "desc" },
@@ -206,6 +209,10 @@ export async function listCollabsForAdmin(): Promise<AdminCollabListItem[]> {
       month: "short",
       year: "numeric",
     }),
+    isCurrentAdminOwner: viewerArtistId ? c.ownerId === viewerArtistId : false,
+    isCurrentAdminMember: viewerArtistId
+      ? c.members.some((m) => m.artistId === viewerArtistId && m.leftAt === null)
+      : false,
   }));
 }
 

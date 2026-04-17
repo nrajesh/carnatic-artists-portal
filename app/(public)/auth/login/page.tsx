@@ -99,15 +99,19 @@ export default function LoginPage() {
           {!sessionState.loading && sessionState.authenticated && (
             <div className="mb-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
               You&apos;re already signed in as {sessionState.role}. Use dashboard/logout instead of requesting a new login link.
-              <div className="mt-2 flex gap-2">
+              <div className="mt-2 flex items-center gap-3 text-xs font-semibold">
                 <Link
                   href={sessionState.role === 'admin' ? '/admin/dashboard' : '/dashboard'}
-                  className="text-xs font-semibold text-amber-800 underline underline-offset-2"
+                  className="text-amber-800 underline underline-offset-2"
                 >
                   Go to dashboard
                 </Link>
+                <span className="text-amber-400">|</span>
                 <form action="/api/auth/logout" method="POST" className="inline">
-                  <button type="submit" className="text-xs font-semibold text-amber-800 underline underline-offset-2">
+                  <button
+                    type="submit"
+                    className="cursor-pointer border-0 bg-transparent p-0 text-amber-800 underline underline-offset-2"
+                  >
                     Log out
                   </button>
                 </form>
