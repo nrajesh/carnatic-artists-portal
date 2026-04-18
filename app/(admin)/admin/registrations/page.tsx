@@ -93,32 +93,53 @@ export default async function RegistrationsPage({ searchParams }: PageProps) {
         )}
       </div>
 
-      {/* Filters */}
-      <form method="GET" className="mb-6 flex flex-wrap gap-3 items-end">
-        <div className="flex flex-col gap-1">
-          <label className="text-xs font-semibold text-stone-600 uppercase tracking-wide">Status</label>
-          <select name="status" defaultValue={activeStatus}
-            className="rounded-lg border border-stone-300 bg-white px-3 py-2 text-sm text-stone-700 focus:outline-none focus:ring-2 focus:ring-amber-400 min-h-[44px]">
+      {/* Filters — fixed control height so native select/date/button align */}
+      <form method="GET" className="mb-6 flex flex-wrap items-end gap-3">
+        <div className="flex min-w-[10rem] flex-col gap-1.5">
+          <label className="text-xs font-semibold uppercase tracking-wide text-stone-600">Status</label>
+          <select
+            name="status"
+            defaultValue={activeStatus}
+            className="h-11 w-full rounded-lg border border-stone-300 bg-white px-3 text-sm text-stone-700 shadow-sm focus:outline-none focus:ring-2 focus:ring-amber-400"
+          >
             <option value="">All</option>
             <option value="pending">Pending</option>
             <option value="approved">Approved</option>
             <option value="rejected">Rejected</option>
           </select>
         </div>
-        <div className="flex flex-col gap-1">
-          <label className="text-xs font-semibold text-stone-600 uppercase tracking-wide">From</label>
-          <input type="date" name="from" defaultValue={from ?? ""}
-            className="rounded-lg border border-stone-300 bg-white px-3 py-2 text-sm text-stone-700 focus:outline-none focus:ring-2 focus:ring-amber-400 min-h-[44px]" />
+        <div className="flex flex-col gap-1.5">
+          <label className="text-xs font-semibold uppercase tracking-wide text-stone-600">From</label>
+          <input
+            type="date"
+            name="from"
+            defaultValue={from ?? ""}
+            className="h-11 min-w-[10.5rem] rounded-lg border border-stone-300 bg-white px-3 text-sm text-stone-700 shadow-sm focus:outline-none focus:ring-2 focus:ring-amber-400"
+          />
         </div>
-        <div className="flex flex-col gap-1">
-          <label className="text-xs font-semibold text-stone-600 uppercase tracking-wide">To</label>
-          <input type="date" name="to" defaultValue={to ?? ""}
-            className="rounded-lg border border-stone-300 bg-white px-3 py-2 text-sm text-stone-700 focus:outline-none focus:ring-2 focus:ring-amber-400 min-h-[44px]" />
+        <div className="flex flex-col gap-1.5">
+          <label className="text-xs font-semibold uppercase tracking-wide text-stone-600">To</label>
+          <input
+            type="date"
+            name="to"
+            defaultValue={to ?? ""}
+            className="h-11 min-w-[10.5rem] rounded-lg border border-stone-300 bg-white px-3 text-sm text-stone-700 shadow-sm focus:outline-none focus:ring-2 focus:ring-amber-400"
+          />
         </div>
-        <button type="submit" className="rounded-lg bg-amber-600 px-4 py-2 text-sm font-semibold text-white hover:bg-amber-700 min-h-[44px]">Filter</button>
-        {(activeStatus || from || to) && (
-          <Link href="/admin/registrations" className="rounded-lg border border-stone-300 bg-white px-4 py-2 text-sm font-semibold text-stone-600 hover:bg-stone-100 min-h-[44px] flex items-center">Clear</Link>
-        )}
+        <button
+          type="submit"
+          className="inline-flex h-11 shrink-0 items-center justify-center rounded-lg bg-amber-600 px-5 text-sm font-semibold text-white shadow-sm hover:bg-amber-700 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:ring-offset-2"
+        >
+          Filter
+        </button>
+        {(activeStatus || from || to) ? (
+          <Link
+            href="/admin/registrations"
+            className="inline-flex h-11 shrink-0 items-center justify-center rounded-lg border border-stone-300 bg-white px-5 text-sm font-semibold text-stone-600 shadow-sm hover:bg-stone-100 focus:outline-none focus:ring-2 focus:ring-stone-400 focus:ring-offset-2"
+          >
+            Clear
+          </Link>
+        ) : null}
       </form>
 
       <p className="mb-4 text-sm text-stone-500">Showing {registrations.length} result{registrations.length !== 1 ? "s" : ""}</p>

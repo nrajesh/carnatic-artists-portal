@@ -28,7 +28,11 @@ function posthogUiHost(): string | undefined {
   return 'https://eu.posthog.com'
 }
 
-/** Session recording is on by default; set NEXT_PUBLIC_POSTHOG_ENABLE_RECORDING=false to opt out. */
+/**
+ * Client-side opt-out only. Leave env unset so `disable_session_recording` is omitted from init
+ * (PostHog recommends removing the option rather than setting it false when enabling replay).
+ * @see https://posthog.com/docs/session-replay/troubleshooting#recordings-are-not-being-captured
+ */
 function sessionRecordingDisabled(): boolean {
   const v = process.env.NEXT_PUBLIC_POSTHOG_ENABLE_RECORDING?.trim().toLowerCase()
   if (!v) return false
@@ -43,6 +47,8 @@ export function initPostHog(): void {
     return
   }
 
+  const recordingOff = sessionRecordingDisabled()
+
   posthog.init(key, {
     api_host: posthogApiHost(),
     ui_host: posthogUiHost(),
@@ -50,7 +56,7 @@ export function initPostHog(): void {
     autocapture: false,
     mask_all_text: true,
     persistence: 'localStorage+cookie',
-    disable_session_recording: sessionRecordingDisabled(),
+    ...(recordingOff ? { disable_session_recording: true } : {}),
     // Session replay depends on the same remote config + flags pipeline as feature flags.
     // Setting `advanced_disable_feature_flags` leaves recording stuck waiting for a "flags response".
     disable_surveys: true,
