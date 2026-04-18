@@ -6,7 +6,7 @@ import {
   countActiveArtists,
   countActiveCollabs,
   countOpenToCollabArtists,
-  getArtistListingBySlug,
+  getDailyFeaturedArtistForHome,
   listArtistsForDirectory,
   listCollabsForHome,
 } from "@/lib/queries/artists";
@@ -24,23 +24,15 @@ export default async function HomePage({
   const session = sessionCookie ? await verifySession(sessionCookie) : null;
   const collabsIndexHref = session?.role === "admin" ? "/admin/collabs" : "/collabs";
   const { ph_reset } = await searchParams;
-  const [
-    totalArtists,
-    seekingCollab,
-    totalCollabs,
-    singer,
-    instrumentalist,
-    homeCollabs,
-    previewArtists,
-  ] = await Promise.all([
-    countActiveArtists(),
-    countOpenToCollabArtists(),
-    countActiveCollabs(),
-    getArtistListingBySlug("lakshmi-narayanan"),
-    getArtistListingBySlug("anand-subramanian"),
-    listCollabsForHome(3),
-    listArtistsForDirectory(),
-  ]);
+  const [totalArtists, seekingCollab, totalCollabs, featuredArtist, homeCollabs, previewArtists] =
+    await Promise.all([
+      countActiveArtists(),
+      countOpenToCollabArtists(),
+      countActiveCollabs(),
+      getDailyFeaturedArtistForHome(),
+      listCollabsForHome(3),
+      listArtistsForDirectory(),
+    ]);
   const previewSix = previewArtists.slice(0, 6);
 
   return (
@@ -79,58 +71,40 @@ export default async function HomePage({
         </div>
       </div>
 
-      <div className="max-w-4xl mx-auto px-6 pb-10 grid sm:grid-cols-2 gap-6">
-        {singer && (
+      {featuredArtist && (
+        <div className="mx-auto max-w-4xl px-6 pb-10">
           <Link
-            href={`/artists/${singer.slug}`}
-            className="group block bg-white rounded-2xl border border-amber-200 shadow-sm p-6 hover:shadow-md hover:border-amber-400 transition-all"
+            href={`/artists/${featuredArtist.slug}`}
+            className="group block rounded-2xl border border-amber-200 bg-white p-6 shadow-sm transition-all hover:border-amber-400 hover:shadow-md sm:p-8"
           >
-            <h2 className="text-xs font-semibold text-amber-500 uppercase tracking-widest mb-3">🎤 Singer of the Day</h2>
+            <h2 className="mb-1 text-xs font-semibold uppercase tracking-widest text-amber-500">
+              Today&apos;s featured artist
+            </h2>
+            <p className="mb-4 text-xs text-stone-500">
+              Discover exceptional Carnatic vocal talent - featured fresh every day.
+            </p>
             <div className="flex items-center gap-4">
               <div
-                className="w-14 h-14 rounded-full flex items-center justify-center text-2xl font-bold flex-shrink-0"
+                className="flex h-14 w-14 flex-shrink-0 items-center justify-center rounded-full text-2xl font-bold"
                 style={{
-                  backgroundColor: singer.specialities[0]?.color ?? DEFAULT_ARTIST_ACCENT_COLOR,
+                  backgroundColor: featuredArtist.specialities[0]?.color ?? DEFAULT_ARTIST_ACCENT_COLOR,
                   color: "#FFFFFF",
                 }}
               >
-                {singer.name[0]}
+                {featuredArtist.name[0]}
               </div>
               <div>
-                <p className="font-semibold text-stone-800 group-hover:text-amber-800 transition-colors">{singer.name}</p>
+                <p className="font-semibold text-stone-800 transition-colors group-hover:text-amber-800">
+                  {featuredArtist.name}
+                </p>
                 <p className="text-sm text-stone-500">
-                  {singer.specialities[0]?.name ?? "Artist"} · {singer.province}
+                  {featuredArtist.specialities[0]?.name ?? "Artist"} · {featuredArtist.province}
                 </p>
               </div>
             </div>
           </Link>
-        )}
-        {instrumentalist && (
-          <Link
-            href={`/artists/${instrumentalist.slug}`}
-            className="group block bg-white rounded-2xl border border-amber-200 shadow-sm p-6 hover:shadow-md hover:border-amber-400 transition-all"
-          >
-            <h2 className="text-xs font-semibold text-amber-500 uppercase tracking-widest mb-3">🥁 Instrumentalist of the Day</h2>
-            <div className="flex items-center gap-4">
-              <div
-                className="w-14 h-14 rounded-full flex items-center justify-center text-2xl font-bold flex-shrink-0"
-                style={{
-                  backgroundColor: instrumentalist.specialities[0]?.color ?? DEFAULT_ARTIST_ACCENT_COLOR,
-                  color: "#FFFFFF",
-                }}
-              >
-                {instrumentalist.name[0]}
-              </div>
-              <div>
-                <p className="font-semibold text-stone-800 group-hover:text-amber-800 transition-colors">{instrumentalist.name}</p>
-                <p className="text-sm text-stone-500">
-                  {instrumentalist.specialities[0]?.name ?? "Artist"} · {instrumentalist.province}
-                </p>
-              </div>
-            </div>
-          </Link>
-        )}
-      </div>
+        </div>
+      )}
 
       <div className="max-w-4xl mx-auto px-6 pb-10">
         <div className="flex items-center justify-between mb-4">

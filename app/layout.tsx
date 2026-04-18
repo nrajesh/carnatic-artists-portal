@@ -6,6 +6,7 @@ import { PostHogProvider } from "@/components/posthog-provider";
 import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
 import { DevAdminBadge } from "@/components/dev-admin-badge";
+import { formatDeploymentDateTime } from "@/lib/format-deployment-datetime";
 import { verifySession } from "@/lib/session-jwt";
 
 const inter = Inter({ subsets: ["latin"] });
@@ -32,14 +33,7 @@ export default async function RootLayout({
         </div>
         {session && (
           <div className="border-t border-amber-200/80 bg-amber-50/60 px-4 py-2 text-center text-xs text-stone-500">
-            Logged in as {session.role} · Session expires{" "}
-            {session.expiresAt.toLocaleString("en-GB", {
-              day: "2-digit",
-              month: "2-digit",
-              year: "numeric",
-              hour: "2-digit",
-              minute: "2-digit",
-            })}
+            Logged in as {session.role} · Session expires {formatDeploymentDateTime(session.expiresAt)}
           </div>
         )}
         <SiteFooter />

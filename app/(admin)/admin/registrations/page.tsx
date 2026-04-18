@@ -1,15 +1,10 @@
 import Link from "next/link";
+import { formatDeploymentDate } from "@/lib/format-deployment-datetime";
+import { getDb } from "@/lib/db";
+import { Prisma } from "@prisma/client";
 
-// ---------------------------------------------------------------------------
-// Dummy data - replace with DB query once Neon is connected
-// ---------------------------------------------------------------------------
-const DUMMY_REGISTRATIONS = [
-  { id: "r1", fullName: "Arjun Natarajan",    email: "arjun@example.com",   contactNumber: "+31612345678", contactType: "whatsapp", specialities: ["Vocal", "Violin"],  status: "pending",  submittedAt: new Date("2025-03-10") },
-  { id: "r2", fullName: "Deepa Krishnaswamy", email: "deepa@example.com",   contactNumber: "+31698765432", contactType: "mobile",   specialities: ["Mridangam"],        status: "pending",  submittedAt: new Date("2025-03-12") },
-  { id: "r3", fullName: "Ramesh Sundaram",    email: "ramesh@example.com",  contactNumber: "+31611223344", contactType: "whatsapp", specialities: ["Flute"],            status: "approved", submittedAt: new Date("2025-02-20") },
-  { id: "r4", fullName: "Geetha Pillai",      email: "geetha@example.com",  contactNumber: "+31655443322", contactType: "mobile",   specialities: ["Veena"],            status: "rejected", submittedAt: new Date("2025-02-15") },
-  { id: "r5", fullName: "Mohan Venkatesh",    email: "mohan@example.com",   contactNumber: "+31677889900", contactType: "whatsapp", specialities: ["Ghatam", "Kanjira"], status: "pending", submittedAt: new Date("2025-03-18") },
-];
+const VALID_STATUSES = ["pending", "approved", "rejected"] as const;
+type RegistrationStatus = (typeof VALID_STATUSES)[number];
 
 function StatusBadge({ status }: { status: string }) {
   const styles: Record<string, string> = {
@@ -31,16 +26,50 @@ interface PageProps {
 
 export default async function RegistrationsPage({ searchParams }: PageProps) {
   const { status, from, to } = await searchParams;
+  const parsedStatus = VALID_STATUSES.includes(status as RegistrationStatus)
+    ? (status as RegistrationStatus)
+    : undefined;
 
-  let registrations = DUMMY_REGISTRATIONS;
-  if (status && ["pending","approved","rejected"].includes(status)) {
-    registrations = registrations.filter(r => r.status === status);
+  const where: Prisma.RegistrationRequestWhereInput = {};
+  if (parsedStatus) {
+    where.status = parsedStatus;
   }
-  if (from) registrations = registrations.filter(r => r.submittedAt >= new Date(from));
-  if (to)   registrations = registrations.filter(r => r.submittedAt <= new Date(to + "T23:59:59"));
 
-  const pendingCount = DUMMY_REGISTRATIONS.filter(r => r.status === "pending").length;
-  const activeStatus = status ?? "";
+  if (from || to) {
+    const submittedAtFilter: Prisma.DateTimeFilter = {};
+    if (from) {
+      const fromDate = new Date(`${from}T00:00:00.000Z`);
+      if (!Number.isNaN(fromDate.getTime())) {
+        submittedAtFilter.gte = fromDate;
+      }
+    }
+    if (to) {
+      const toDate = new Date(`${to}T23:59:59.999Z`);
+      if (!Number.isNaN(toDate.getTime())) {
+        submittedAtFilter.lte = toDate;
+      }
+    }
+    if (submittedAtFilter.gte || submittedAtFilter.lte) {
+      where.submittedAt = submittedAtFilter;
+    }
+  }
+
+  const [registrations, pendingCount] = await Promise.all([
+    getDb().registrationRequest.findMany({
+      where,
+      include: {
+        specialities: {
+          orderBy: { specialityName: "asc" },
+        },
+      },
+      orderBy: { submittedAt: "desc" },
+    }),
+    getDb().registrationRequest.count({
+      where: { status: "pending" },
+    }),
+  ]);
+
+  const activeStatus = parsedStatus ?? "";
 
   return (
     <main className="min-h-screen bg-stone-50 px-4 py-8 sm:px-8">
@@ -102,12 +131,12 @@ export default async function RegistrationsPage({ searchParams }: PageProps) {
                 </div>
                 <p className="text-sm text-stone-500 mb-3 truncate">{reg.email}</p>
                 <div className="flex flex-wrap gap-1 mb-3">
-                  {reg.specialities.map(s => (
-                    <span key={s} className="rounded-full bg-amber-50 border border-amber-200 px-2 py-0.5 text-xs text-amber-700 font-medium">{s}</span>
+                  {reg.specialities.map((spec) => (
+                    <span key={spec.specialityName} className="rounded-full bg-amber-50 border border-amber-200 px-2 py-0.5 text-xs text-amber-700 font-medium">{spec.specialityName}</span>
                   ))}
                 </div>
                 <p className="text-xs text-stone-400">
-                  Submitted {reg.submittedAt.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })}
+                  Submitted {formatDeploymentDate(reg.submittedAt)}
                 </p>
               </Link>
             </li>

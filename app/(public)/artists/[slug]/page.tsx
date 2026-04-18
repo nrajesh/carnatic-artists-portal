@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { cookies } from "next/headers";
+import { formatDeploymentCalendarDate } from "@/lib/format-deployment-datetime";
 import { verifySession } from "@/lib/session-jwt";
 import { getArtistBySlug } from "@/lib/queries/artists";
 import { ArtistProfileTracker } from "./artist-profile-tracker";
@@ -157,9 +158,9 @@ export default async function ArtistProfilePage({ params, searchParams }: PagePr
                   <div key={i} className="flex items-center gap-3 bg-green-50 border border-green-200 rounded-lg px-4 py-2.5">
                     <span className="text-green-600">📅</span>
                     <span className="text-sm text-green-800 font-medium">
-                      {new Date(d.from).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })}
+                      {formatDeploymentCalendarDate(d.from)}
                       {" → "}
-                      {new Date(d.to).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })}
+                      {formatDeploymentCalendarDate(d.to)}
                     </span>
                   </div>
                 ))}

@@ -1,56 +1,75 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-
-const DUMMY_ARTISTS: Record<string, { id: string; name: string; email: string; province: string; specialities: string[]; status: string }> = {
-  "1":  { id: "1",  name: "Lakshmi Narayanan",      email: "lakshmi@example.com",  province: "Noord-Holland", specialities: ["Vocal"],            status: "active"    },
-  "2":  { id: "2",  name: "Ravi Krishnamurthy",     email: "ravi@example.com",     province: "Zuid-Holland",  specialities: ["Violin"],           status: "active"    },
-  "3":  { id: "3",  name: "Anand Subramanian",      email: "anand@example.com",    province: "Utrecht",       specialities: ["Mridangam"],        status: "active"    },
-  "8":  { id: "8",  name: "Divya Ramachandran",     email: "divya@example.com",    province: "Utrecht",       specialities: ["Kanjira"],          status: "suspended" },
-};
+import { getArtistProfileForAdmin } from "@/lib/queries/admin-artists";
+import { SuspendControls } from "./suspend-controls";
 
 export default async function EditArtistPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const artist = DUMMY_ARTISTS[id];
+  const artist = await getArtistProfileForAdmin(id);
   if (!artist) notFound();
 
   return (
     <main className="min-h-screen bg-stone-50 px-4 py-8 sm:px-8">
-      <Link href="/admin/artists" className="text-sm text-amber-700 hover:text-amber-900 mb-6 inline-block">
-        Back to Artists
+      <Link
+        href={`/admin/artists/${artist.id}`}
+        className="mb-6 inline-block text-sm text-amber-700 hover:text-amber-900"
+      >
+        ← Back to artist
       </Link>
-      <div className="max-w-xl mx-auto">
-        <h1 className="text-2xl font-bold text-stone-800 mb-6">Edit Artist: {artist.name}</h1>
+      <div className="mx-auto max-w-xl">
+        <h1 className="mb-6 text-2xl font-bold text-stone-800">Edit: {artist.name}</h1>
 
-        <div className="bg-white rounded-xl border border-stone-200 shadow-sm p-6 space-y-5">
+        <div className="space-y-5 rounded-xl border border-stone-200 bg-white p-6 shadow-sm">
           <div>
-            <label className="block text-sm font-semibold text-stone-700 mb-1">Full Name</label>
-            <input defaultValue={artist.name} disabled className="w-full border border-stone-200 rounded-lg px-3 py-2 text-stone-700 bg-stone-50 text-sm" />
+            <label className="mb-1 block text-sm font-semibold text-stone-700">Full name</label>
+            <p className="rounded-lg border border-stone-200 bg-stone-50 px-3 py-2 text-sm text-stone-800">
+              {artist.name}
+            </p>
+            <p className="mt-1 text-xs text-stone-400">Name changes are not available in admin yet.</p>
           </div>
           <div>
-            <label className="block text-sm font-semibold text-stone-700 mb-1">Email</label>
-            <input defaultValue={artist.email} disabled className="w-full border border-stone-200 rounded-lg px-3 py-2 text-stone-700 bg-stone-50 text-sm" />
+            <label className="mb-1 block text-sm font-semibold text-stone-700">Email</label>
+            <p className="rounded-lg border border-stone-200 bg-stone-50 px-3 py-2 text-sm text-stone-800">
+              {artist.email}
+            </p>
           </div>
           <div>
-            <label className="block text-sm font-semibold text-stone-700 mb-1">Province</label>
-            <input defaultValue={artist.province} disabled className="w-full border border-stone-200 rounded-lg px-3 py-2 text-stone-700 bg-stone-50 text-sm" />
+            <label className="mb-1 block text-sm font-semibold text-stone-700">Province</label>
+            <p className="rounded-lg border border-stone-200 bg-stone-50 px-3 py-2 text-sm text-stone-800">
+              {artist.province}
+            </p>
           </div>
           <div>
-            <label className="block text-sm font-semibold text-stone-700 mb-1">Specialities</label>
+            <label className="mb-1 block text-sm font-semibold text-stone-700">Specialities</label>
             <div className="flex flex-wrap gap-2">
-              {artist.specialities.map(s => (
-                <span key={s} className="bg-amber-50 border border-amber-200 text-amber-700 text-xs px-3 py-1 rounded-full font-medium">{s}</span>
+              {artist.specialities.map((s) => (
+                <span
+                  key={s.name}
+                  className="rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-xs font-medium text-amber-700"
+                >
+                  {s.name}
+                </span>
               ))}
             </div>
           </div>
           <div>
-            <label className="block text-sm font-semibold text-stone-700 mb-1">Account Status</label>
-            <span className={`inline-block rounded-full px-3 py-1 text-xs font-semibold ${artist.status === "active" ? "bg-green-50 text-green-700 border border-green-200" : "bg-red-50 text-red-700 border border-red-200"}`}>
-              {artist.status === "active" ? "Active" : "Suspended"}
-            </span>
+            <label className="mb-1 block text-sm font-semibold text-stone-700">Account status</label>
+            <div className="flex items-center gap-2">
+              <span
+                className={`inline-block rounded-full border px-3 py-1 text-xs font-semibold ${
+                  artist.isSuspended
+                    ? "border-red-200 bg-red-50 text-red-700"
+                    : "border-green-200 bg-green-50 text-green-700"
+                }`}
+              >
+                {artist.isSuspended ? "Suspended" : "Active"}
+              </span>
+            </div>
           </div>
 
-          <div className="pt-2 border-t border-stone-100">
-            <p className="text-xs text-stone-400">Full edit functionality will be enabled once the database is connected.</p>
+          <div className="border-t border-stone-100 pt-4">
+            <h2 className="mb-2 text-sm font-semibold text-stone-700">Moderation</h2>
+            <SuspendControls artistId={artist.id} initialSuspended={artist.isSuspended} />
           </div>
         </div>
       </div>

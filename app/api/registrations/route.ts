@@ -7,18 +7,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { getDb } from '@/lib/db';
-import { uploadFile } from '@/lib/storage';
-
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-
-function getAdminEmails(): string[] {
-  return (process.env.ADMIN_EMAILS ?? '')
-    .split(',')
-    .map((e) => e.trim().toLowerCase())
-    .filter(Boolean);
-}
+import { StorageError, uploadFile } from '@/lib/storage';
+import { notifyAdminRegistrationEvent } from '@/lib/notifications';
+import { normalizeSpecialityList } from '@/lib/speciality-catalog';
 
 function getFileExtension(contentType: string): string {
   const map: Record<string, string> = {
@@ -43,7 +34,7 @@ export const registrationServerSchema = z.object({
     invalid_type_error: 'Contact type must be "whatsapp" or "mobile"',
   }),
   specialities: z
-    .array(z.string().min(1))
+    .array(z.string().min(2).max(80))
     .min(1, 'At least one speciality is required')
     .max(3, 'Maximum 3 specialities allowed'),
   bioRichText: z.string().optional(),
@@ -73,12 +64,14 @@ export async function POST(request: NextRequest) {
   }
 
   // Extract text fields
+  const specialitiesNormalized = normalizeSpecialityList(formData.getAll('specialities') as string[]);
+
   const rawData = {
     fullName: formData.get('fullName') as string | null,
     email: formData.get('email') as string | null,
     contactNumber: formData.get('contactNumber') as string | null,
     contactType: formData.get('contactType') as string | null,
-    specialities: formData.getAll('specialities') as string[],
+    specialities: specialitiesNormalized,
     bioRichText: (formData.get('bioRichText') as string | null) ?? undefined,
     linkedinUrl: (formData.get('linkedinUrl') as string | null) ?? undefined,
     instagramUrl: (formData.get('instagramUrl') as string | null) ?? undefined,
@@ -160,10 +153,11 @@ export async function POST(request: NextRequest) {
     });
   } catch (err) {
     console.error('Profile photo upload failed:', err);
-    return NextResponse.json(
-      { error: 'UPLOAD_ERROR', message: 'Failed to upload profile photo. Please try again.' },
-      { status: 503 },
-    );
+    const message =
+      err instanceof StorageError && err.code === 'STORAGE_UNAVAILABLE'
+        ? 'File storage is not available. On localhost, configure Cloudflare R2 in .env.local (R2_ACCOUNT_ID, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY, R2_BUCKET_NAME, R2_PUBLIC_URL).'
+        : 'Failed to upload profile photo. Please try again.';
+    return NextResponse.json({ error: 'UPLOAD_ERROR', message }, { status: 503 });
   }
 
   let backgroundImageUrl: string | undefined;
@@ -179,10 +173,11 @@ export async function POST(request: NextRequest) {
       });
     } catch (err) {
       console.error('Background image upload failed:', err);
-      return NextResponse.json(
-        { error: 'UPLOAD_ERROR', message: 'Failed to upload background image. Please try again.' },
-        { status: 503 },
-      );
+      const message =
+        err instanceof StorageError && err.code === 'STORAGE_UNAVAILABLE'
+          ? 'File storage is not available. On localhost, configure Cloudflare R2 in .env.local (R2_ACCOUNT_ID, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY, R2_BUCKET_NAME, R2_PUBLIC_URL).'
+          : 'Failed to upload background image. Please try again.';
+      return NextResponse.json({ error: 'UPLOAD_ERROR', message }, { status: 503 });
     }
   }
 
@@ -220,31 +215,12 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    // Create Notification records for all admin accounts
-    const adminEmails = getAdminEmails();
-    if (adminEmails.length > 0) {
-      const adminArtists = await getDb().artist.findMany({
-        where: {
-          email: { in: adminEmails },
-        },
-        select: { id: true },
-      });
-
-      if (adminArtists.length > 0) {
-        await getDb().notification.createMany({
-          data: adminArtists.map((admin) => ({
-            artistId: admin.id,
-            type: 'new_registration',
-            payload: {
-              registrationId,
-              applicantName: validated.fullName,
-              applicantEmail: validated.email,
-            },
-            isRead: false,
-          })),
-        });
-      }
-    }
+    await notifyAdminRegistrationEvent({
+      event: 'new_registration',
+      registrationId,
+      applicantName: validated.fullName,
+      applicantEmail: validated.email,
+    });
 
     return NextResponse.json({ success: true });
   } catch (err) {

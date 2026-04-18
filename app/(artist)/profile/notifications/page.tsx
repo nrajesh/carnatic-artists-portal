@@ -21,6 +21,9 @@ export default async function NotificationSettingsPage() {
         reviewAddedEnabled: true,
         reviewUpdatedEnabled: true,
         reviewDeletedEnabled: true,
+        newRegistrationEnabled: true,
+        registrationApprovedEnabled: true,
+        registrationRejectedEnabled: true,
       },
     })) ?? {
       inAppEnabled: true,
@@ -29,6 +32,9 @@ export default async function NotificationSettingsPage() {
       reviewAddedEnabled: true,
       reviewUpdatedEnabled: true,
       reviewDeletedEnabled: true,
+      newRegistrationEnabled: true,
+      registrationApprovedEnabled: true,
+      registrationRejectedEnabled: true,
     };
 
   return (
@@ -74,6 +80,24 @@ export default async function NotificationSettingsPage() {
               When a review is deleted
             </label>
           </fieldset>
+
+          {session.role === "admin" && (
+            <fieldset className="space-y-2">
+              <legend className="mb-2 text-sm font-semibold text-stone-700">Admin registration events</legend>
+              <label className="flex items-center gap-2 text-sm text-stone-700">
+                <input type="checkbox" name="newRegistrationEnabled" defaultChecked={pref.newRegistrationEnabled} className="accent-amber-700" />
+                When a new registration is submitted
+              </label>
+              <label className="flex items-center gap-2 text-sm text-stone-700">
+                <input type="checkbox" name="registrationApprovedEnabled" defaultChecked={pref.registrationApprovedEnabled} className="accent-amber-700" />
+                When a registration is approved
+              </label>
+              <label className="flex items-center gap-2 text-sm text-stone-700">
+                <input type="checkbox" name="registrationRejectedEnabled" defaultChecked={pref.registrationRejectedEnabled} className="accent-amber-700" />
+                When a registration is rejected
+              </label>
+            </fieldset>
+          )}
 
           <button
             type="submit"

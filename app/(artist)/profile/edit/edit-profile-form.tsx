@@ -199,6 +199,8 @@ export function EditProfileForm({ initial, allSpecialities, provinces }: EditPro
           <SpecialityPicker
             selected={specialities}
             onChange={setSpecialities}
+            catalog={allSpecialities}
+            allowCustom={false}
             error={errors.specialities}
           />
         </div>

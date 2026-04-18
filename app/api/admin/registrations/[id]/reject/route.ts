@@ -13,15 +13,18 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getDb } from '@/lib/db';
 import { analyticsServer } from '@/lib/analytics-server';
+import { notifyAdminRegistrationEvent } from '@/lib/notifications';
 
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
   const { id } = await params;
+  const db = getDb();
+  const reviewerId = request.headers.get('x-artist-id');
 
   // 1. Fetch the RegistrationRequest
-  const registration = await getDb().registrationRequest.findUnique({
+  const registration = await db.registrationRequest.findUnique({
     where: { id },
   });
 
@@ -39,12 +42,29 @@ export async function POST(
   const now = new Date();
 
   // 2. Update status to "rejected"
-  await getDb().registrationRequest.update({
+  await db.registrationRequest.update({
     where: { id },
     data: {
       status: 'rejected',
       reviewedAt: now,
+      reviewedBy: reviewerId ?? undefined,
     },
+  });
+
+  const reviewer =
+    reviewerId
+      ? await db.artist.findUnique({
+          where: { id: reviewerId },
+          select: { fullName: true },
+        })
+      : null;
+
+  await notifyAdminRegistrationEvent({
+    event: 'registration_rejected',
+    registrationId: id,
+    applicantName: registration.fullName,
+    applicantEmail: registration.email,
+    reviewedByName: reviewer?.fullName,
   });
 
   // Capture analytics event

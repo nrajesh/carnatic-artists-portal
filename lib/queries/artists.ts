@@ -1,5 +1,10 @@
+import { formatDeploymentDateNumericDay, formatDeploymentMonthYear } from "@/lib/format-deployment-datetime";
 import { getDb } from "@/lib/db";
 import type { Speciality } from "@prisma/client";
+import {
+  getLocalCalendarDateForDb,
+  getLocalDayOrdinalForRotation,
+} from "@/lib/local-day";
 
 /** Listing card - matches prior dummy-artists usage in directory UI */
 export type ArtistListing = {
@@ -12,8 +17,28 @@ export type ArtistListing = {
   openToCollab: boolean;
 };
 
-function specColor(s: Speciality) {
+export function specColor(s: Speciality) {
   return { name: s.name, color: s.primaryColor };
+}
+
+function toArtistListing(a: {
+  id: string;
+  slug: string;
+  fullName: string;
+  email: string;
+  province: string;
+  openToCollab: boolean;
+  specialities: { speciality: Speciality }[];
+}): ArtistListing {
+  return {
+    id: a.id,
+    slug: a.slug,
+    name: a.fullName,
+    email: a.email,
+    province: a.province,
+    specialities: a.specialities.map((j) => specColor(j.speciality)),
+    openToCollab: a.openToCollab,
+  };
 }
 
 export async function listArtistsForDirectory(): Promise<ArtistListing[]> {
@@ -27,15 +52,76 @@ export async function listArtistsForDirectory(): Promise<ArtistListing[]> {
     },
     orderBy: { fullName: "asc" },
   });
-  return rows.map((a) => ({
-    id: a.id,
-    slug: a.slug,
-    name: a.fullName,
-    email: a.email,
-    province: a.province,
-    specialities: a.specialities.map((j) => specColor(j.speciality)),
-    openToCollab: a.openToCollab,
-  }));
+  return rows.map(toArtistListing);
+}
+
+/**
+ * Home hero spotlight: optional manual row in DailyFeatured (singer) for "today"
+ * in the deployment timezone (see `getDeploymentTimezone` in deployment.config),
+ * otherwise a deterministic daily pick from vocalists (fallback: all active artists).
+ */
+export async function getDailyFeaturedArtistForHome(): Promise<ArtistListing | null> {
+  const db = getDb();
+  const todayLocal = getLocalCalendarDateForDb(new Date());
+
+  const override = await db.dailyFeatured.findUnique({
+    where: {
+      featureDate_featureType: {
+        featureDate: todayLocal,
+        featureType: "singer",
+      },
+    },
+    include: {
+      artist: {
+        include: {
+          specialities: {
+            orderBy: { displayOrder: "asc" },
+            include: { speciality: true },
+          },
+        },
+      },
+    },
+  });
+
+  if (override?.artist && !override.artist.isSuspended) {
+    return toArtistListing(override.artist);
+  }
+
+  const vocalistInclude = {
+    specialities: {
+      orderBy: { displayOrder: "asc" as const },
+      include: { speciality: true },
+    },
+  };
+
+  const vocalists = await db.artist.findMany({
+    where: {
+      isSuspended: false,
+      specialities: {
+        some: {
+          speciality: {
+            name: { equals: "Vocal", mode: "insensitive" },
+          },
+        },
+      },
+    },
+    include: vocalistInclude,
+    orderBy: { id: "asc" },
+  });
+
+  const poolRows =
+    vocalists.length > 0
+      ? vocalists
+      : await db.artist.findMany({
+          where: { isSuspended: false },
+          include: vocalistInclude,
+          orderBy: { id: "asc" },
+        });
+
+  if (poolRows.length === 0) return null;
+
+  const idx = getLocalDayOrdinalForRotation(new Date()) % poolRows.length;
+  return toArtistListing(poolRows[idx]);
 }
 
 /** Profile page shape - aligned with former DummyArtist */
@@ -115,9 +201,7 @@ export async function getArtistBySlug(slug: string): Promise<ArtistProfileView |
           : c.status === "incomplete"
             ? "incomplete"
             : "active",
-      closedAt: c.closedAt
-        ? c.closedAt.toLocaleString("en-GB", { month: "short", year: "numeric" })
-        : undefined,
+      closedAt: c.closedAt ? formatDeploymentMonthYear(c.closedAt) : undefined,
     };
   });
 
@@ -130,11 +214,7 @@ export async function getArtistBySlug(slug: string): Promise<ArtistProfileView |
     rating: f.starRating,
     comment: f.comment ?? "",
     collab: f.collab.name,
-    date: f.submittedAt.toLocaleDateString("en-GB", {
-      day: "numeric",
-      month: "short",
-      year: "numeric",
-    }),
+    date: formatDeploymentDateNumericDay(f.submittedAt),
   }));
 
   return {
@@ -317,9 +397,7 @@ export async function getArtistDashboardView(artistId: string): Promise<ArtistDa
             : c.status === "incomplete"
               ? "incomplete"
               : "active",
-      closedAt: c.closedAt
-        ? c.closedAt.toLocaleString("en-GB", { month: "short", year: "numeric" })
-        : undefined,
+      closedAt: c.closedAt ? formatDeploymentMonthYear(c.closedAt) : undefined,
     });
   }
   for (const c of artist.ownedCollabs) {
@@ -336,9 +414,7 @@ export async function getArtistDashboardView(artistId: string): Promise<ArtistDa
               : c.status === "incomplete"
                 ? "incomplete"
                 : "active",
-        closedAt: c.closedAt
-          ? c.closedAt.toLocaleString("en-GB", { month: "short", year: "numeric" })
-          : undefined,
+        closedAt: c.closedAt ? formatDeploymentMonthYear(c.closedAt) : undefined,
       });
     }
   }

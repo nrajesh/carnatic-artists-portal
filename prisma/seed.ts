@@ -4,6 +4,7 @@
  */
 import { PrismaClient } from "@prisma/client";
 import { DUMMY_ARTISTS } from "../lib/dummy-artists";
+import { getLocalCalendarDateForDb } from "../lib/local-day";
 
 const prisma = new PrismaClient();
 
@@ -222,12 +223,11 @@ async function main() {
     });
   }
 
-  const today = new Date();
-  today.setUTCHours(0, 0, 0, 0);
+  const todayLocal = getLocalCalendarDateForDb(new Date());
   await prisma.dailyFeatured.createMany({
     data: [
-      { featureDate: today, featureType: "singer", artistId: "1" },
-      { featureDate: today, featureType: "instrumentalist", artistId: "3" },
+      { featureDate: todayLocal, featureType: "singer", artistId: "1" },
+      { featureDate: todayLocal, featureType: "instrumentalist", artistId: "3" },
     ],
     skipDuplicates: true,
   });

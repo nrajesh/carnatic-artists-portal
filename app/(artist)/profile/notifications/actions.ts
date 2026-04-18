@@ -24,6 +24,9 @@ export async function updateNotificationPreferencesAction(formData: FormData): P
       reviewAddedEnabled: checked(formData, "reviewAddedEnabled"),
       reviewUpdatedEnabled: checked(formData, "reviewUpdatedEnabled"),
       reviewDeletedEnabled: checked(formData, "reviewDeletedEnabled"),
+      newRegistrationEnabled: checked(formData, "newRegistrationEnabled"),
+      registrationApprovedEnabled: checked(formData, "registrationApprovedEnabled"),
+      registrationRejectedEnabled: checked(formData, "registrationRejectedEnabled"),
     },
     update: {
       inAppEnabled: checked(formData, "inAppEnabled"),
@@ -32,6 +35,9 @@ export async function updateNotificationPreferencesAction(formData: FormData): P
       reviewAddedEnabled: checked(formData, "reviewAddedEnabled"),
       reviewUpdatedEnabled: checked(formData, "reviewUpdatedEnabled"),
       reviewDeletedEnabled: checked(formData, "reviewDeletedEnabled"),
+      newRegistrationEnabled: checked(formData, "newRegistrationEnabled"),
+      registrationApprovedEnabled: checked(formData, "registrationApprovedEnabled"),
+      registrationRejectedEnabled: checked(formData, "registrationRejectedEnabled"),
     },
   });
 

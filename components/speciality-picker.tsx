@@ -1,39 +1,57 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useRef, useEffect, useMemo, useState } from "react";
+import { normalizeSpecialityLabel } from "@/lib/speciality-catalog";
 
-const ALL_SPECIALITIES = [
-  { name: "Vocal",             color: "#7C3AED" },
-  { name: "Violin",            color: "#B45309" },
-  { name: "Mridangam",         color: "#B91C1C" },
-  { name: "Veena",             color: "#047857" },
-  { name: "Flute",             color: "#0369A1" },
-  { name: "Ghatam",            color: "#92400E" },
-  { name: "Kanjira",           color: "#BE185D" },
-  { name: "Thavil",            color: "#7E22CE" },
-  { name: "Nadaswaram",        color: "#C2410C" },
-  { name: "Violin (Carnatic)", color: "#A16207" },
-  { name: "Morsing",           color: "#065F46" },
-  { name: "Tavil",             color: "#1D4ED8" },
-];
+export type SpecialityCatalogItem = { name: string; color: string };
 
 interface Props {
   selected: string[];
   onChange: (next: string[]) => void;
   error?: string;
+  /** Catalogue rows (typically from GET /api/specialities or server props). */
+  catalog: SpecialityCatalogItem[];
+  /** Allow typing a custom speciality not in the catalogue (registration flow). */
+  allowCustom?: boolean;
 }
 
-export default function SpecialityPicker({ selected, onChange, error }: Props) {
-  const [query, setQuery]       = useState("");
-  const [open, setOpen]         = useState(false);
-  const containerRef            = useRef<HTMLDivElement>(null);
+export default function SpecialityPicker({
+  selected,
+  onChange,
+  error,
+  catalog,
+  allowCustom = false,
+}: Props) {
+  const [query, setQuery] = useState("");
+  const [open, setOpen] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
 
-  const available = ALL_SPECIALITIES.filter(
-    s => !selected.includes(s.name) &&
-         s.name.toLowerCase().includes(query.toLowerCase())
-  );
+  const catalogByLower = useMemo(() => {
+    const m = new Map<string, SpecialityCatalogItem>();
+    for (const row of catalog) {
+      m.set(row.name.toLowerCase(), row);
+    }
+    return m;
+  }, [catalog]);
 
-  // Close on outside click
+  const available = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    return catalog.filter(
+      (s) =>
+        !selected.some((x) => x.toLowerCase() === s.name.toLowerCase()) &&
+        s.name.toLowerCase().includes(q),
+    );
+  }, [catalog, query, selected]);
+
+  const normalizedQuery = normalizeSpecialityLabel(query);
+  const customEligible =
+    allowCustom &&
+    normalizedQuery.length >= 2 &&
+    normalizedQuery.length <= 80 &&
+    selected.length < 3 &&
+    !selected.some((x) => x.toLowerCase() === normalizedQuery.toLowerCase()) &&
+    !catalogByLower.has(normalizedQuery.toLowerCase());
+
   useEffect(() => {
     function handle(e: MouseEvent) {
       if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
@@ -45,34 +63,53 @@ export default function SpecialityPicker({ selected, onChange, error }: Props) {
     return () => document.removeEventListener("mousedown", handle);
   }, []);
 
-  function add(name: string) {
+  function addFromCatalog(name: string) {
+    const canonical = catalogByLower.get(name.toLowerCase())?.name ?? name;
     if (selected.length < 3) {
-      onChange([...selected, name]);
+      onChange([...selected, canonical]);
     }
     setQuery("");
     setOpen(false);
   }
 
+  function addCustom() {
+    const label = normalizeSpecialityLabel(query);
+    if (selected.length >= 3 || label.length < 2) return;
+    if (selected.some((x) => x.toLowerCase() === label.toLowerCase())) return;
+    onChange([...selected, label]);
+    setQuery("");
+    setOpen(false);
+  }
+
   function remove(name: string) {
-    onChange(selected.filter(s => s !== name));
+    onChange(selected.filter((s) => s !== name));
+  }
+
+  function chipColor(name: string): string {
+    return catalogByLower.get(name.toLowerCase())?.color ?? "#92400E";
   }
 
   return (
     <div>
-      {/* Selected chips */}
-      <div className="flex flex-wrap gap-2 mb-2 min-h-[36px]">
-        {selected.map(name => {
-          const c = ALL_SPECIALITIES.find(s => s.name === name)?.color ?? "#92400E";
+      <div className="mb-2 flex min-h-[36px] flex-wrap gap-2">
+        {selected.map((name) => {
+          const c = chipColor(name);
           return (
-            <span key={name}
-              className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-sm font-medium"
-              style={{ backgroundColor: c, color: "#FFFFFF" }}>
+            <span
+              key={name}
+              className="inline-flex items-center gap-1 rounded-full px-3 py-1 text-sm font-medium"
+              style={{ backgroundColor: c, color: "#FFFFFF" }}
+            >
               {name}
               <button
                 type="button"
-                onMouseDown={e => { e.preventDefault(); remove(name); }}
-                className="ml-1 w-4 h-4 flex items-center justify-center rounded-full hover:bg-white/20 transition-colors"
-                aria-label={`Remove ${name}`}>
+                onMouseDown={(e) => {
+                  e.preventDefault();
+                  remove(name);
+                }}
+                className="ml-1 flex h-4 w-4 items-center justify-center rounded-full transition-colors hover:bg-white/20"
+                aria-label={`Remove ${name}`}
+              >
                 ×
               </button>
             </span>
@@ -80,27 +117,36 @@ export default function SpecialityPicker({ selected, onChange, error }: Props) {
         })}
       </div>
 
-      {/* Typeahead input - hidden once 3 selected */}
       {selected.length < 3 && (
         <div ref={containerRef} className="relative">
           <input
             type="text"
             value={query}
-            placeholder="Type to search speciality…"
+            placeholder={
+              catalog.length === 0 ? "Loading specialities…" : "Search or type a speciality…"
+            }
+            disabled={catalog.length === 0 && !allowCustom}
             onFocus={() => setOpen(true)}
-            onChange={e => { setQuery(e.target.value); setOpen(true); }}
-            className="w-full sm:w-64 border border-amber-200 bg-amber-50 rounded-lg px-3 py-2 text-sm text-stone-800 placeholder-amber-400 focus:outline-none focus:ring-2 focus:ring-amber-400 min-h-[44px]"
+            onChange={(e) => {
+              setQuery(e.target.value);
+              setOpen(true);
+            }}
+            className="min-h-[44px] w-full rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-stone-800 placeholder:text-amber-400 focus:outline-none focus:ring-2 focus:ring-amber-400 sm:w-64"
           />
 
-          {open && available.length > 0 && (
-            <ul className="absolute z-20 mt-1 w-full sm:w-64 bg-white border border-stone-200 rounded-xl shadow-lg max-h-52 overflow-y-auto">
-              {available.map(s => (
+          {open && catalog.length > 0 && available.length > 0 && (
+            <ul className="absolute z-20 mt-1 max-h-52 w-full overflow-y-auto rounded-xl border border-stone-200 bg-white shadow-lg sm:w-64">
+              {available.map((s) => (
                 <li key={s.name}>
                   <button
                     type="button"
-                    onMouseDown={e => { e.preventDefault(); add(s.name); }}
-                    className="w-full text-left px-4 py-2.5 text-sm text-stone-800 hover:bg-amber-50 flex items-center gap-2 min-h-[44px]">
-                    <span className="w-3 h-3 rounded-full flex-shrink-0" style={{ backgroundColor: s.color }} />
+                    onMouseDown={(e) => {
+                      e.preventDefault();
+                      addFromCatalog(s.name);
+                    }}
+                    className="flex min-h-[44px] w-full items-center gap-2 px-4 py-2.5 text-left text-sm text-stone-800 hover:bg-amber-50"
+                  >
+                    <span className="h-3 w-3 flex-shrink-0 rounded-full" style={{ backgroundColor: s.color }} />
                     {s.name}
                   </button>
                 </li>
@@ -108,15 +154,37 @@ export default function SpecialityPicker({ selected, onChange, error }: Props) {
             </ul>
           )}
 
-          {open && query.length > 0 && available.length === 0 && (
-            <div className="absolute z-20 mt-1 w-full sm:w-64 bg-white border border-stone-200 rounded-xl shadow-lg px-4 py-3 text-sm text-stone-400">
-              No matching specialities
+          {open && allowCustom && customEligible && (
+            <div className="absolute z-20 mt-1 w-full rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 shadow-lg sm:w-64">
+              <button
+                type="button"
+                onMouseDown={(e) => {
+                  e.preventDefault();
+                  addCustom();
+                }}
+                className="w-full text-left text-sm font-medium text-amber-900"
+              >
+                Add custom: &ldquo;{normalizedQuery}&rdquo;
+              </button>
+              <p className="mt-1 text-xs text-stone-500">
+                If it&apos;s missing from the list, admins can add it to the catalogue when reviewing your application.
+              </p>
             </div>
           )}
+
+          {open &&
+            catalog.length > 0 &&
+            query.length > 0 &&
+            available.length === 0 &&
+            !customEligible && (
+              <div className="absolute z-20 mt-1 w-full rounded-xl border border-stone-200 bg-white px-4 py-3 text-sm text-stone-400 shadow-lg sm:w-64">
+                No matching specialities
+              </div>
+            )}
         </div>
       )}
 
-      {error && <p className="text-xs text-red-500 mt-1">{error}</p>}
+      {error ? <p className="mt-1 text-xs text-red-500">{error}</p> : null}
     </div>
   );
 }

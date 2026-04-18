@@ -1,18 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-
-const DUMMY_REGISTRATIONS: Record<string, {
-  id: string; fullName: string; email: string; contactNumber: string;
-  contactType: string; specialities: string[]; status: string;
-  submittedAt: Date; bio: string;
-  links: { linkType: string; url: string }[];
-}> = {
-  r1: { id: "r1", fullName: "Arjun Natarajan",    email: "arjun@example.com",  contactNumber: "+31612345678", contactType: "whatsapp", specialities: ["Vocal","Violin"],   status: "pending",  submittedAt: new Date("2025-03-10"), bio: "<p>Trained under Smt. Suguna Varadachari for 12 years. Performs regularly at sabhas in Amsterdam and Rotterdam.</p>", links: [{ linkType: "youtube", url: "https://youtube.com/@arjunnatarajan" }] },
-  r2: { id: "r2", fullName: "Deepa Krishnaswamy", email: "deepa@example.com",  contactNumber: "+31698765432", contactType: "mobile",   specialities: ["Mridangam"],        status: "pending",  submittedAt: new Date("2025-03-12"), bio: "<p>Student of Shri Umayalpuram K. Sivaraman. Has accompanied leading vocalists across Europe.</p>", links: [] },
-  r3: { id: "r3", fullName: "Ramesh Sundaram",    email: "ramesh@example.com", contactNumber: "+31611223344", contactType: "whatsapp", specialities: ["Flute"],            status: "approved", submittedAt: new Date("2025-02-20"), bio: "<p>Disciple of Shri N. Ramani. Known for meditative Carnatic flute performances.</p>", links: [{ linkType: "instagram", url: "https://instagram.com/rameshflute" }] },
-  r4: { id: "r4", fullName: "Geetha Pillai",      email: "geetha@example.com", contactNumber: "+31655443322", contactType: "mobile",   specialities: ["Veena"],            status: "rejected", submittedAt: new Date("2025-02-15"), bio: "<p>Trained in the Mysore bani of Veena playing. Performs solo and in ensemble settings.</p>", links: [] },
-  r5: { id: "r5", fullName: "Mohan Venkatesh",    email: "mohan@example.com",  contactNumber: "+31677889900", contactType: "whatsapp", specialities: ["Ghatam","Kanjira"], status: "pending",  submittedAt: new Date("2025-03-18"), bio: "<p>Specialist in both Ghatam and Kanjira. Has performed at major Carnatic festivals in The Netherlands and Belgium.</p>", links: [{ linkType: "linkedin", url: "https://linkedin.com/in/mohanvenkatesh" }] },
-};
+import { formatDeploymentRegistrationDate } from "@/lib/format-deployment-datetime";
+import { getDb } from "@/lib/db";
 
 const LINK_LABELS: Record<string, string> = { linkedin: "LinkedIn", instagram: "Instagram", facebook: "Facebook", twitter: "Twitter/X", youtube: "YouTube", website: "Website" };
 
@@ -28,8 +17,26 @@ export default async function ReviewRegistrationPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const reg = DUMMY_REGISTRATIONS[id];
+  const [reg, catalogueRows] = await Promise.all([
+    getDb().registrationRequest.findUnique({
+      where: { id },
+      include: {
+        specialities: {
+          orderBy: { specialityName: "asc" },
+        },
+        links: {
+          orderBy: { linkType: "asc" },
+        },
+        reviewer: {
+          select: { fullName: true },
+        },
+      },
+    }),
+    getDb().speciality.findMany({ select: { name: true } }),
+  ]);
   if (!reg) notFound();
+
+  const catalogueLower = new Set(catalogueRows.map((c) => c.name.toLowerCase()));
 
   const isProcessed = reg.status !== "pending";
 
@@ -41,22 +48,43 @@ export default async function ReviewRegistrationPage({
         <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
           <div>
             <h1 className="text-2xl font-bold text-stone-800">{reg.fullName}</h1>
-            <p className="text-stone-500 text-sm mt-1">Submitted {reg.submittedAt.toLocaleDateString("en-GB", { day: "2-digit", month: "long", year: "numeric" })}</p>
+            <p className="text-stone-500 text-sm mt-1">
+              Submitted {formatDeploymentRegistrationDate(reg.submittedAt)}
+            </p>
           </div>
           <StatusBadge status={reg.status} />
         </div>
 
-        {/* Avatar placeholder */}
-        <div className="mb-6 flex gap-4">
+        <div className="mb-6 grid gap-4 sm:grid-cols-2">
           <div className="flex flex-col gap-1">
             <span className="text-xs font-semibold text-stone-500 uppercase tracking-wide">Profile Photo</span>
-            <div className="h-24 w-24 rounded-xl bg-amber-100 border border-amber-200 flex items-center justify-center text-3xl font-bold text-amber-700">
-              {reg.fullName[0]}
-            </div>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={reg.profilePhotoUrl}
+              alt={`${reg.fullName} profile`}
+              className="h-28 w-28 rounded-xl border border-stone-200 object-cover"
+            />
           </div>
+          {reg.backgroundImageUrl && (
+            <div className="flex flex-col gap-1">
+              <span className="text-xs font-semibold text-stone-500 uppercase tracking-wide">Background Image</span>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={reg.backgroundImageUrl}
+                alt={`${reg.fullName} background`}
+                className="h-28 w-full rounded-xl border border-stone-200 object-cover"
+              />
+            </div>
+          )}
+          {reg.reviewedAt && (
+            <div className="sm:col-span-2 text-xs text-stone-500">
+              Reviewed{" "}
+              {formatDeploymentRegistrationDate(reg.reviewedAt)}
+              {reg.reviewer?.fullName ? ` by ${reg.reviewer.fullName}` : ""}
+            </div>
+          )}
         </div>
 
-        {/* Details */}
         <div className="rounded-xl border border-stone-200 bg-white p-6 shadow-sm mb-6">
           <dl className="grid gap-4 sm:grid-cols-2">
             <div><dt className="text-xs font-semibold text-stone-500 uppercase tracking-wide mb-1">Email</dt><dd className="text-stone-800">{reg.email}</dd></div>
@@ -64,17 +92,38 @@ export default async function ReviewRegistrationPage({
             <div className="sm:col-span-2">
               <dt className="text-xs font-semibold text-stone-500 uppercase tracking-wide mb-1">Specialities</dt>
               <dd className="flex flex-wrap gap-2">
-                {reg.specialities.map(s => <span key={s} className="rounded-full bg-amber-50 border border-amber-200 px-3 py-0.5 text-sm text-amber-700 font-medium">{s}</span>)}
+                {reg.specialities.map((spec) => {
+                  const known = catalogueLower.has(spec.specialityName.trim().toLowerCase());
+                  return (
+                    <span
+                      key={spec.specialityName}
+                      className={`rounded-full border px-3 py-0.5 text-sm font-medium ${
+                        known
+                          ? "border-amber-200 bg-amber-50 text-amber-800"
+                          : "border-amber-500 bg-amber-100 text-amber-950"
+                      }`}
+                    >
+                      {spec.specialityName}
+                      {!known ? <span className="ml-1 text-xs font-normal">(not in catalogue)</span> : null}
+                    </span>
+                  );
+                })}
               </dd>
+              <p className="mt-3 text-xs text-stone-500">
+                <Link href="/admin/specialities" className="font-medium text-amber-700 underline underline-offset-2 hover:text-amber-900">
+                  Manage specialities
+                </Link>{" "}
+                to add missing names and colours before approval. If you approve first, new names are created automatically with default colours and can be edited later.
+              </p>
             </div>
           </dl>
         </div>
 
         {/* Bio */}
-        {reg.bio && (
+        {reg.bioRichText && (
           <div className="rounded-xl border border-stone-200 bg-white p-6 shadow-sm mb-6">
             <h2 className="text-xs font-semibold text-stone-500 uppercase tracking-wide mb-3">Biographical Write-up</h2>
-            <div className="prose prose-stone max-w-none text-stone-700" dangerouslySetInnerHTML={{ __html: reg.bio }} />
+            <div className="prose prose-stone max-w-none text-stone-700" dangerouslySetInnerHTML={{ __html: reg.bioRichText }} />
           </div>
         )}
 

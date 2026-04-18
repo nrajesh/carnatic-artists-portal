@@ -287,6 +287,9 @@ model NotificationPreference {
   reviewAddedEnabled   Boolean @default(true)
   reviewUpdatedEnabled Boolean @default(true)
   reviewDeletedEnabled Boolean @default(true)
+  newRegistrationEnabled Boolean @default(true)
+  registrationApprovedEnabled Boolean @default(true)
+  registrationRejectedEnabled Boolean @default(true)
   updatedAt            DateTime @updatedAt
 
   artist Artist @relation(fields: [artistId], references: [id], onDelete: Cascade)

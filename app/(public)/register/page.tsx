@@ -15,7 +15,7 @@ import TiptapImage from '@tiptap/extension-image';
 import TiptapLink from '@tiptap/extension-link';
 import NextLink from 'next/link';
 import { usePostHog } from 'posthog-js/react';
-import SpecialityPicker from '@/components/speciality-picker';
+import SpecialityPicker, { type SpecialityCatalogItem } from '@/components/speciality-picker';
 
 // ---------------------------------------------------------------------------
 // Zod schema
@@ -40,9 +40,13 @@ export const registrationSchema = z.object({
   }),
   profilePhoto: fileSchema,
   specialities: z
-    .array(z.string().min(1))
+    .array(z.string().min(2).max(80))
     .min(1, 'At least one speciality is required')
-    .max(3, 'Maximum 3 specialities allowed'),
+    .max(3, 'Maximum 3 specialities allowed')
+    .refine(
+      (arr) => new Set(arr.map((s) => s.trim().toLowerCase())).size === arr.length,
+      'Each speciality must be unique',
+    ),
   backgroundImage: z.instanceof(File).optional().nullable(),
   bioRichText: z.string().optional(),
   websiteUrls: z.array(z.object({ url: urlSchema })).optional(),
@@ -138,6 +142,7 @@ export default function RegisterPage() {
     role: null,
   });
   const [registeringSomeoneElse, setRegisteringSomeoneElse] = useState(false);
+  const [specialityCatalog, setSpecialityCatalog] = useState<SpecialityCatalogItem[]>([]);
   const posthog = usePostHog();
 
   const {
@@ -178,6 +183,25 @@ export default function RegisterPage() {
       } catch {
         if (!active) return;
         setSessionState({ loading: false, authenticated: false, role: null });
+      }
+    })();
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    let active = true;
+    (async () => {
+      try {
+        const res = await fetch('/api/specialities');
+        if (!res.ok) return;
+        const data = (await res.json()) as Array<{ name: string; primaryColor: string }>;
+        if (!active) return;
+        setSpecialityCatalog(data.map((r) => ({ name: r.name, color: r.primaryColor })));
+      } catch {
+        if (!active) return;
+        setSpecialityCatalog([]);
       }
     })();
     return () => {
@@ -234,7 +258,11 @@ export default function RegisterPage() {
         });
         setSubmitted(true);
       } else {
-        setSubmitError(json.error ?? 'Submission failed. Please try again.');
+        setSubmitError(
+          (typeof json.message === 'string' && json.message) ||
+            (typeof json.error === 'string' && json.error) ||
+            'Submission failed. Please try again.',
+        );
       }
     } catch {
       setSubmitError('An unexpected error occurred. Please try again.');
@@ -405,6 +433,9 @@ export default function RegisterPage() {
               Specialities <span className="text-red-600">*</span>{' '}
               <span className="font-normal text-amber-600">(1–3)</span>
             </label>
+            <p className="mb-2 text-xs text-amber-700">
+              Pick from the list or add your own if it&apos;s missing - an admin can add it to the catalogue when reviewing your request.
+            </p>
             <Controller
               name="specialities"
               control={control}
@@ -412,7 +443,12 @@ export default function RegisterPage() {
                 <SpecialityPicker
                   selected={field.value ?? []}
                   onChange={field.onChange}
-                  error={errors.specialities?.message ?? (errors.specialities as { root?: { message?: string } } | undefined)?.root?.message}
+                  catalog={specialityCatalog}
+                  allowCustom
+                  error={
+                    errors.specialities?.message ??
+                    (errors.specialities as { root?: { message?: string } } | undefined)?.root?.message
+                  }
                 />
               )}
             />

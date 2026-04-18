@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
+import { formatDeploymentCalendarDate, formatDeploymentDateTime } from "@/lib/format-deployment-datetime";
 import { verifySession } from "@/lib/session-jwt";
 import { getDb } from "@/lib/db";
 import { getArtistDashboardView } from "@/lib/queries/artists";
@@ -230,17 +231,9 @@ export default async function ArtistDashboardPage({
                   >
                     <span className="text-green-600 text-sm">📅</span>
                     <span className="text-xs text-green-800 font-medium">
-                      {new Date(d.from).toLocaleDateString("en-GB", {
-                        day: "2-digit",
-                        month: "short",
-                        year: "numeric",
-                      })}
+                      {formatDeploymentCalendarDate(d.from)}
                       {" → "}
-                      {new Date(d.to).toLocaleDateString("en-GB", {
-                        day: "2-digit",
-                        month: "short",
-                        year: "numeric",
-                      })}
+                      {formatDeploymentCalendarDate(d.to)}
                     </span>
                   </div>
                 ))}
@@ -284,14 +277,7 @@ export default async function ArtistDashboardPage({
         </div>
 
         <p className="text-xs text-stone-300 text-center mt-8">
-          Logged in as {session.role} · Session expires{" "}
-          {session.expiresAt.toLocaleString("en-GB", {
-            day: "2-digit",
-            month: "short",
-            year: "numeric",
-            hour: "2-digit",
-            minute: "2-digit",
-          })}
+          Logged in as {session.role} · Session expires {formatDeploymentDateTime(session.expiresAt)}
         </p>
       </div>
     </main>

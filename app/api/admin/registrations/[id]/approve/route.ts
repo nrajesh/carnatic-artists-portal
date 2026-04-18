@@ -15,9 +15,12 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
+import { revalidatePath } from 'next/cache';
 import { getDb } from '@/lib/db';
 import { issueMagicLink } from '@/lib/auth';
 import { analyticsServer } from '@/lib/analytics-server';
+import { notifyAdminRegistrationEvent } from '@/lib/notifications';
+import { resolveSpecialityForApproval } from '@/lib/speciality-resolve';
 
 // ---------------------------------------------------------------------------
 // Slug generation
@@ -61,9 +64,11 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> },
 ) {
   const { id } = await params;
+  const db = getDb();
+  const reviewerId = request.headers.get('x-artist-id');
 
   // 1. Fetch the RegistrationRequest
-  const registration = await getDb().registrationRequest.findUnique({
+  const registration = await db.registrationRequest.findUnique({
     where: { id },
     include: {
       specialities: true,
@@ -88,7 +93,7 @@ export async function POST(
   const slug = await generateSlug(registration.fullName);
 
   // 3. Create Artist record
-  const artist = await getDb().artist.create({
+  const artist = await db.artist.create({
     data: {
       slug,
       fullName: registration.fullName,
@@ -102,15 +107,12 @@ export async function POST(
     },
   });
 
-  // 4. Create ArtistSpeciality records
+  // 4. Create ArtistSpeciality records (resolve case-insensitive; create missing catalogue rows with defaults)
   for (let i = 0; i < registration.specialities.length; i++) {
     const spec = registration.specialities[i];
-    // Look up the Speciality by name
-    const speciality = await getDb().speciality.findUnique({
-      where: { name: spec.specialityName },
-    });
+    const speciality = await resolveSpecialityForApproval(db, spec.specialityName);
     if (speciality) {
-      await getDb().artistSpeciality.create({
+      await db.artistSpeciality.create({
         data: {
           artistId: artist.id,
           specialityId: speciality.id,
@@ -122,7 +124,7 @@ export async function POST(
 
   // 5. Create ExternalLink records
   if (registration.links.length > 0) {
-    await getDb().externalLink.createMany({
+    await db.externalLink.createMany({
       data: registration.links.map((link) => ({
         artistId: artist.id,
         linkType: link.linkType,
@@ -135,12 +137,31 @@ export async function POST(
   await issueMagicLink(registration.email);
 
   // 7. Update RegistrationRequest status
-  await getDb().registrationRequest.update({
+  await db.registrationRequest.update({
     where: { id },
     data: {
       status: 'approved',
       reviewedAt: now,
+      reviewedBy: reviewerId ?? undefined,
     },
+  });
+
+  const reviewer =
+    reviewerId
+      ? await db.artist.findUnique({
+          where: { id: reviewerId },
+          select: { fullName: true },
+        })
+      : null;
+
+  revalidatePath('/admin/specialities');
+
+  await notifyAdminRegistrationEvent({
+    event: 'registration_approved',
+    registrationId: id,
+    applicantName: registration.fullName,
+    applicantEmail: registration.email,
+    reviewedByName: reviewer?.fullName,
   });
 
   // Capture analytics event

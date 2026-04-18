@@ -1,3 +1,8 @@
+import {
+  formatDeploymentCollabMessageTime,
+  formatDeploymentDate,
+  formatDeploymentDateNumericDay,
+} from "@/lib/format-deployment-datetime";
 import { getDb } from "@/lib/db";
 
 export type CollabListItem = {
@@ -30,7 +35,7 @@ export async function listCollabsForArtist(artistId: string): Promise<CollabList
     status: m.collab.status,
     isOwner: m.collab.ownerId === artistId,
     memberCount: m.collab._count.members,
-    createdAt: m.collab.createdAt.toLocaleDateString("en-GB"),
+    createdAt: formatDeploymentDate(m.collab.createdAt),
   }));
 }
 
@@ -130,12 +135,7 @@ export async function getCollabDetailForArtist(
       senderId: msg.sender.id,
       senderName: msg.sender.fullName,
       content: msg.content,
-      sentAt: msg.sentAt.toLocaleString("en-GB", {
-        day: "2-digit",
-        month: "short",
-        hour: "2-digit",
-        minute: "2-digit",
-      }),
+      sentAt: formatDeploymentCollabMessageTime(msg.sentAt),
     })),
     feedback: collab.feedback.map((f) => ({
       id: f.id,
@@ -145,8 +145,8 @@ export async function getCollabDetailForArtist(
       revieweeName: f.reviewee.fullName,
       starRating: f.starRating,
       comment: f.comment,
-      submittedAt: f.submittedAt.toLocaleDateString("en-GB"),
-      editedAt: f.editedAt ? f.editedAt.toLocaleDateString("en-GB") : null,
+      submittedAt: formatDeploymentDateNumericDay(f.submittedAt),
+      editedAt: f.editedAt ? formatDeploymentDateNumericDay(f.editedAt) : null,
     })),
   };
 }
@@ -204,11 +204,7 @@ export async function listCollabsForAdmin(viewerArtistId?: string): Promise<Admi
     members: c._count.members,
     messages: c._count.messages,
     status: c.status,
-    createdAt: c.createdAt.toLocaleDateString("en-GB", {
-      day: "2-digit",
-      month: "short",
-      year: "numeric",
-    }),
+    createdAt: formatDeploymentDate(c.createdAt),
     isCurrentAdminOwner: viewerArtistId ? c.ownerId === viewerArtistId : false,
     isCurrentAdminMember: viewerArtistId
       ? c.members.some((m) => m.artistId === viewerArtistId && m.leftAt === null)
@@ -257,20 +253,11 @@ export async function getCollabDetailForAdmin(idOrSlug: string): Promise<AdminCo
       slug: m.artist.slug,
     })),
     status: collab.status,
-    createdAt: collab.createdAt.toLocaleDateString("en-GB", {
-      day: "2-digit",
-      month: "short",
-      year: "numeric",
-    }),
+    createdAt: formatDeploymentDate(collab.createdAt),
     messages: collab.messages.map((msg) => ({
       sender: msg.sender.fullName,
       text: msg.content,
-      time: msg.sentAt.toLocaleString("en-GB", {
-        day: "2-digit",
-        month: "short",
-        hour: "2-digit",
-        minute: "2-digit",
-      }),
+      time: formatDeploymentCollabMessageTime(msg.sentAt),
     })),
   };
 }

@@ -1,15 +1,24 @@
+import { getTimezonesForCountry } from "countries-and-timezones";
+
 /**
  * Deployment configuration for the Carnatic Artist Portal.
  *
  * All deployment-specific values are read exclusively from environment variables.
- * No values are hard-coded in this file.
+ * Timezone is resolved from `DEPLOYMENT_REGION` (ISO 3166-1 alpha-2) via the
+ * `countries-and-timezones` dataset, unless `DEPLOYMENT_TIMEZONE` is set.
  *
  * Requirements: 16.1, 16.7
  */
 
 export interface DeploymentConfig {
-  /** Country or region identifier, e.g. "NL" */
+  /** ISO 3166-1 alpha-2 country code, e.g. "NL" */
   region: string;
+  /**
+   * IANA timezone for local calendar semantics (featured artist, DailyFeatured date, etc.).
+   * Set `DEPLOYMENT_TIMEZONE` to override; otherwise derived from `DEPLOYMENT_REGION`
+   * via country→timezone data (single-zone countries only; multi-zone requires an explicit override).
+   */
+  timezone: string;
   /** Portal display name, e.g. "Carnatic Artist Portal" */
   name: string;
   locales: {
@@ -28,12 +37,54 @@ export interface DeploymentConfig {
   };
 }
 
+function resolveTimezoneFromIsoCountry(region: string): string {
+  const code = region.trim().toUpperCase();
+  if (code.length !== 2) return "UTC";
+
+  const zones = getTimezonesForCountry(code);
+  if (!zones || zones.length === 0) return "UTC";
+  if (zones.length === 1) return zones[0].name;
+
+  throw new Error(
+    `DEPLOYMENT_REGION=${code} maps to multiple IANA timezones (${zones.map((z) => z.name).join(", ")}). ` +
+      "Set DEPLOYMENT_TIMEZONE to the zone this deployment should use for calendar dates and wall-clock display.",
+  );
+}
+
 /**
- * Reads all deployment-specific configuration from environment variables.
- * Throws if any required variable is missing.
+ * Resolves the deployment IANA timezone without requiring the full config bundle.
+ * Used for date calculations when only env is available.
  */
+export function getDeploymentTimezone(): string {
+  const explicit = process.env.DEPLOYMENT_TIMEZONE?.trim();
+  if (explicit) return explicit;
+
+  const region = process.env.DEPLOYMENT_REGION?.trim() ?? "";
+  return resolveTimezoneFromIsoCountry(region);
+}
+
+/**
+ * Short label for UI copy (e.g. “each calendar day (CET)”).
+ * Derived from the resolved IANA zone via `Intl` (standard-time abbreviation in January).
+ */
+export function getDeploymentClockLabelForUi(): string {
+  const id = getDeploymentTimezone();
+  if (id === "UTC" || id === "Etc/UTC") return "UTC";
+
+  const winter = new Date(Date.UTC(2026, 0, 15, 12, 0, 0));
+  const parts = new Intl.DateTimeFormat("en-GB", {
+    timeZone: id,
+    timeZoneName: "short",
+  }).formatToParts(winter);
+  const shortName = parts.find((p) => p.type === "timeZoneName")?.value?.trim();
+  if (shortName) return shortName;
+
+  return id.includes("/") ? id.split("/")[1]!.replace(/_/g, " ") : id;
+}
+
 export function getDeploymentConfig(): DeploymentConfig {
   const region = requireEnv("DEPLOYMENT_REGION");
+  const timezone = getDeploymentTimezone();
   const name = requireEnv("DEPLOYMENT_NAME");
   const localePrimary = requireEnv("DEPLOYMENT_LOCALE_PRIMARY");
   const localeSecondary = process.env.DEPLOYMENT_LOCALE_SECONDARY;
@@ -62,6 +113,7 @@ export function getDeploymentConfig(): DeploymentConfig {
 
   return {
     region,
+    timezone,
     name,
     locales: {
       primary: localePrimary,
