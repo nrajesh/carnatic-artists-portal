@@ -28,6 +28,13 @@ function posthogUiHost(): string | undefined {
   return 'https://eu.posthog.com'
 }
 
+/** Session recording is on by default; set NEXT_PUBLIC_POSTHOG_ENABLE_RECORDING=false to opt out. */
+function sessionRecordingDisabled(): boolean {
+  const v = process.env.NEXT_PUBLIC_POSTHOG_ENABLE_RECORDING?.trim().toLowerCase()
+  if (!v) return false
+  return v === 'false' || v === '0' || v === 'off' || v === 'no'
+}
+
 export function initPostHog(): void {
   const key = process.env.NEXT_PUBLIC_POSTHOG_KEY
 
@@ -43,7 +50,7 @@ export function initPostHog(): void {
     autocapture: false,
     mask_all_text: true,
     persistence: 'localStorage+cookie',
-    disable_session_recording: process.env.NEXT_PUBLIC_POSTHOG_ENABLE_RECORDING !== 'true',
+    disable_session_recording: sessionRecordingDisabled(),
     // Not used by this app - disabling prevents a `/flags` POST and a `/array/<key>/config.js`
     // fetch on every page load. Each is a potential source of the Safari "network connection
     // was lost" console error when the browser navigates before the request completes.

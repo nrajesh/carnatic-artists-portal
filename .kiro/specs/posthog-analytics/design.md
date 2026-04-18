@@ -167,7 +167,7 @@ posthog.init(process.env.NEXT_PUBLIC_POSTHOG_KEY!, {
   capture_pageview: false,       // Manual page view tracking
   autocapture: false,            // Explicit events only
   mask_all_text: true,           // Prevent accidental text capture
-  disable_session_recording: process.env.NEXT_PUBLIC_POSTHOG_ENABLE_RECORDING !== 'true',
+  disable_session_recording: false, // implementation: sessionRecordingDisabled() in lib/analytics-client.ts (opt-out via env)
   persistence: 'localStorage+cookie',
   debug: process.env.NODE_ENV === 'development',
 })
@@ -212,7 +212,7 @@ posthog.identify(artistId, {
 | `NEXT_PUBLIC_POSTHOG_KEY` | Client + Server | PostHog project API key (begins `phc_`) |
 | `POSTHOG_HOST` | Server only | Full URL of self-hosted PostHog instance |
 | `POSTHOG_ADMIN_PATH` | Server only | Secret path to PostHog web UI |
-| `NEXT_PUBLIC_POSTHOG_ENABLE_RECORDING` | Client | Set to `'true'` to enable session recording |
+| `NEXT_PUBLIC_POSTHOG_ENABLE_RECORDING` | Client | Optional. Set `false`, `0`, or `off` to **disable** session replay (enabled by default when the project key is set). |
 
 ### Opt-Out Detection
 

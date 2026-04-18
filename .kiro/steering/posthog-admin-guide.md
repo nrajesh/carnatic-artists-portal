@@ -32,7 +32,7 @@ The main value of PostHog. Useful charts to build:
 ## What this integration does NOT do
 
 - **No autocapture** - only the 17 explicitly named events are tracked. If you want to track something new, a code change is needed.
-- **No session recordings** - disabled by default. Requires `NEXT_PUBLIC_POSTHOG_ENABLE_RECORDING=true` and GDPR review before enabling.
+- **Session replay** - **on by default** when `NEXT_PUBLIC_POSTHOG_KEY` is set (`mask_all_text: true`). Set `NEXT_PUBLIC_POSTHOG_ENABLE_RECORDING=false` to disable. Confirm compliance (e.g. GDPR) before production use.
 - **No heatmaps** - these rely on autocapture, which is off.
 - **No feature flags or A/B testing** - not in scope, but PostHog supports them and they can be added later.
 
