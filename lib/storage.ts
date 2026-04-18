@@ -5,7 +5,6 @@ import {
   GetObjectCommand,
 } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
-import { getCloudflareContext } from '@opennextjs/cloudflare';
 
 // ---------------------------------------------------------------------------
 // StorageError
@@ -41,41 +40,66 @@ const ALLOWED_CONTENT_TYPES = new Set([
 // Env resolution (localhost + Cloudflare Workers)
 // ---------------------------------------------------------------------------
 
+function pickString(v: unknown): string | undefined {
+  if (typeof v !== 'string') return undefined;
+  const t = v.trim();
+  return t !== '' ? t : undefined;
+}
+
 /**
- * R2 vars are normally read from `process.env`. On Cloudflare Workers, OpenNext injects plaintext
- * `vars` into `process.env`; **Secrets** should appear there too after init, but some deployments
- * only expose them on the raw Worker `env` object. Resolve from `process.env` first, then
- * `getCloudflareContext().env` so dashboard secrets match runtime behaviour.
+ * Resolve one R2-related env value. Order:
+ * 1. `process.env` - local `.env.local` and any injected vars
+ * 2. `cloudflare:workers` `env` - **required for R2 secrets** on OpenNext: S3 keys often do not appear on
+ *    `process.env` inside the Node-compat server isolate, but Workers always exposes them here
+ * 3. OpenNext `getCloudflareContext` (sync then async) - fallback
  */
-function getR2EnvString(key: string): string | undefined {
-  const fromProcess = process.env[key];
-  if (typeof fromProcess === 'string' && fromProcess.trim() !== '') {
-    return fromProcess;
+async function resolveR2EnvString(key: string): Promise<string | undefined> {
+  const pe = pickString(process.env[key]);
+  if (pe) return pe;
+
+  try {
+    const { env } = await import(/* webpackIgnore: true */ 'cloudflare:workers');
+    const w = pickString(env[key]);
+    if (w) return w;
+  } catch {
+    // Not running on Workers, or bundler without cloudflare:workers (tests, local Node)
   }
 
   try {
-    const { env } = getCloudflareContext({ async: false }) as {
-      env: Record<string, unknown>;
-    };
-    const v = env[key];
-    if (typeof v === 'string' && v.trim() !== '') {
-      return v;
-    }
+    const { getCloudflareContext } = await import('@opennextjs/cloudflare');
+    const env = getCloudflareContext({ async: false }).env as unknown as Record<
+      string,
+      unknown
+    >;
+    const c = pickString(env[key]);
+    if (c) return c;
   } catch {
-    // Local `next dev` without OpenNext worker context, or SSG - fall through
+    //
+  }
+
+  try {
+    const { getCloudflareContext } = await import('@opennextjs/cloudflare');
+    const env = (await getCloudflareContext({ async: true })).env as unknown as Record<
+      string,
+      unknown
+    >;
+    const c = pickString(env[key]);
+    if (c) return c;
+  } catch {
+    //
   }
 
   return undefined;
 }
 
 // ---------------------------------------------------------------------------
-// R2 S3 client (lazy-initialised so env vars are read at call time)
+// R2 S3 client
 // ---------------------------------------------------------------------------
 
-function getS3Client(): S3Client {
-  const accountId = getR2EnvString('R2_ACCOUNT_ID');
-  const accessKeyId = getR2EnvString('R2_ACCESS_KEY_ID');
-  const secretAccessKey = getR2EnvString('R2_SECRET_ACCESS_KEY');
+async function getS3Client(): Promise<S3Client> {
+  const accountId = await resolveR2EnvString('R2_ACCOUNT_ID');
+  const accessKeyId = await resolveR2EnvString('R2_ACCESS_KEY_ID');
+  const secretAccessKey = await resolveR2EnvString('R2_SECRET_ACCESS_KEY');
 
   if (!accountId || !accessKeyId || !secretAccessKey) {
     throw new StorageError(
@@ -94,8 +118,8 @@ function getS3Client(): S3Client {
   });
 }
 
-function getBucketName(): string {
-  const bucket = getR2EnvString('R2_BUCKET_NAME');
+async function getBucketName(): Promise<string> {
+  const bucket = await resolveR2EnvString('R2_BUCKET_NAME');
   if (!bucket) {
     throw new StorageError(
       'STORAGE_UNAVAILABLE',
@@ -105,8 +129,8 @@ function getBucketName(): string {
   return bucket;
 }
 
-function getPublicUrl(): string {
-  const publicUrl = getR2EnvString('R2_PUBLIC_URL');
+async function getPublicUrl(): Promise<string> {
+  const publicUrl = await resolveR2EnvString('R2_PUBLIC_URL');
   if (!publicUrl) {
     throw new StorageError(
       'STORAGE_UNAVAILABLE',
@@ -149,8 +173,8 @@ export async function uploadFile(params: {
   }
 
   try {
-    const client = getS3Client();
-    const bucket = getBucketName();
+    const client = await getS3Client();
+    const bucket = await getBucketName();
 
     await client.send(
       new PutObjectCommand({
@@ -162,7 +186,7 @@ export async function uploadFile(params: {
       }),
     );
 
-    const publicUrl = getPublicUrl();
+    const publicUrl = await getPublicUrl();
     return `${publicUrl}/${key}`;
   } catch (err) {
     if (err instanceof StorageError) {
@@ -180,8 +204,8 @@ export async function uploadFile(params: {
  */
 export async function deleteFile(key: string): Promise<void> {
   try {
-    const client = getS3Client();
-    const bucket = getBucketName();
+    const client = await getS3Client();
+    const bucket = await getBucketName();
 
     await client.send(
       new DeleteObjectCommand({
@@ -205,8 +229,8 @@ export async function deleteFile(key: string): Promise<void> {
  */
 export async function getPresignedUrl(key: string): Promise<string> {
   try {
-    const client = getS3Client();
-    const bucket = getBucketName();
+    const client = await getS3Client();
+    const bucket = await getBucketName();
 
     const command = new GetObjectCommand({
       Bucket: bucket,

@@ -2,7 +2,8 @@
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "carnatic-artists-portal",
   "main": ".open-next/worker.js",
-  "compatibility_date": "2024-12-30",
+  // 2025-03+ runtime: import { env } from "cloudflare:workers" (R2 secrets in lib/storage.ts)
+  "compatibility_date": "2025-03-21",
   "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
   "observability": {
     "enabled": false,

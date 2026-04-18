@@ -8,7 +8,7 @@ const nextConfig = {
   // Required by @opennextjs/cloudflare to produce the server bundle under .next/standalone
   output: "standalone",
   // Prisma on Workers: keep generated client external so OpenNext can patch for workerd
-  serverExternalPackages: ["@prisma/client", ".prisma/client"],
+  serverExternalPackages: ["@prisma/client", ".prisma/client", "cloudflare:workers"],
   typescript: {
     // Type errors won't block builds during active development
     ignoreBuildErrors: true,
@@ -17,7 +17,8 @@ const nextConfig = {
     if (isServer) {
       // Prevent webpack from bundling native Node.js modules used by
       // @neondatabase/serverless in server-side code
-      config.externals = [...(config.externals ?? []), 'ws'];
+      // cloudflare:workers is a virtual module at runtime on Workers only (R2 env in lib/storage.ts)
+      config.externals = [...(config.externals ?? []), 'ws', 'cloudflare:workers'];
     }
     return config;
   },
