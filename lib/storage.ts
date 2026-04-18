@@ -4,11 +4,27 @@ import {
   DeleteObjectCommand,
   GetObjectCommand,
 } from '@aws-sdk/client-s3';
+import {
+  RequestChecksumCalculation,
+  ResponseChecksumValidation,
+} from '@aws-sdk/middleware-flexible-checksums';
+import { createDefaultUserAgentProvider as createBrowserUserAgentProvider } from '@aws-sdk/util-user-agent-browser';
 import { FetchHttpHandler } from '@smithy/fetch-http-handler';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 
+import s3ClientPackage from '@aws-sdk/client-s3/package.json';
+
 /** Workers / unenv have no real `fs`; default Node HTTP handler can trigger `[unenv] fs.readFile`. */
 const r2RequestHandler = new FetchHttpHandler({});
+
+/**
+ * The Node S3 runtime uses `@aws-sdk/util-user-agent-node`, which reads `package.json` via `fs.readFile`
+ * for TypeScript version detection — that fails on Workers (unenv). Browser UA avoids any filesystem access.
+ */
+const r2DefaultUserAgentProvider = createBrowserUserAgentProvider({
+  serviceId: 's3',
+  clientVersion: s3ClientPackage.version,
+});
 
 // ---------------------------------------------------------------------------
 // StorageError
@@ -120,6 +136,10 @@ async function getS3Client(): Promise<S3Client> {
       secretAccessKey,
     },
     requestHandler: r2RequestHandler,
+    defaultUserAgentProvider: r2DefaultUserAgentProvider,
+    /** Default `WHEN_SUPPORTED` adds CRC32 and pulls Node zlib/stream paths; R2 does not require it. */
+    requestChecksumCalculation: RequestChecksumCalculation.WHEN_REQUIRED,
+    responseChecksumValidation: ResponseChecksumValidation.WHEN_REQUIRED,
   });
 }
 

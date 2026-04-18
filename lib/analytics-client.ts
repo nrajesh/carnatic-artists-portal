@@ -51,11 +51,8 @@ export function initPostHog(): void {
     mask_all_text: true,
     persistence: 'localStorage+cookie',
     disable_session_recording: sessionRecordingDisabled(),
-    // Not used by this app - disabling prevents a `/flags` POST and a `/array/<key>/config.js`
-    // fetch on every page load. Each is a potential source of the Safari "network connection
-    // was lost" console error when the browser navigates before the request completes.
-    advanced_disable_feature_flags: true,
-    advanced_disable_feature_flags_on_first_load: true,
+    // Session replay depends on the same remote config + flags pipeline as feature flags.
+    // Setting `advanced_disable_feature_flags` leaves recording stuck waiting for a "flags response".
     disable_surveys: true,
     debug: process.env.NODE_ENV === 'development',
   })
