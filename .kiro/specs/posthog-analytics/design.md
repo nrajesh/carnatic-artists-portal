@@ -2,14 +2,14 @@
 
 ## Overview
 
-This design integrates PostHog analytics into the Carnatic Artist Portal - a Next.js 14 App Router application with three route groups (`/(public)/*`, `/(artist)/*`, `/(admin)/*`). The integration is split across two SDK layers:
+This design integrates PostHog analytics into the Carnatic Artist Portal - a Next.js App Router application with three route groups (`/(public)/*`, `/(artist)/*`, `/(admin)/*`). The integration is split across two SDK layers:
 
-- **Client-side** (`posthog-js`): initialised once in the root layout via a React Provider, captures page views on every App Router navigation, and fires explicit events for user interactions.
+- **Client-side** (`posthog-js`): initialised once in the root layout via a React Provider, captures page views on every App Router navigation, fires explicit events for user interactions, and may enable **Session Replay** when not opted out via env (replays use `mask_all_text: true`; local `next dev` disables replay by default unless overridden).
 - **Server-side** (`posthog-node`): used inside Next.js API route handlers to capture backend events (login, logout, registration approvals/rejections, artist suspension) with the actor's `artistId` as the PostHog `distinctId`.
 
-All SDK traffic is routed through a Next.js reverse-proxy route (`/api/ph/[...path]`) so that the real PostHog host is never exposed to browsers and ad-blockers cannot target a known PostHog domain. The PostHog web UI is accessible only via a secret, non-guessable path stored in `POSTHOG_ADMIN_PATH`.
+In **production**, browser-side PostHog traffic (events, replay assets, and related SDK requests) is sent through a same-origin reverse-proxy route (`/api/ph/[...path]`) so the ingest host is not hard-coded in the client bundle and common ad-block lists are less likely to block the first hop. The proxy forwards to whatever backend `POSTHOG_HOST` points to - **PostHog Cloud** (e.g. EU/US ingest) or a **self-hosted** instance. In **development**, the client may call PostHog Cloud directly so the app works without `POSTHOG_HOST` on the server (see `lib/analytics-client.ts`). The PostHog **web UI** for operators may be opened via a secret path (`POSTHOG_ADMIN_PATH`) when configured.
 
-Privacy is a first-class concern: no PII is ever included in event properties, autocapture is disabled, and the client respects Do Not Track / opt-out cookies.
+Privacy is a first-class concern: no PII in **custom event properties**, autocapture is disabled, session replay text is masked at the SDK layer, and the client respects Do Not Track / opt-out cookies. End-user disclosure lives at `/privacy`.
 
 ### Key Design Decisions
 
@@ -19,7 +19,7 @@ Privacy is a first-class concern: no PII is ever included in event properties, a
 | `capture_pageview: false` + manual capture | App Router uses client-side navigation; automatic pageview detection is unreliable |
 | `posthog-node` singleton via module-level variable | Avoids re-initialising the Node SDK on every request in serverless/edge environments |
 | `artistId` as `distinctId` (not email) | Avoids PII in PostHog person records; `artistId` is an opaque UUID |
-| `mask_all_text: true` | Prevents accidental capture of visible text (names, emails shown in UI) |
+| `mask_all_text: true` | Reduces sensitive visible text in Session Replay (not a substitute for project-level sampling / URL rules) |
 | Dev-only floating badge (server-rendered) | Zero JS overhead; disappears automatically in production builds |
 
 ---
@@ -34,7 +34,7 @@ graph TD
     end
 
     subgraph NextServer["Next.js Server"]
-        C -->|"fetch POSTHOG_HOST + path"| D["PostHog Instance (self-hosted Docker)"]
+        C -->|"fetch POSTHOG_HOST + path"| D["PostHog backend (Cloud or self-hosted)"]
         E["API Route Handlers (posthog-node)"] -->|"HTTP POST directly"| D
     end
 
@@ -149,7 +149,7 @@ Responsibilities:
 
 ### 7. `app/(public)/privacy/page.tsx` - Privacy policy page
 
-A standard Next.js Server Component page at `/privacy` within the `/(public)` route group. Contains the required disclosures about PostHog analytics usage, data retention, opt-out mechanism, and self-hosted status.
+A standard Next.js Server Component page at `/privacy` within the `/(public)` route group. Discloses named-event analytics, optional Session Replay (masking + operator configuration), retention, opt-out (DNT / cookie), and where data is processed (Cloud vs self-hosted, depending on `POSTHOG_HOST`).
 
 ### 8. Event-capturing hooks / inline captures
 
@@ -163,11 +163,11 @@ Each page or component that needs to fire an event calls `usePostHog()` and invo
 
 ```typescript
 posthog.init(process.env.NEXT_PUBLIC_POSTHOG_KEY!, {
-  api_host: '/api/ph',           // All SDK traffic via proxy
+  api_host: '/api/ph' | 'https://eu.i.posthog.com', // production: same-origin proxy; dev: direct Cloud ingest by default
   capture_pageview: false,       // Manual page view tracking
   autocapture: false,            // Explicit events only
-  mask_all_text: true,           // Prevent accidental text capture
-  disable_session_recording: false, // implementation: sessionRecordingDisabled() in lib/analytics-client.ts (opt-out via env)
+  mask_all_text: true,           // Session Replay: mask text nodes in the captured DOM
+  disable_session_recording: omitted | true, // lib/analytics-client.ts: env + dev defaults
   persistence: 'localStorage+cookie',
   debug: process.env.NODE_ENV === 'development',
 })
@@ -210,9 +210,11 @@ posthog.identify(artistId, {
 | Variable | Scope | Purpose |
 |---|---|---|
 | `NEXT_PUBLIC_POSTHOG_KEY` | Client + Server | PostHog project API key (begins `phc_`) |
-| `POSTHOG_HOST` | Server only | Full URL of self-hosted PostHog instance |
+| `POSTHOG_HOST` | Server (proxy + Node SDK) | Ingest API base URL, e.g. PostHog Cloud `https://eu.i.posthog.com` or self-hosted origin |
 | `POSTHOG_ADMIN_PATH` | Server only | Secret path to PostHog web UI |
-| `NEXT_PUBLIC_POSTHOG_ENABLE_RECORDING` | Client | Optional. Set `false`, `0`, or `off` to **disable** session replay (enabled by default when the project key is set). |
+| `NEXT_PUBLIC_POSTHOG_ENABLE_RECORDING` | Client (build-time) | Optional. `false` / `0` / `off` / `no` disables Session Replay in the bundled client. |
+| `NEXT_PUBLIC_POSTHOG_RECORDING_IN_DEV` | Client (build-time) | Optional. Set `true` / `1` / `yes` to allow replay in `next dev` (off by default). |
+| `NEXT_PUBLIC_POSTHOG_INGEST_HOST` | Client (build-time) | Optional dev override for direct ingest (default EU Cloud in `analytics-client.ts`). |
 
 ### Opt-Out Detection
 
@@ -384,7 +386,7 @@ Unit tests cover:
 ### Integration Tests (manual / deployment)
 
 The following requirements are verified manually or via deployment checks:
-- PostHog instance not bound to public port (Requirement 8.1).
+- PostHog backend reachable from the deployment (Cloud project or self-hosted) and not accidentally exposed on an unintended public port (Requirement 8.1, interpreted for the operator’s topology).
 - Reverse-proxy rewrite maps `POSTHOG_ADMIN_PATH` to PostHog internal address (Requirement 8.2–8.5).
 - `POSTHOG_ADMIN_PATH` not committed to version control (Requirement 8.6).
 - `env.example` documents all three PostHog variables (Requirement 10.5).

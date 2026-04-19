@@ -20,6 +20,9 @@ Once an artist logs in, PostHog stitches their anonymous pre-login activity to t
 
 No email, no name - just the opaque ID and those two properties. This is intentional for GDPR compliance.
 
+### Session replay
+When recording is enabled for a build, **Recordings** in PostHog can show reconstructed sessions (clicks, navigation, timing). The app sets **text masking** in the SDK, but replay is still a sensitive surface: use PostHog project settings (sampling, URL triggers, retention) and keep `/privacy` aligned with what you actually ship. Disable recording entirely with `NEXT_PUBLIC_POSTHOG_ENABLE_RECORDING=false` at build time if you do not want replays.
+
 ### Dashboards & Insights
 The main value of PostHog. Useful charts to build:
 - "How many `artist_profile_viewed` events per day?"
@@ -32,7 +35,7 @@ The main value of PostHog. Useful charts to build:
 ## What this integration does NOT do
 
 - **No autocapture** - only the 17 explicitly named events are tracked. If you want to track something new, a code change is needed.
-- **Session replay** - **on by default** when `NEXT_PUBLIC_POSTHOG_KEY` is set (`mask_all_text: true`). Set `NEXT_PUBLIC_POSTHOG_ENABLE_RECORDING=false` to disable. Confirm compliance (e.g. GDPR) before production use.
+- **Session replay**  -  can be **on** in production builds when the project key is set and `NEXT_PUBLIC_POSTHOG_ENABLE_RECORDING` is not a false-ish value; **`mask_all_text: true`** reduces visible text in the replay DOM. **Off by default in `next dev`** unless `NEXT_PUBLIC_POSTHOG_RECORDING_IN_DEV` is enabled. Treat replay like any other personal-data processing activity in your jurisdiction.
 - **No heatmaps** - these rely on autocapture, which is off.
 - **No feature flags or A/B testing** - not in scope, but PostHog supports them and they can be added later.
 
@@ -61,7 +64,7 @@ Use **Cohorts** to find artists who have a `dashboard_viewed` event but no `prof
 ## Things to be careful about
 
 ### Never add PII to events
-The privacy policy states no PII is collected. If you ever add a new `posthog.capture()` call, double-check the properties object doesn't include email, name, phone, or any other personally identifiable field.
+The privacy policy states no PII in **event properties**, and explains replay separately. If you add a new `posthog.capture()` call, double-check the properties object doesn't include email, name, phone, or other identifiers you should not ship to PostHog.
 
 ### The dev badge is local-only
 An amber floating badge showing the PostHog admin path appears in the bottom-right corner when running locally (`NODE_ENV=development`). It will never appear in production.
@@ -75,22 +78,20 @@ An amber floating badge showing the PostHog admin path appears in the bottom-rig
 
 ### Analytics failures are silent by design
 If PostHog is unreachable, the app keeps working normally - events are just lost. If event counts drop to zero unexpectedly, check:
-1. The PostHog Docker container is running
-2. `POSTHOG_HOST` is set correctly in the environment
-3. The reverse proxy is routing correctly
+1. Your PostHog project or self-hosted instance is up (Cloud status page / your Docker host)
+2. `POSTHOG_HOST` matches the ingest URL your project expects (EU vs US Cloud, or self-hosted)
+3. The `/api/ph` proxy returns 200s in the browser Network tab (production)
 
 ### Opt-out is honoured
-Users with **Do Not Track** enabled in their browser, or with the `ph_opt_out=1` cookie set, won't generate any events. Expect your event counts to be slightly lower than raw traffic numbers.
+Users with **Do Not Track** enabled, or the `ph_opt_out=1` cookie, won't generate any events. The public **`/privacy/opt-out`** route sets that cookie and redirects to `/privacy` - the privacy page shows the full sample URL for each deployment (and documents `http://localhost:3000/privacy/opt-out` for local dev).
 
 ---
 
 ## Obtaining the PostHog API key
 
-After spinning up the self-hosted PostHog instance:
-1. Log into the PostHog web UI via the secret `POSTHOG_ADMIN_PATH`
-2. Go to **Settings → Project → Project API Key**
-3. Copy the key (it begins with `phc_`)
-4. Set it as `NEXT_PUBLIC_POSTHOG_KEY` in `.env.local`
+**PostHog Cloud:** create a project in [PostHog](https://posthog.com/), open **Project settings → Project API Key**, copy the key (begins with `phc_`), set `NEXT_PUBLIC_POSTHOG_KEY` and `POSTHOG_HOST` (e.g. `https://eu.i.posthog.com`) in your environment.
+
+**Self-hosted:** after your instance is running, log into the PostHog web UI (optionally via `POSTHOG_ADMIN_PATH` if you front it through this app), then **Settings → Project → Project API Key** as above.
 
 This key is safe to expose to the browser - it is a write-only ingestion key, not an admin credential.
 

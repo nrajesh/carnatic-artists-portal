@@ -54,7 +54,7 @@ export default function SpecialityPicker({
   }, [catalog, query, selected]);
 
   const normalizedQuery = normalizeSpecialityLabel(query);
-  /** Only offer "Add custom" when nothing in the catalogue matches — avoids a second panel covering matches. */
+  /** Only offer "Add custom" when nothing in the catalogue matches  -  avoids a second panel covering matches. */
   const customEligible =
     allowCustom &&
     available.length === 0 &&

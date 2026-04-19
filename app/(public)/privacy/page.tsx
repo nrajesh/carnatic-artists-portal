@@ -1,24 +1,59 @@
 import Link from "next/link";
+import { headers } from "next/headers";
+import { PosthogOptInHandler } from "@/components/posthog-opt-in-handler";
+import { PrivacyAnalyticsToggle } from "@/components/privacy-analytics-toggle";
+
+const OPT_OUT_PATH = "/privacy/opt-out";
+const LOCAL_OPT_OUT_SAMPLE = "http://localhost:3000/privacy/opt-out";
+
+/**
+ * Best-effort absolute URL for copy/paste (host from request or NEXT_PUBLIC_APP_URL).
+ */
+async function resolveOptOutDisplayUrl(): Promise<string | null> {
+  const h = await headers();
+  const host = (h.get("x-forwarded-host") ?? h.get("host") ?? "").split(",")[0]?.trim() ?? "";
+  const protoCandidate = (h.get("x-forwarded-proto") ?? "").split(",")[0]?.trim().toLowerCase() ?? "";
+  const proto = protoCandidate === "http" || protoCandidate === "https" ? protoCandidate : "";
+  if (host && proto) {
+    return `${proto}://${host}${OPT_OUT_PATH}`;
+  }
+  if (host) {
+    return `https://${host}${OPT_OUT_PATH}`;
+  }
+  const base = process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, "").trim();
+  if (base) return `${base}${OPT_OUT_PATH}`;
+  return null;
+}
 
 /**
  * Privacy Policy page - analytics disclosure.
  * Server Component at the /privacy route.
  * Requirements: 12.1, 12.2, 12.3, 12.4, 12.5, 12.6
  */
-export default function PrivacyPage() {
+export default async function PrivacyPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ analytics?: string }>;
+}) {
+  const { analytics } = await searchParams;
+  const optedOutBanner = analytics === "opted_out";
+  const optedInBanner = analytics === "opted_in";
+  const optOutDisplayUrl = await resolveOptOutDisplayUrl();
+
   return (
     <main className="min-h-screen bg-amber-50">
+      <PosthogOptInHandler active={optedInBanner} />
       {/* Header */}
-      <div className="bg-gradient-to-br from-amber-900 via-amber-800 to-amber-700 text-white px-6 py-16 text-center">
-        <div className="text-4xl mb-4">🔒</div>
-        <h1 className="text-3xl sm:text-4xl font-bold mb-3 tracking-tight">Privacy Policy</h1>
-        <p className="text-amber-200 text-base sm:text-lg max-w-xl mx-auto">
-          How the Carnatic Artist Portal collects and uses analytics data.
+      <div className="bg-gradient-to-br from-amber-900 via-amber-800 to-amber-700 px-6 py-16 text-center text-white">
+        <div className="mb-4 text-4xl">🔒</div>
+        <h1 className="mb-3 text-3xl font-bold tracking-tight sm:text-4xl">Privacy Policy</h1>
+        <p className="mx-auto max-w-xl text-base text-amber-200 sm:text-lg">
+          How the Carnatic Artist Portal collects and uses analytics and related product telemetry.
         </p>
         <div className="mt-6">
           <Link
             href="/"
-            className="inline-flex items-center gap-1 text-sm text-amber-200 hover:text-white font-medium transition-colors"
+            className="inline-flex items-center gap-1 text-sm font-medium text-amber-200 transition-colors hover:text-white"
           >
             ← Back to home
           </Link>
@@ -26,134 +61,227 @@ export default function PrivacyPage() {
       </div>
 
       {/* Content */}
-      <div className="max-w-3xl mx-auto px-6 py-14 space-y-10">
+      <div className="mx-auto max-w-3xl space-y-10 px-6 py-14">
+        {optedOutBanner ? (
+          <div
+            className="rounded-2xl border border-green-200 bg-green-50 px-5 py-4 text-sm text-green-950"
+            role="status"
+          >
+            <p className="font-semibold">Analytics opt-out is active for this browser.</p>
+            <p className="mt-1 text-green-900">
+              A cookie was set so PostHog does not record events or session replay here. To opt back in later, remove
+              the <code className="rounded bg-white/80 px-1 text-xs">ph_opt_out</code> cookie for this site in your
+              browser settings (and clear any PostHog local data if your browser still blocks capture).
+            </p>
+            <p className="mt-2 text-green-900">
+              Other pages (for example Home) will show a normal URL like <code className="rounded bg-white/80 px-1 text-xs">/</code>{" "}
+              - that is expected. Your opt-out is not stored in the address bar; it stays in the cookie until you remove
+              it. Use your browser&apos;s developer tools (Application or Storage tab) to confirm{" "}
+              <code className="rounded bg-white/80 px-1 text-xs">ph_opt_out=1</code> is present for this site.
+            </p>
+          </div>
+        ) : null}
+        {optedInBanner ? (
+          <div
+            className="rounded-2xl border border-emerald-200 bg-emerald-50 px-5 py-4 text-sm text-emerald-950"
+            role="status"
+          >
+            <p className="font-semibold">Analytics tracking is on again for this browser.</p>
+            <p className="mt-1 text-emerald-900">
+              The opt-out cookie was cleared and PostHog was told to resume capture for this browser on this site (if a
+              project key is configured). The footer reminder will disappear after the next navigation.
+            </p>
+          </div>
+        ) : null}
 
         {/* 1. Analytics usage */}
         <section aria-labelledby="analytics-usage">
-          <h2 id="analytics-usage" className="text-xl font-bold text-stone-800 mb-3">
-            1. Analytics
+          <h2 id="analytics-usage" className="mb-3 text-xl font-bold text-stone-800">
+            1. Product analytics (events)
           </h2>
-          <div className="bg-white rounded-2xl border border-amber-200 shadow-sm p-6 text-stone-700 leading-relaxed space-y-3">
+          <div className="space-y-3 rounded-2xl border border-amber-200 bg-white p-6 leading-relaxed text-stone-700 shadow-sm">
             <p>
-              This portal uses <strong className="text-stone-900">PostHog</strong> analytics to track page views and
-              user interactions. The data collected is used solely for the purpose of understanding how the portal is
-              used and improving the service for Carnatic musicians and visitors.
+              This portal uses <strong className="text-stone-900">PostHog</strong> to understand how the site is
+              used and to improve it for Carnatic musicians and visitors. The integration records{" "}
+              <strong className="text-stone-900">named events and page views</strong> you trigger while browsing or
+              using logged-in areas (for example: which pages you open, when you save your profile, or when you
+              update availability). <strong className="text-stone-900">Automatic “click everything” capture
+              (autocapture) is turned off</strong>; only code paths that explicitly call the analytics SDK send data.
             </p>
             <p>
-              Events that are tracked include page views, artist profile views, registration form submissions, and
-              key interactions within the artist dashboard (such as collab creation and availability updates).
-              No tracking occurs outside of these explicitly defined events - autocapture is disabled.
+              Examples of what may be recorded include route changes as page views, artist profile views,
+              registration submissions, and key actions in the artist or admin dashboards. Event payloads are kept
+              minimal and are described at a high level in this policy; the portal operator configures the exact
+              PostHog project.
             </p>
           </div>
         </section>
 
-        {/* 2. No PII */}
+        {/* 2. Session replay */}
+        <section aria-labelledby="session-replay">
+          <h2 id="session-replay" className="mb-3 text-xl font-bold text-stone-800">
+            2. Session replay (optional)
+          </h2>
+          <div className="space-y-3 rounded-2xl border border-amber-200 bg-white p-6 leading-relaxed text-stone-700 shadow-sm">
+            <p>
+              When enabled for a deployment, PostHog <strong className="text-stone-900">Session Replay</strong> can
+              record a replay of how pages render and how you move, scroll, and click - similar to a screen recording of
+              the browser tab. This helps operators reproduce bugs and improve layouts. Replay is{" "}
+              <strong className="text-stone-900">not the same as only “event counts”</strong>: it can show structure,
+              timing, and masked UI content for sessions that are captured.
+            </p>
+            <p>
+              The app initialises the PostHog client with <strong className="text-stone-900">text masking</strong>{" "}
+              (<code className="rounded bg-stone-100 px-1 text-xs">mask_all_text: true</code>) so that visible text in
+              the page is masked in replays where that protection applies. Operators should still configure PostHog
+              (for example sampling, URL filters, and retention) to match their legal and risk posture. Official
+              product documentation:{" "}
+              <a
+                href="https://posthog.com/docs/session-replay/privacy"
+                className="font-medium text-amber-700 underline underline-offset-2 hover:text-amber-900"
+              >
+                PostHog  -  Session replay privacy
+              </a>
+              .
+            </p>
+            <p className="text-sm text-stone-600">
+              Local development builds typically do not record replay unless explicitly enabled. Production builds may
+              disable replay entirely using environment variables documented for operators (
+              <code className="rounded bg-stone-100 px-1 text-xs">NEXT_PUBLIC_POSTHOG_ENABLE_RECORDING</code> and related
+              flags).
+            </p>
+          </div>
+        </section>
+
+        {/* 3. No PII in event properties */}
         <section aria-labelledby="no-pii">
-          <h2 id="no-pii" className="text-xl font-bold text-stone-800 mb-3">
-            2. Personal Data
+          <h2 id="no-pii" className="mb-3 text-xl font-bold text-stone-800">
+            3. Personal data in analytics <em>properties</em>
           </h2>
-          <div className="bg-white rounded-2xl border border-amber-200 shadow-sm p-6 text-stone-700 leading-relaxed space-y-3">
+          <div className="space-y-3 rounded-2xl border border-amber-200 bg-white p-6 leading-relaxed text-stone-700 shadow-sm">
             <p>
-              <strong className="text-stone-900">No personally identifiable information (PII) is included in any
-              analytics event.</strong> Specifically, the following data is never sent to the analytics system:
+              <strong className="text-stone-900">
+                Email addresses, full names, phone numbers, and similar identifiers are not attached to analytics
+                events as custom properties.
+              </strong>{" "}
+              Authenticated artists are linked in PostHog to an opaque internal <strong className="text-stone-900">
+              artist ID</strong> (a UUID). Non-identifying attributes such as province and role may be stored on that
+              profile to support aggregate reporting.
             </p>
-            <ul className="list-disc list-inside space-y-1 text-stone-600 pl-2">
-              <li>Email addresses</li>
-              <li>Full names</li>
-              <li>Phone numbers or contact details</li>
-            </ul>
-            <p>
-              Authenticated artists are identified in analytics by an opaque internal artist ID only. Non-identifying
-              properties such as province and role may be associated with that ID to enable aggregate analysis
-              (for example, understanding which regions are most active).
+            <p className="text-sm text-stone-600">
+              Session replay is a separate surface from “event properties”: it may reflect what appears on screen
+              subject to masking and PostHog settings. If you need to avoid replay entirely, use the opt-out mechanisms
+              in section 5 or ask the operator to disable recording for the deployment.
             </p>
           </div>
         </section>
 
-        {/* 3. Data retention */}
+        {/* 4. Data retention */}
         <section aria-labelledby="data-retention">
-          <h2 id="data-retention" className="text-xl font-bold text-stone-800 mb-3">
-            3. Data Retention
+          <h2 id="data-retention" className="mb-3 text-xl font-bold text-stone-800">
+            4. Data retention
           </h2>
-          <div className="bg-white rounded-2xl border border-amber-200 shadow-sm p-6 text-stone-700 leading-relaxed">
+          <div className="rounded-2xl border border-amber-200 bg-white p-6 leading-relaxed text-stone-700 shadow-sm">
             <p>
-              Event data is retained for <strong className="text-stone-900">12 months</strong>.
+              Event and replay data are retained according to the <strong className="text-stone-900">retention settings
+              </strong> on the operator&apos;s PostHog project (for example{" "}
+              <strong className="text-stone-900">12 months</strong> if that is what they configure).
             </p>
-            <p className="mt-3 text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-4 py-3">
-              <strong>Note for portal operators:</strong> this retention period is a placeholder. Please update it to
-              match the actual retention setting configured on your PostHog instance
-              (Settings → Project → Data retention).
+            <p className="mt-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700">
+              <strong>Note for portal operators:</strong> replace the example period above with the value shown in
+              PostHog (<strong>Settings → Project</strong> for events and replay retention) and keep this page in sync.
             </p>
           </div>
         </section>
 
-        {/* 4. Opt-out */}
+        {/* 5. Opt-out */}
         <section aria-labelledby="opt-out">
-          <h2 id="opt-out" className="text-xl font-bold text-stone-800 mb-3">
-            4. Opting Out
+          <h2 id="opt-out" className="mb-3 text-xl font-bold text-stone-800">
+            5. Opting out
           </h2>
-          <div className="bg-white rounded-2xl border border-amber-200 shadow-sm p-6 text-stone-700 leading-relaxed space-y-3">
-            <p>You can opt out of analytics tracking in two ways:</p>
-            <div className="space-y-4">
-              <div className="flex gap-4 items-start">
-                <span className="flex-shrink-0 w-8 h-8 rounded-full bg-amber-100 text-amber-800 flex items-center justify-center text-sm font-bold">1</span>
-                <div>
-                  <p className="font-semibold text-stone-800">Do Not Track browser signal</p>
-                  <p className="text-sm text-stone-500 mt-0.5">
-                    If your browser has the <em>Do Not Track</em> setting enabled (DNT header set to{" "}
-                    <code className="bg-stone-100 px-1 rounded text-xs">1</code>), the portal will detect this signal
-                    on page load and disable all event capture for your session.
-                  </p>
-                </div>
-              </div>
-              <div className="flex gap-4 items-start">
-                <span className="flex-shrink-0 w-8 h-8 rounded-full bg-amber-100 text-amber-800 flex items-center justify-center text-sm font-bold">2</span>
-                <div>
-                  <p className="font-semibold text-stone-800">Opt-out cookie</p>
-                  <p className="text-sm text-stone-500 mt-0.5">
-                    Setting the cookie{" "}
-                    <code className="bg-stone-100 px-1 rounded text-xs">ph_opt_out=1</code> in your browser will
-                    prevent any analytics events from being captured. This cookie persists across sessions until
-                    you remove it.
-                  </p>
-                </div>
+          <div className="space-y-4 rounded-2xl border border-amber-200 bg-white p-6 leading-relaxed text-stone-700 shadow-sm">
+            <p>
+              You can stop PostHog <strong className="text-stone-900">events and session replay</strong> for this
+              browser using any of the options below. When opt-out applies, the integration does not send analytics
+              requests - not even manual page views.
+            </p>
+
+            <PrivacyAnalyticsToggle
+              optOutDisplayUrl={optOutDisplayUrl}
+              localOptOutSample={LOCAL_OPT_OUT_SAMPLE}
+            />
+
+            <div className="flex items-start gap-4 border-t border-stone-100 pt-4">
+              <span className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-amber-100 text-sm font-bold text-amber-800">
+                B
+              </span>
+              <div>
+                <p className="font-semibold text-stone-800">Do Not Track browser signal</p>
+                <p className="mt-0.5 text-sm text-stone-500">
+                  If your browser sends the <em>Do Not Track</em> header (
+                  <code className="rounded bg-stone-100 px-1 text-xs">DNT: 1</code>), the portal disables PostHog
+                  capture when the app loads. (There is no URL for this - enable DNT in your browser or OS privacy
+                  settings.)
+                </p>
               </div>
             </div>
-            <p className="text-sm text-stone-500">
-              When either opt-out mechanism is active, no events are sent - not even page views.
-            </p>
+
+            <div className="flex items-start gap-4">
+              <span className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-amber-100 text-sm font-bold text-amber-800">
+                C
+              </span>
+              <div>
+                <p className="font-semibold text-stone-800">Set the cookie yourself</p>
+                <p className="mt-0.5 text-sm text-stone-500">
+                  Create a cookie named <code className="rounded bg-stone-100 px-1 text-xs">ph_opt_out</code> with value{" "}
+                  <code className="rounded bg-stone-100 px-1 text-xs">1</code> for this site&apos;s origin, path{" "}
+                  <code className="rounded bg-stone-100 px-1 text-xs">/</code>. Option A does this for you automatically.
+                  To clear it without the button, delete that cookie or open{" "}
+                  <code className="rounded bg-stone-100 px-1 text-xs">/privacy/opt-in</code> in the same way as the
+                  opt-out URL.
+                </p>
+              </div>
+            </div>
           </div>
         </section>
 
-        {/* 5. Self-hosted */}
-        <section aria-labelledby="self-hosted">
-          <h2 id="self-hosted" className="text-xl font-bold text-stone-800 mb-3">
-            5. Data Storage &amp; Infrastructure
+        {/* 6. Infrastructure */}
+        <section aria-labelledby="infrastructure">
+          <h2 id="infrastructure" className="mb-3 text-xl font-bold text-stone-800">
+            6. Where data is processed
           </h2>
-          <div className="bg-white rounded-2xl border border-amber-200 shadow-sm p-6 text-stone-700 leading-relaxed space-y-3">
+          <div className="space-y-3 rounded-2xl border border-amber-200 bg-white p-6 leading-relaxed text-stone-700 shadow-sm">
             <p>
-              The PostHog analytics instance used by this portal is{" "}
-              <strong className="text-stone-900">self-hosted and operated by the portal operator</strong>. It runs on
-              infrastructure under the operator&apos;s direct control.
+              Browser-side PostHog traffic is sent to <strong className="text-stone-900">this website&apos;s own
+              domain</strong> first (for example the <code className="rounded bg-stone-100 px-1 text-xs">/api/ph</code>{" "}
+              reverse proxy path in production), then forwarded to the PostHog backend configured by the operator.
+              That backend may be{" "}
+              <strong className="text-stone-900">PostHog Cloud</strong> (regional ingest such as the EU or US data
+              centre, depending on <code className="rounded bg-stone-100 px-1 text-xs">POSTHOG_HOST</code>) or a{" "}
+              <strong className="text-stone-900">self-hosted</strong> PostHog instance. Server-side analytics calls from
+              this app connect to the same configured host.
             </p>
-            <p>
-              <strong className="text-stone-900">Your analytics data does not leave the operator&apos;s
-              infrastructure.</strong> No data is sent to PostHog&apos;s cloud service or any third-party analytics
-              provider. All event ingestion happens through a reverse-proxy route on this portal&apos;s own domain.
+            <p className="text-sm text-stone-600">
+              The operator is responsible for listing subprocessors, data processing agreements, and any cookie banner
+              or consent text required in their jurisdiction. This page describes what the application is built to
+              do; it is not a substitute for legal advice.
             </p>
           </div>
         </section>
 
-        {/* 6. Contact */}
+        {/* 7. Contact */}
         <section aria-labelledby="contact">
-          <h2 id="contact" className="text-xl font-bold text-stone-800 mb-3">
-            6. Questions
+          <h2 id="contact" className="mb-3 text-xl font-bold text-stone-800">
+            7. Questions
           </h2>
-          <div className="bg-white rounded-2xl border border-amber-200 shadow-sm p-6 text-stone-700 leading-relaxed">
+          <div className="rounded-2xl border border-amber-200 bg-white p-6 leading-relaxed text-stone-700 shadow-sm">
             <p>
-              If you have questions about how your data is handled, please contact the portal operator directly.
-              Contact details can be found on the{" "}
-              <Link href="/about" className="text-amber-700 hover:text-amber-900 underline underline-offset-2 font-medium">
+              If you have questions about how your data is handled, contact the portal operator directly. Pointers
+              appear on the{" "}
+              <Link
+                href="/about"
+                className="font-medium text-amber-700 underline underline-offset-2 hover:text-amber-900"
+              >
                 About
               </Link>{" "}
               page.
@@ -161,18 +289,27 @@ export default function PrivacyPage() {
           </div>
         </section>
 
-        <p className="text-xs text-stone-400 text-center pt-4 border-t border-amber-100">
-          This privacy policy relates to analytics data collection only. Last reviewed by the portal operator.
+        <p className="border-t border-amber-100 pt-4 text-center text-xs text-stone-400">
+          This policy covers analytics and optional session replay as implemented in the open-source codebase. Last
+          reviewed by the portal operator.
         </p>
       </div>
 
       {/* Footer nav */}
       <div className="border-t border-amber-200 bg-white px-6 py-8">
-        <div className="max-w-3xl mx-auto flex flex-wrap justify-center gap-6 text-sm font-medium text-amber-700">
-          <Link href="/" className="hover:text-amber-900 underline underline-offset-2">Home</Link>
-          <Link href="/artists" className="hover:text-amber-900 underline underline-offset-2">Browse Artists</Link>
-          <Link href="/register" className="hover:text-amber-900 underline underline-offset-2">Register as Artist</Link>
-          <Link href="/about" className="hover:text-amber-900 underline underline-offset-2">About this Portal</Link>
+        <div className="mx-auto flex max-w-3xl flex-wrap justify-center gap-6 text-sm font-medium text-amber-700">
+          <Link href="/" className="underline underline-offset-2 hover:text-amber-900">
+            Home
+          </Link>
+          <Link href="/artists" className="underline underline-offset-2 hover:text-amber-900">
+            Browse Artists
+          </Link>
+          <Link href="/register" className="underline underline-offset-2 hover:text-amber-900">
+            Register as Artist
+          </Link>
+          <Link href="/about" className="underline underline-offset-2 hover:text-amber-900">
+            About this Portal
+          </Link>
         </div>
       </div>
     </main>

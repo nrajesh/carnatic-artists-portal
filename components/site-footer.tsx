@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { cookies } from "next/headers";
 import { verifySession } from "@/lib/session-jwt";
+import { AnalyticsOptOutFooterNote } from "@/components/analytics-opt-out-footer-note";
 
 /**
  * Global footer - safe for production (About, Privacy, auth state).
@@ -57,6 +58,7 @@ export async function SiteFooter() {
             </Link>
           )}
         </nav>
+        <AnalyticsOptOutFooterNote />
         <p className="mt-6 text-center text-xs text-stone-500">
           Carnatic Artist Portal - connecting musicians in the Netherlands
         </p>

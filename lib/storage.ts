@@ -19,7 +19,7 @@ const r2RequestHandler = new FetchHttpHandler({});
 
 /**
  * The Node S3 runtime uses `@aws-sdk/util-user-agent-node`, which reads `package.json` via `fs.readFile`
- * for TypeScript version detection — that fails on Workers (unenv). Browser UA avoids any filesystem access.
+ * for TypeScript version detection  -  that fails on Workers (unenv). Browser UA avoids any filesystem access.
  */
 const r2DefaultUserAgentProvider = createBrowserUserAgentProvider({
   serviceId: 's3',

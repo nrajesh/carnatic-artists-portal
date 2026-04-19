@@ -93,7 +93,7 @@ export default async function RegistrationsPage({ searchParams }: PageProps) {
         )}
       </div>
 
-      {/* Filters — fixed control height so native select/date/button align */}
+      {/* Filters  -  fixed control height so native select/date/button align */}
       <form method="GET" className="mb-6 flex flex-wrap items-end gap-3">
         <div className="flex min-w-[10rem] flex-col gap-1.5">
           <label className="text-xs font-semibold uppercase tracking-wide text-stone-600">Status</label>

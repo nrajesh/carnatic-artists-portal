@@ -27,14 +27,15 @@ export function RegistrationPrefixedUrlInput(props: Props): JSX.Element {
   const suffix = suffixFromStored(typeof stored === "string" ? stored : "");
 
   return (
-    <div>
+    <div className="min-w-0 max-w-full">
       <label htmlFor={id} className="mb-1 block text-sm font-semibold text-amber-900">
         {label}
       </label>
       {helperText ? <div className="mb-2 text-xs text-amber-600">{helperText}</div> : null}
-      <div className="flex min-h-[44px] min-w-0 overflow-hidden rounded-lg border border-amber-300 bg-white focus-within:ring-2 focus-within:ring-amber-500">
+      {/* Stacked on narrow screens so long https:// prefixes never overlap the input (iOS Chrome). */}
+      <div className="flex w-full min-w-0 max-w-full flex-col rounded-lg border border-amber-300 bg-white focus-within:ring-2 focus-within:ring-amber-500 sm:flex-row sm:overflow-hidden">
         <span
-          className="flex max-w-[55%] shrink-0 items-center border-r border-amber-200 bg-amber-50 px-2 py-2 text-xs font-medium text-amber-900 select-none"
+          className="select-none break-all border-b border-amber-200 bg-amber-50 px-2 py-1.5 text-[11px] font-medium leading-snug text-amber-900 sm:max-w-[min(50%,14rem)] sm:border-b-0 sm:border-r sm:py-2 sm:text-xs md:max-w-[45%]"
           title={prefix}
         >
           {prefix}
@@ -48,7 +49,7 @@ export function RegistrationPrefixedUrlInput(props: Props): JSX.Element {
           onBlur={field.onBlur}
           onChange={(e) => field.onChange(merge(e.target.value))}
           placeholder={suffixPlaceholder}
-          className="min-w-0 flex-1 border-0 bg-transparent px-2 py-2 text-sm text-amber-900 placeholder-amber-400 focus:outline-none focus:ring-0"
+          className="min-h-[48px] min-w-0 w-full flex-1 border-0 bg-transparent px-2 py-2 text-base text-amber-900 placeholder-amber-400 focus:outline-none focus:ring-0 sm:min-h-[44px]"
         />
       </div>
       {error ? (

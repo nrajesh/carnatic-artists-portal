@@ -177,7 +177,17 @@ export default async function ReviewRegistrationPage({
             <h2 className="text-xs font-semibold text-stone-500 uppercase tracking-wide mb-3">External Links</h2>
             <ul className="flex flex-col gap-2">
               {reg.links.map((link, i) => (
-                <li key={i}><a href={link.url} target="_blank" rel="noopener noreferrer" className="text-amber-700 hover:text-amber-900 text-sm font-medium underline underline-offset-2"><span className="text-stone-400 text-xs mr-2">{LINK_LABELS[link.linkType] ?? link.linkType}</span>{link.url}</a></li>
+                <li key={i} className="min-w-0">
+                  <a
+                    href={link.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="break-all text-sm font-medium text-amber-700 underline underline-offset-2 hover:text-amber-900"
+                  >
+                    <span className="mr-2 text-xs text-stone-400">{LINK_LABELS[link.linkType] ?? link.linkType}</span>
+                    {link.url}
+                  </a>
+                </li>
               ))}
             </ul>
           </div>

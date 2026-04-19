@@ -355,31 +355,33 @@ export function ArtistProfileEditForm({
           </label>
           <div className="space-y-2">
             {websiteUrls.map((row, index) => (
-              <div key={index} className="flex gap-2">
-                <div
-                  className={`flex min-h-[44px] min-w-0 flex-1 overflow-hidden rounded-lg border border-stone-200 bg-white focus-within:ring-2 ${ring}`}
-                >
-                  <span className="flex shrink-0 items-center border-r border-stone-200 bg-stone-50 px-2 py-2 text-xs font-medium text-stone-700 select-none">
-                    {REGISTRATION_HTTPS_PREFIX}
-                  </span>
-                  <input
-                    type="text"
-                    inputMode="url"
-                    autoComplete="off"
-                    value={websitePathSuffixFromStored(row.url ?? "")}
-                    onChange={(e) => setWebsiteUrlAt(index, mergeWebsitePath(e.target.value))}
-                    placeholder="yourwebsite.com"
-                    className="min-w-0 flex-1 border-0 bg-transparent px-2 py-2 text-sm text-stone-800 placeholder-stone-400 focus:outline-none focus:ring-0"
-                  />
+              <div key={index} className="min-w-0 max-w-full">
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-stretch">
+                  <div
+                    className={`flex w-full min-w-0 max-w-full flex-col rounded-lg border border-stone-200 bg-white focus-within:ring-2 sm:flex-row sm:overflow-hidden ${ring}`}
+                  >
+                    <span className="select-none break-all border-b border-stone-200 bg-stone-50 px-2 py-1.5 text-[11px] font-medium leading-snug text-stone-700 sm:border-b-0 sm:border-r sm:py-2 sm:text-xs">
+                      {REGISTRATION_HTTPS_PREFIX}
+                    </span>
+                    <input
+                      type="text"
+                      inputMode="url"
+                      autoComplete="off"
+                      value={websitePathSuffixFromStored(row.url ?? "")}
+                      onChange={(e) => setWebsiteUrlAt(index, mergeWebsitePath(e.target.value))}
+                      placeholder="yourwebsite.com"
+                      className="min-h-[48px] min-w-0 w-full flex-1 border-0 bg-transparent px-2 py-2 text-base text-stone-800 placeholder-stone-400 focus:outline-none focus:ring-0 sm:min-h-[44px]"
+                    />
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => removeWebsiteRow(index)}
+                    className="min-h-[44px] min-w-[44px] shrink-0 rounded-lg border border-red-200 px-3 py-2 text-red-600 hover:bg-red-50 sm:self-start"
+                    aria-label="Remove website URL"
+                  >
+                    ×
+                  </button>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => removeWebsiteRow(index)}
-                  className="min-h-[44px] min-w-[44px] rounded-lg border border-red-200 px-3 py-2 text-red-600 hover:bg-red-50"
-                  aria-label="Remove website URL"
-                >
-                  ×
-                </button>
               </div>
             ))}
             {websiteUrls.length < 3 && (

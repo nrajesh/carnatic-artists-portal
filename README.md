@@ -65,6 +65,7 @@ Designed for Lighthouse PWA ≥90, Performance ≥85, Accessibility ≥90 on mob
 | Rich text | Tiptap (ProseMirror-based, Unicode-safe) |
 | Maps | D3.js + configurable GeoJSON |
 | i18n | next-intl (JSON locale files) |
+| Analytics | [PostHog](https://posthog.com/)  -  explicit events + manual page views, **no autocapture**; optional **Session Replay** (text masking on; configurable via env); browser traffic uses a **same-origin** `/api/ph` proxy in production; DNT + `ph_opt_out` honoured in the client provider |
 | Testing | Vitest + fast-check (property-based) + Playwright (E2E) |
 
 ---
@@ -177,7 +178,7 @@ Since magic-link email requires Resend to be configured, use these shortcuts for
 | `/` | Home - stats, daily featured vocalist (photo + gradient fallback + active collab teasers), NL province map, preview grid |
 | `/artists` | Artist directory with search (name, speciality, province) |
 | `/artists/[slug]` | Artist profile - bio, collab stats, reviews, availability |
-| `/register` | Artist registration — required name, email, contact, specialities; optional HTTPS profile/banner image URLs |
+| `/register` | Artist registration  -  required name, email, contact, specialities; optional HTTPS profile/banner image URLs |
 | `/auth/login` | Request magic link |
 | `/dashboard` | Artist dashboard (auth required) |
 | `/profile/edit` | Edit profile (auth required) |
@@ -265,7 +266,7 @@ The app is built for production with **Next.js** (`npm run build`, `output: "sta
 2. **Build command:** `npm run build`
 3. **Deploy command:** `npm run deploy:cf`  
    This runs `opennextjs-cloudflare build --skipNextBuild` (consumes the `.next` output from the build step) and then `opennextjs-cloudflare deploy` with **`--keep-vars`** so Wrangler does not remove [runtime variables](https://developers.cloudflare.com/workers/configuration/environment-variables/) you set only in the dashboard.
-4. **PostHog:** `POSTHOG_HOST` is set in `wrangler.jsonc` (`vars`) so the `/api/ph` proxy always has an ingest URL at runtime. For **PostHog Cloud US**, change it to `https://us.i.posthog.com`. If you rely on dashboard-only vars for other secrets, keep using `--keep-vars` (already in the npm scripts).
+4. **PostHog:** `POSTHOG_HOST` is set in `wrangler.jsonc` (`vars`) so the `/api/ph` proxy always has an ingest URL at runtime (typically **PostHog Cloud EU** `https://eu.i.posthog.com` or **US** `https://us.i.posthog.com`; self-hosted ingest URLs work too). `NEXT_PUBLIC_POSTHOG_KEY` must be present at **build** time for client analytics. **Session replay** is gated by `NEXT_PUBLIC_POSTHOG_ENABLE_RECORDING` and dev-only `NEXT_PUBLIC_POSTHOG_RECORDING_IN_DEV`  -  see `lib/analytics-client.ts` and `/privacy`. If you rely on dashboard-only vars for other secrets, keep using `--keep-vars` (already in the npm scripts).
 5. **Non-production uploads (optional):** e.g. `opennextjs-cloudflare build --skipNextBuild && opennextjs-cloudflare upload` for version uploads / preview pipelines.
 6. Add variables from `env.example` under **Build variables and secrets** for the Next.js build (`NEXT_PUBLIC_*`, etc.).
 7. **`DEPLOYMENT_*` branding:** Netherlands defaults (`DEPLOYMENT_REGION`, `DEPLOYMENT_NAME`, locales, GeoJSON path, logo URL) are declared in **`wrangler.jsonc`** (`vars`) so Workers runtime gets them - Cloudflare does **not** inject your laptop `.env` into the Worker. Override in the dashboard for another country or forked branding.

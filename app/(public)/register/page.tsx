@@ -5,7 +5,7 @@
  * Requirements: 1.1, 1.2, 1.3, 1.4, 1.5, 1.7, 1.8
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useForm, useFieldArray, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -126,6 +126,7 @@ function EditorToolbar({ editor }: { editor: ReturnType<typeof useEditor> }) {
     <div className="flex flex-wrap gap-1 border border-amber-300 border-b-0 rounded-t-md bg-amber-50 p-2">
       <button
         type="button"
+        onMouseDown={(e) => e.preventDefault()}
         onClick={() => editor.chain().focus().toggleBold().run()}
         className={`px-2 py-1 text-sm rounded font-bold min-w-[44px] min-h-[44px] ${
           editor.isActive('bold') ? 'bg-amber-700 text-white' : 'bg-white text-amber-900 border border-amber-300'
@@ -136,6 +137,7 @@ function EditorToolbar({ editor }: { editor: ReturnType<typeof useEditor> }) {
       </button>
       <button
         type="button"
+        onMouseDown={(e) => e.preventDefault()}
         onClick={() => editor.chain().focus().toggleItalic().run()}
         className={`px-2 py-1 text-sm rounded italic min-w-[44px] min-h-[44px] ${
           editor.isActive('italic') ? 'bg-amber-700 text-white' : 'bg-white text-amber-900 border border-amber-300'
@@ -146,6 +148,7 @@ function EditorToolbar({ editor }: { editor: ReturnType<typeof useEditor> }) {
       </button>
       <button
         type="button"
+        onMouseDown={(e) => e.preventDefault()}
         onClick={setLink}
         className={`px-2 py-1 text-sm rounded min-w-[44px] min-h-[44px] ${
           editor.isActive('link') ? 'bg-amber-700 text-white' : 'bg-white text-amber-900 border border-amber-300'
@@ -156,6 +159,7 @@ function EditorToolbar({ editor }: { editor: ReturnType<typeof useEditor> }) {
       </button>
       <button
         type="button"
+        onMouseDown={(e) => e.preventDefault()}
         onClick={addImage}
         className="px-2 py-1 text-sm rounded bg-white text-amber-900 border border-amber-300 min-w-[44px] min-h-[44px]"
         aria-label="Insert image"
@@ -185,6 +189,7 @@ export default function RegisterPage() {
   const [registeringSomeoneElse, setRegisteringSomeoneElse] = useState(false);
   const [specialityCatalog, setSpecialityCatalog] = useState<SpecialityCatalogItem[]>([]);
   const posthog = usePostHog();
+  const bioRichTextDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const {
     register,
@@ -269,13 +274,23 @@ export default function RegisterPage() {
     editorProps: {
       attributes: {
         class:
-          'min-h-[12rem] cursor-text px-3 py-3 text-amber-900 outline-none prose prose-sm max-w-none focus:outline-none',
+          'min-h-[12rem] cursor-text px-3 py-3 text-base text-amber-900 outline-none prose prose-sm max-w-none focus:outline-none sm:text-sm',
       },
     },
-    onUpdate: ({ editor }) => {
-      setValue('bioRichText', editor.getHTML());
+    onUpdate: ({ editor: ed }) => {
+      if (bioRichTextDebounceRef.current) clearTimeout(bioRichTextDebounceRef.current);
+      bioRichTextDebounceRef.current = setTimeout(() => {
+        bioRichTextDebounceRef.current = null;
+        setValue('bioRichText', ed.getHTML(), { shouldDirty: true, shouldValidate: false });
+      }, 300);
     },
   });
+
+  useEffect(() => {
+    return () => {
+      if (bioRichTextDebounceRef.current) clearTimeout(bioRichTextDebounceRef.current);
+    };
+  }, []);
 
   const onSubmit = async (data: RegistrationFormData) => {
     setSubmitError(null);
@@ -293,7 +308,8 @@ export default function RegisterPage() {
       data.specialities.forEach((s) => formData.append('specialities', s));
 
       if (data.backgroundImageUrl) formData.append('backgroundImageUrl', data.backgroundImageUrl);
-      if (data.bioRichText) formData.append('bioRichText', data.bioRichText);
+      const bioRichText = editor?.getHTML() ?? data.bioRichText ?? '';
+      if (bioRichText) formData.append('bioRichText', bioRichText);
       if (data.linkedinUrl) formData.append('linkedinUrl', data.linkedinUrl);
       if (data.instagramUrl) formData.append('instagramUrl', data.instagramUrl);
       if (data.facebookUrl) formData.append('facebookUrl', data.facebookUrl);
@@ -339,8 +355,8 @@ export default function RegisterPage() {
   }
 
   return (
-    <main className="min-h-screen bg-amber-50 py-8 px-4">
-      <div className="max-w-2xl mx-auto">
+    <main className="min-h-screen min-w-0 bg-amber-50 py-8 px-4">
+      <div className="mx-auto max-w-2xl min-w-0">
         {/* Back link */}
         <div className="mb-6">
           <NextLink href="/" className="inline-flex items-center gap-1 text-sm text-amber-700 hover:text-amber-900 font-medium transition-colors">
@@ -376,7 +392,7 @@ export default function RegisterPage() {
         <form
           onSubmit={handleSubmit(onSubmit)}
           noValidate
-          className="bg-white rounded-2xl shadow-lg border border-amber-200 p-6 space-y-6"
+          className="touch-manipulation space-y-6 rounded-2xl border border-amber-200 bg-white p-6 shadow-lg"
         >
           {/* ── Full Name ── */}
           <div>
@@ -418,7 +434,7 @@ export default function RegisterPage() {
               Contact Number <span className="text-red-600">*</span>
             </label>
             <p className="mb-2 text-xs text-amber-600">
-              Digits only (7–15). Use an optional <strong>+</strong> at the start for a country code — no spaces or other
+              Digits only (7–15). Use an optional <strong>+</strong> at the start for a country code  -  no spaces or other
               symbols.
             </p>
             <div className="flex flex-col sm:flex-row gap-3">
@@ -547,8 +563,8 @@ export default function RegisterPage() {
               />
             </div>
 
-            {/* Bio / Musical Journey — min-height on ProseMirror (editorProps) so the whole box is clickable */}
-            <div className="mb-4">
+            {/* Bio / Musical Journey  -  min-height on ProseMirror (editorProps) so the whole box is clickable */}
+            <div className="mb-4 min-w-0 max-w-full">
               <label className="block text-sm font-semibold text-amber-900 mb-1">
                 Bio / Musical Journey
               </label>
@@ -566,14 +582,14 @@ export default function RegisterPage() {
               </label>
               <div className="space-y-2">
                 {websiteFields.map((field, index) => (
-                  <div key={field.id}>
-                    <div className="flex gap-2">
+                  <div key={field.id} className="min-w-0 max-w-full">
+                    <div className="flex flex-col gap-2 sm:flex-row sm:items-stretch">
                       <Controller
                         name={`websiteUrls.${index}.url`}
                         control={control}
                         render={({ field: urlField }) => (
-                          <div className="flex min-h-[44px] min-w-0 flex-1 overflow-hidden rounded-lg border border-amber-300 bg-white focus-within:ring-2 focus-within:ring-amber-500">
-                            <span className="flex shrink-0 items-center border-r border-amber-200 bg-amber-50 px-2 py-2 text-xs font-medium text-amber-900 select-none">
+                          <div className="flex w-full min-w-0 max-w-full flex-col rounded-lg border border-amber-300 bg-white focus-within:ring-2 focus-within:ring-amber-500 sm:flex-row sm:overflow-hidden">
+                            <span className="select-none break-all border-b border-amber-200 bg-amber-50 px-2 py-1.5 text-[11px] font-medium leading-snug text-amber-900 sm:border-b-0 sm:border-r sm:py-2 sm:text-xs">
                               {REGISTRATION_HTTPS_PREFIX}
                             </span>
                             <input
@@ -586,7 +602,7 @@ export default function RegisterPage() {
                               value={websitePathSuffixFromStored(urlField.value ?? '')}
                               onChange={(e) => urlField.onChange(mergeWebsitePath(e.target.value))}
                               placeholder="yourwebsite.com"
-                              className="min-w-0 flex-1 border-0 bg-transparent px-2 py-2 text-sm text-amber-900 placeholder-amber-400 focus:outline-none focus:ring-0"
+                              className="min-h-[48px] min-w-0 w-full flex-1 border-0 bg-transparent px-2 py-2 text-base text-amber-900 placeholder-amber-400 focus:outline-none focus:ring-0 sm:min-h-[44px]"
                             />
                           </div>
                         )}
@@ -594,7 +610,7 @@ export default function RegisterPage() {
                       <button
                         type="button"
                         onClick={() => removeWebsite(index)}
-                        className="px-3 py-2 text-red-600 border border-red-200 rounded-lg hover:bg-red-50 min-w-[44px] min-h-[44px]"
+                        className="min-h-[44px] min-w-[44px] shrink-0 rounded-lg border border-red-200 px-3 py-2 text-red-600 hover:bg-red-50 sm:self-start"
                         aria-label="Remove website URL"
                       >
                         ×
@@ -624,7 +640,7 @@ export default function RegisterPage() {
               )}
             </div>
 
-            {/* Social Links — fixed host prefix; type handle or path after it */}
+            {/* Social Links  -  fixed host prefix; type handle or path after it */}
             {(
               [
                 {

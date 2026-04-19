@@ -33,6 +33,7 @@ function BioEditorToolbar({ editor }: { editor: ReturnType<typeof useEditor> }) 
     <div className={`${bar} border-stone-300 bg-stone-100`}>
       <button
         type="button"
+        onMouseDown={(e) => e.preventDefault()}
         onClick={() => editor.chain().focus().toggleBold().run()}
         className={`${btnBase} font-bold ${editor.isActive("bold") ? btnOn : `${btnOff}border-stone-300 text-stone-800`}`}
         aria-label="Bold"
@@ -41,6 +42,7 @@ function BioEditorToolbar({ editor }: { editor: ReturnType<typeof useEditor> }) 
       </button>
       <button
         type="button"
+        onMouseDown={(e) => e.preventDefault()}
         onClick={() => editor.chain().focus().toggleItalic().run()}
         className={`${btnBase} italic ${editor.isActive("italic") ? btnOn : `${btnOff}border-stone-300 text-stone-800`}`}
         aria-label="Italic"
@@ -49,6 +51,7 @@ function BioEditorToolbar({ editor }: { editor: ReturnType<typeof useEditor> }) 
       </button>
       <button
         type="button"
+        onMouseDown={(e) => e.preventDefault()}
         onClick={setLink}
         className={`${btnBase} ${editor.isActive("link") ? btnOn : `${btnOff}border-stone-300 text-stone-800`}`}
         aria-label="Link"
@@ -57,6 +60,7 @@ function BioEditorToolbar({ editor }: { editor: ReturnType<typeof useEditor> }) 
       </button>
       <button
         type="button"
+        onMouseDown={(e) => e.preventDefault()}
         onClick={addImage}
         className={`${btnBase} ${btnOff}border-stone-300 text-stone-800`}
         aria-label="Insert image"
@@ -78,7 +82,10 @@ type BioRichTextEditorProps = {
  */
 export function BioRichTextEditor({ initialHtml, onHtmlChange, disabled }: BioRichTextEditorProps) {
   const prevInitialRef = useRef(initialHtml);
+  const onHtmlChangeRef = useRef(onHtmlChange);
+  const htmlDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  const editorRef = useRef<ReturnType<typeof useEditor>>(null);
   const editor = useEditor({
     immediatelyRender: false,
     extensions: [
@@ -91,17 +98,37 @@ export function BioRichTextEditor({ initialHtml, onHtmlChange, disabled }: BioRi
     editorProps: {
       attributes: {
         class:
-          "min-h-[12rem] cursor-text px-3 py-3 text-stone-800 outline-none prose prose-sm max-w-none focus:outline-none",
+          "min-h-[12rem] cursor-text px-3 py-3 text-base text-stone-800 outline-none prose prose-sm max-w-none focus:outline-none sm:text-sm",
       },
     },
     onUpdate: ({ editor: ed }) => {
-      onHtmlChange(ed.getHTML());
+      if (htmlDebounceRef.current) clearTimeout(htmlDebounceRef.current);
+      htmlDebounceRef.current = setTimeout(() => {
+        htmlDebounceRef.current = null;
+        onHtmlChangeRef.current(ed.getHTML());
+      }, 300);
     },
   });
 
   useEffect(() => {
+    onHtmlChangeRef.current = onHtmlChange;
+  }, [onHtmlChange]);
+
+  useEffect(() => {
+    editorRef.current = editor;
+  }, [editor]);
+
+  useEffect(() => {
     if (editor) editor.setEditable(!disabled);
   }, [editor, disabled]);
+
+  useEffect(() => {
+    return () => {
+      if (htmlDebounceRef.current) clearTimeout(htmlDebounceRef.current);
+      const ed = editorRef.current;
+      if (ed) onHtmlChangeRef.current(ed.getHTML());
+    };
+  }, []);
 
   useEffect(() => {
     if (!editor) return;
