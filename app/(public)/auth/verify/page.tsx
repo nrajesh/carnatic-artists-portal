@@ -40,36 +40,9 @@ export default async function VerifyPage({ searchParams }: VerifyPageProps) {
 
         <div className="rounded-2xl border border-stone-200 bg-white p-8 shadow-sm">
           <h1 className="mb-2 text-2xl font-bold text-stone-800">Finish signing in</h1>
-          <p className="mb-4 text-sm text-stone-600">
+          <p className="mb-6 text-sm text-stone-600">
             Tap <strong className="font-semibold text-stone-800">Continue</strong> below to complete sign-in.
           </p>
-          <div
-            className="mb-5 flex gap-3 rounded-lg border border-sky-200 bg-sky-50 px-4 py-3 text-sm text-sky-950 shadow-sm"
-            role="note"
-            aria-label="About email link previews"
-          >
-            <svg
-              className="mt-0.5 h-5 w-5 shrink-0 text-sky-600"
-              fill="none"
-              viewBox="0 0 24 24"
-              strokeWidth={1.5}
-              stroke="currentColor"
-              aria-hidden
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="m11.25 11.25.041-.02a.75.75 0 0 1 1.063.852l-.708 2.836a.75.75 0 0 0 1.063.853l.041-.021M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9-3.75h.008v.008H12V8.25Z"
-              />
-            </svg>
-            <div>
-              <p className="font-medium text-sky-950">Email previews can use your link early</p>
-              <p className="mt-1.5 leading-relaxed text-sky-900">
-                Opening the link in a preview or long-pressing can load this page in the background. If that
-                already happened, this link may no longer work—request a new one from the login page.
-              </p>
-            </div>
-          </div>
           <form action="/api/auth/verify" method="POST" className="space-y-4">
             <input type="hidden" name="token" value={token.trim()} />
             <button
