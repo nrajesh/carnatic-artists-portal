@@ -1,10 +1,12 @@
 /**
- * Proxy - JWT session validation for protected routes.
+ * Edge Middleware — JWT session validation for protected routes.
  *
  * Reads the `session` cookie, verifies it as a signed JWT, and either
  * allows the request through (with identity headers) or redirects to login.
  *
- * Works in the Edge runtime - no shared in-memory store needed.
+ * Uses the Edge runtime (`middleware.ts`). Next.js 16's `proxy.ts` defaults to the
+ * Node.js runtime, which OpenNext for Cloudflare does not support yet — keep this file
+ * named `middleware.ts` until that ecosystem catches up.
  *
  * Requirements: 12.4, 12.5
  */
@@ -28,7 +30,7 @@ function isAdminRoute(pathname: string): boolean {
   return ADMIN_PREFIXES.some((prefix) => pathname.startsWith(prefix));
 }
 
-export async function proxy(request: NextRequest): Promise<NextResponse> {
+export async function middleware(request: NextRequest): Promise<NextResponse> {
   const { pathname } = request.nextUrl;
 
   const sessionCookie = request.cookies.get('session')?.value ?? null;
