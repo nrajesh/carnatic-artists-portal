@@ -1,8 +1,9 @@
 /**
- * POST /auth/verify - completes magic-link sign-in (consumes token, sets session cookie).
+ * POST /api/auth/verify - completes magic-link sign-in (consumes token, sets session cookie).
  *
- * GET is handled by `page.tsx`, which shows a confirmation step. That prevents email
- * clients and link-preview crawlers from burning single-use tokens via prefetch GETs.
+ * GET /auth/verify is handled by `app/(public)/auth/verify/page.tsx`, which shows a confirmation
+ * step. That prevents email clients and link-preview crawlers from burning single-use tokens via
+ * prefetch GETs.
  *
  * Requirements: 2.6, 2.7, 4.4, 12.3
  */
@@ -75,7 +76,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       return redirectToError(request, 'invalid');
     }
 
-    logSafeError('[auth/verify] unexpected error', err);
+    logSafeError('[api/auth/verify] unexpected error', err);
     return redirectToError(request, 'unexpected');
   }
 }

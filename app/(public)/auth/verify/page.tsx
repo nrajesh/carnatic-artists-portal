@@ -46,7 +46,7 @@ export default async function VerifyPage({ searchParams }: VerifyPageProps) {
             page in the background - if that already happened, this link may no longer work and you&apos;ll
             need a new one from the login page.
           </p>
-          <form action="/auth/verify" method="POST" className="space-y-4">
+          <form action="/api/auth/verify" method="POST" className="space-y-4">
             <input type="hidden" name="token" value={token.trim()} />
             <button
               type="submit"

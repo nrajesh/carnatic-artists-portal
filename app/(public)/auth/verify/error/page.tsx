@@ -1,7 +1,7 @@
 /**
  * Magic-link verification error page.
  *
- * Receives `?code=` from the /auth/verify route handler and renders an
+ * Receives `?code=` from redirects after `POST /api/auth/verify` and renders an
  * appropriate error card. Kept as a Server Component - no cookie writes
  * happen here.
  */
