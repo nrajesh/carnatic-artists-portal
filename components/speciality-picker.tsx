@@ -36,16 +36,28 @@ export default function SpecialityPicker({
 
   const available = useMemo(() => {
     const q = query.trim().toLowerCase();
-    return catalog.filter(
+    if (!q) {
+      return catalog.filter((s) => !selected.some((x) => x.toLowerCase() === s.name.toLowerCase()));
+    }
+    const rows = catalog.filter(
       (s) =>
         !selected.some((x) => x.toLowerCase() === s.name.toLowerCase()) &&
         s.name.toLowerCase().includes(q),
     );
+    // Prefer prefix matches (e.g. "vo" → "Vocal" before "Pallavi vocal workshop")
+    return [...rows].sort((a, b) => {
+      const al = a.name.toLowerCase().startsWith(q) ? 0 : 1;
+      const bl = b.name.toLowerCase().startsWith(q) ? 0 : 1;
+      if (al !== bl) return al - bl;
+      return a.name.localeCompare(b.name);
+    });
   }, [catalog, query, selected]);
 
   const normalizedQuery = normalizeSpecialityLabel(query);
+  /** Only offer "Add custom" when nothing in the catalogue matches — avoids a second panel covering matches. */
   const customEligible =
     allowCustom &&
+    available.length === 0 &&
     normalizedQuery.length >= 2 &&
     normalizedQuery.length <= 80 &&
     selected.length < 3 &&
@@ -134,7 +146,7 @@ export default function SpecialityPicker({
             className="min-h-[44px] w-full rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-stone-800 placeholder:text-amber-400 focus:outline-none focus:ring-2 focus:ring-amber-400 sm:w-64"
           />
 
-          {open && catalog.length > 0 && available.length > 0 && (
+          {open && catalog.length > 0 && (available.length > 0 || customEligible) && (
             <ul className="absolute z-20 mt-1 max-h-52 w-full overflow-y-auto rounded-xl border border-stone-200 bg-white shadow-lg sm:w-64">
               {available.map((s) => (
                 <li key={s.name}>
@@ -151,10 +163,38 @@ export default function SpecialityPicker({
                   </button>
                 </li>
               ))}
+              {customEligible ? (
+                <li className="border-t border-amber-100 bg-amber-50/80">
+                  <button
+                    type="button"
+                    onMouseDown={(e) => {
+                      e.preventDefault();
+                      addCustom();
+                    }}
+                    className="flex min-h-[44px] w-full flex-col items-start gap-1 px-4 py-2.5 text-left text-sm font-medium text-amber-900 hover:bg-amber-100/80"
+                  >
+                    <span>Add custom: &ldquo;{normalizedQuery}&rdquo;</span>
+                    <span className="text-xs font-normal text-stone-500">
+                      If it&apos;s missing from the list, admins can add it to the catalogue when reviewing your
+                      application.
+                    </span>
+                  </button>
+                </li>
+              ) : null}
             </ul>
           )}
 
-          {open && allowCustom && customEligible && (
+          {open &&
+            catalog.length > 0 &&
+            query.trim().length > 0 &&
+            available.length === 0 &&
+            !customEligible && (
+              <div className="absolute z-20 mt-1 w-full rounded-xl border border-stone-200 bg-white px-4 py-3 text-sm text-stone-400 shadow-lg sm:w-64">
+                No matching specialities
+              </div>
+            )}
+
+          {open && catalog.length === 0 && allowCustom && customEligible && (
             <div className="absolute z-20 mt-1 w-full rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 shadow-lg sm:w-64">
               <button
                 type="button"
@@ -171,16 +211,6 @@ export default function SpecialityPicker({
               </p>
             </div>
           )}
-
-          {open &&
-            catalog.length > 0 &&
-            query.length > 0 &&
-            available.length === 0 &&
-            !customEligible && (
-              <div className="absolute z-20 mt-1 w-full rounded-xl border border-stone-200 bg-white px-4 py-3 text-sm text-stone-400 shadow-lg sm:w-64">
-                No matching specialities
-              </div>
-            )}
         </div>
       )}
 

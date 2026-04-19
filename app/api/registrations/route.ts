@@ -9,13 +9,32 @@ import { z } from 'zod';
 import { getDb } from '@/lib/db';
 import { notifyAdminRegistrationEvent } from '@/lib/notifications';
 import { normalizeSpecialityList } from '@/lib/speciality-catalog';
+import {
+  mergeFacebookUrl,
+  mergeInstagramUrl,
+  mergeLinkedinUrl,
+  mergeTwitterUrl,
+  mergeWebsitePath,
+  mergeYoutubeUrl,
+  isPlausibleContactNumber,
+  sanitizeContactNumberInput,
+} from '@/lib/registration-input-normalize';
 
-/** Empty / missing → undefined. When set, must be a valid HTTPS image URL. */
+/** Empty / missing → undefined. When set, must be a valid HTTPS image URL (path merged with https://). */
 const optionalHttpsPhotoUrl = z.preprocess((val: unknown) => {
+  if (val === undefined || val === null) return undefined;
   if (typeof val !== 'string') return undefined;
   const t = val.trim();
-  return t === '' ? undefined : t;
+  if (t === '') return undefined;
+  return mergeWebsitePath(t);
 }, z.union([z.undefined(), z.string().url('Must be a valid URL').refine((u) => /^https:\/\//i.test(u), 'Must use HTTPS')]));
+
+function optionalMergedSocial(merge: (s: string) => string) {
+  return z.preprocess(
+    (val: unknown) => (typeof val === 'string' ? merge(val.trim()) : ''),
+    z.union([z.literal(''), z.string().url('Must be a valid URL')]),
+  );
+}
 
 // ---------------------------------------------------------------------------
 // Server-side Zod validation schema
@@ -24,11 +43,17 @@ const optionalHttpsPhotoUrl = z.preprocess((val: unknown) => {
 export const registrationServerSchema = z.object({
   fullName: z.string().min(1, 'Full name is required'),
   email: z.string().email('Valid email address is required'),
-  contactNumber: z.string().min(1, 'Contact number is required'),
-  contactType: z.enum(['whatsapp', 'mobile'], {
-    required_error: 'Contact type is required',
-    invalid_type_error: 'Contact type must be "whatsapp" or "mobile"',
-  }),
+  contactNumber: z.preprocess(
+    (v: unknown) => (typeof v === 'string' ? sanitizeContactNumberInput(v) : ''),
+    z
+      .string()
+      .min(1, 'Contact number is required')
+      .refine(
+        isPlausibleContactNumber,
+        'Use 7–15 digits only; optional + at the start for country code (no spaces or other symbols)',
+      ),
+  ),
+  contactType: z.enum(['whatsapp', 'mobile']),
   profilePhotoUrl: optionalHttpsPhotoUrl,
   backgroundImageUrl: optionalHttpsPhotoUrl,
   specialities: z
@@ -36,12 +61,21 @@ export const registrationServerSchema = z.object({
     .min(1, 'At least one speciality is required')
     .max(3, 'Maximum 3 specialities allowed'),
   bioRichText: z.string().optional(),
-  linkedinUrl: z.string().url('Must be a valid URL').optional().or(z.literal('')),
-  instagramUrl: z.string().url('Must be a valid URL').optional().or(z.literal('')),
-  facebookUrl: z.string().url('Must be a valid URL').optional().or(z.literal('')),
-  twitterUrl: z.string().url('Must be a valid URL').optional().or(z.literal('')),
-  youtubeUrl: z.string().url('Must be a valid URL').optional().or(z.literal('')),
-  websiteUrls: z.array(z.string().url('Must be a valid URL')).optional(),
+  linkedinUrl: optionalMergedSocial(mergeLinkedinUrl),
+  instagramUrl: optionalMergedSocial(mergeInstagramUrl),
+  facebookUrl: optionalMergedSocial(mergeFacebookUrl),
+  twitterUrl: optionalMergedSocial(mergeTwitterUrl),
+  youtubeUrl: optionalMergedSocial(mergeYoutubeUrl),
+  websiteUrls: z.preprocess(
+    (val: unknown) => {
+      if (!Array.isArray(val)) return [];
+      return val
+        .filter((x): x is string => typeof x === 'string')
+        .map((s) => mergeWebsitePath(s.trim()))
+        .filter((u) => u !== '');
+    },
+    z.array(z.string().url('Must be a valid URL')).optional(),
+  ),
 });
 
 export type RegistrationServerData = z.infer<typeof registrationServerSchema>;

@@ -39,6 +39,17 @@ function sessionRecordingDisabled(): boolean {
   return v === 'false' || v === '0' || v === 'off' || v === 'no'
 }
 
+/**
+ * Session replay in `next dev` loads rrweb workers that can spam the console with invalid blob
+ * source-map URLs (e.g. image-bitmap-data-url-worker). Off by default in development; set
+ * NEXT_PUBLIC_POSTHOG_RECORDING_IN_DEV=true to record local sessions anyway.
+ */
+function sessionRecordingOffInDev(): boolean {
+  if (process.env.NODE_ENV !== 'development') return false
+  const v = process.env.NEXT_PUBLIC_POSTHOG_RECORDING_IN_DEV?.trim().toLowerCase()
+  return v !== 'true' && v !== '1' && v !== 'yes'
+}
+
 export function initPostHog(): void {
   const key = process.env.NEXT_PUBLIC_POSTHOG_KEY
 
@@ -47,7 +58,7 @@ export function initPostHog(): void {
     return
   }
 
-  const recordingOff = sessionRecordingDisabled()
+  const recordingOff = sessionRecordingDisabled() || sessionRecordingOffInDev()
 
   posthog.init(key, {
     api_host: posthogApiHost(),

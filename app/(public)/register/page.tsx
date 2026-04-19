@@ -16,31 +16,69 @@ import TiptapLink from '@tiptap/extension-link';
 import NextLink from 'next/link';
 import { usePostHog } from 'posthog-js/react';
 import SpecialityPicker, { type SpecialityCatalogItem } from '@/components/speciality-picker';
+import { RegistrationPrefixedUrlInput } from '@/components/registration-prefixed-url-input';
+import {
+  facebookSuffixFromStored,
+  instagramSuffixFromStored,
+  isPlausibleContactNumber,
+  linkedinSuffixFromStored,
+  mergeFacebookUrl,
+  mergeInstagramUrl,
+  mergeLinkedinUrl,
+  mergeTwitterUrl,
+  mergeWebsitePath,
+  mergeYoutubeUrl,
+  REGISTRATION_FACEBOOK_PREFIX,
+  REGISTRATION_HTTPS_PREFIX,
+  REGISTRATION_INSTAGRAM_PREFIX,
+  REGISTRATION_LINKEDIN_PREFIX,
+  REGISTRATION_TWITTER_PREFIX,
+  REGISTRATION_YOUTUBE_PREFIX,
+  sanitizeContactNumberInput,
+  twitterSuffixFromStored,
+  websitePathSuffixFromStored,
+  youtubeSuffixFromStored,
+} from '@/lib/registration-input-normalize';
 
 // ---------------------------------------------------------------------------
 // Zod schema
 // ---------------------------------------------------------------------------
 
-const urlSchema = z.string().url('Must be a valid URL').or(z.literal(''));
-
 /** Empty → omitted. When set, must be HTTPS (image URL you host). */
-const optionalHttpsPhotoUrlSchema = z
-  .string()
-  .transform((s) => s.trim())
-  .pipe(
-    z.union([
-      z.literal('').transform(() => undefined),
-      z.string().url('Must be a valid URL').refine((u) => /^https:\/\//i.test(u), 'Must use HTTPS'),
-    ]),
+const optionalHttpsPhotoUrlSchema = z.preprocess((val: unknown) => {
+  if (val === undefined || val === null) return undefined;
+  if (typeof val !== 'string') return undefined;
+  const t = val.trim();
+  if (t === '') return undefined;
+  return mergeWebsitePath(t);
+}, z.union([z.undefined(), z.string().url('Must be a valid URL').refine((u) => /^https:\/\//i.test(u), 'Must use HTTPS')]));
+
+function optMergedSocialField(merge: (s: string) => string) {
+  return z.preprocess(
+    (val) => (typeof val === 'string' ? merge(val.trim()) : ''),
+    z.union([z.literal(''), z.string().url('Must be a valid URL')]),
   );
+}
+
+const websiteRowUrlSchema = z.preprocess(
+  (val) => (typeof val === 'string' ? mergeWebsitePath(val.trim()) : ''),
+  z.union([z.literal(''), z.string().url('Must be a valid URL')]),
+);
 
 export const registrationSchema = z.object({
   fullName: z.string().min(1, 'Full name is required'),
   email: z.string().email('Valid email address is required'),
-  contactNumber: z.string().min(1, 'Contact number is required'),
-  contactType: z.enum(['whatsapp', 'mobile'], {
-    required_error: 'Please select a contact type',
-  }),
+  contactNumber: z.preprocess(
+    (v) => (typeof v === 'string' ? sanitizeContactNumberInput(v) : ''),
+    z
+      .string()
+      .min(1, 'Contact number is required')
+      .refine(
+        isPlausibleContactNumber,
+        'Enter 7–15 digits; optional + only at the start (no spaces or other symbols)',
+      ),
+  ),
+  contactType: z.enum(['whatsapp', 'mobile']),
   profilePhotoUrl: optionalHttpsPhotoUrlSchema,
   specialities: z
     .array(z.string().min(2).max(80))
@@ -52,12 +90,12 @@ export const registrationSchema = z.object({
     ),
   backgroundImageUrl: optionalHttpsPhotoUrlSchema,
   bioRichText: z.string().optional(),
-  websiteUrls: z.array(z.object({ url: urlSchema })).optional(),
-  linkedinUrl: urlSchema.optional(),
-  instagramUrl: urlSchema.optional(),
-  facebookUrl: urlSchema.optional(),
-  twitterUrl: urlSchema.optional(),
-  youtubeUrl: urlSchema.optional(),
+  websiteUrls: z.array(z.object({ url: websiteRowUrlSchema })).optional(),
+  linkedinUrl: optMergedSocialField(mergeLinkedinUrl),
+  instagramUrl: optMergedSocialField(mergeInstagramUrl),
+  facebookUrl: optMergedSocialField(mergeFacebookUrl),
+  twitterUrl: optMergedSocialField(mergeTwitterUrl),
+  youtubeUrl: optMergedSocialField(mergeYoutubeUrl),
 });
 
 export type RegistrationFormData = z.infer<typeof registrationSchema>;
@@ -85,7 +123,7 @@ function EditorToolbar({ editor }: { editor: ReturnType<typeof useEditor> }) {
   };
 
   return (
-    <div className="flex flex-wrap gap-1 border border-amber-200 border-b-0 rounded-t-md bg-amber-50 p-2">
+    <div className="flex flex-wrap gap-1 border border-amber-300 border-b-0 rounded-t-md bg-amber-50 p-2">
       <button
         type="button"
         onClick={() => editor.chain().focus().toggleBold().run()}
@@ -162,6 +200,11 @@ export default function RegisterPage() {
       backgroundImageUrl: '',
       specialities: [],
       websiteUrls: [],
+      linkedinUrl: '',
+      instagramUrl: '',
+      facebookUrl: '',
+      twitterUrl: '',
+      youtubeUrl: '',
     },
   });
 
@@ -223,6 +266,12 @@ export default function RegisterPage() {
       TiptapLink.configure({ openOnClick: false }),
     ],
     content: '',
+    editorProps: {
+      attributes: {
+        class:
+          'min-h-[12rem] cursor-text px-3 py-3 text-amber-900 outline-none prose prose-sm max-w-none focus:outline-none',
+      },
+    },
     onUpdate: ({ editor }) => {
       setValue('bioRichText', editor.getHTML());
     },
@@ -368,13 +417,29 @@ export default function RegisterPage() {
             <label className="block text-sm font-semibold text-amber-900 mb-1">
               Contact Number <span className="text-red-600">*</span>
             </label>
+            <p className="mb-2 text-xs text-amber-600">
+              Digits only (7–15). Use an optional <strong>+</strong> at the start for a country code — no spaces or other
+              symbols.
+            </p>
             <div className="flex flex-col sm:flex-row gap-3">
-              <input
-                id="contactNumber"
-                type="text"
-                {...register('contactNumber')}
-                className="flex-1 border border-amber-300 rounded-lg px-3 py-2 text-amber-900 placeholder-amber-400 focus:outline-none focus:ring-2 focus:ring-amber-500 min-h-[44px]"
-                placeholder="+31 6 12345678"
+              <Controller
+                name="contactNumber"
+                control={control}
+                render={({ field }) => (
+                  <input
+                    id="contactNumber"
+                    type="tel"
+                    inputMode="tel"
+                    autoComplete="tel"
+                    name={field.name}
+                    ref={field.ref}
+                    onBlur={field.onBlur}
+                    value={field.value ?? ''}
+                    onChange={(e) => field.onChange(sanitizeContactNumberInput(e.target.value))}
+                    className="min-h-[44px] flex-1 rounded-lg border border-amber-300 px-3 py-2 text-amber-900 placeholder-amber-400 focus:outline-none focus:ring-2 focus:ring-amber-500"
+                    placeholder="+31 6 12345678"
+                  />
+                )}
               />
               <div className="flex items-center gap-4 sm:gap-3">
                 <label className="flex items-center gap-2 cursor-pointer min-h-[44px]">
@@ -406,27 +471,29 @@ export default function RegisterPage() {
           </div>
 
           {/* ── Profile photo URL (optional) ── */}
-          <div>
-            <label htmlFor="profilePhotoUrl" className="block text-sm font-semibold text-amber-900 mb-1">
-              Profile photo URL <span className="font-normal text-amber-600">(optional)</span>
-            </label>
-            <p className="text-xs text-amber-600 mb-2">
-              If you have one, paste an <strong>https://</strong> link to a profile image you already host (your
-              website, a CDN, etc.). Leave blank to use the initial letter on your public profile.
-            </p>
-            <input
-              id="profilePhotoUrl"
-              type="url"
-              inputMode="url"
-              autoComplete="url"
-              placeholder="https://example.com/your-photo.jpg"
-              {...register('profilePhotoUrl')}
-              className="w-full border border-amber-300 rounded-lg px-3 py-2 text-amber-900 placeholder-amber-400 focus:outline-none focus:ring-2 focus:ring-amber-500 min-h-[44px]"
-            />
-            {errors.profilePhotoUrl && (
-              <p className="mt-1 text-sm text-red-600" role="alert">{errors.profilePhotoUrl.message as string}</p>
+          <Controller
+            name="profilePhotoUrl"
+            control={control}
+            render={({ field }) => (
+              <RegistrationPrefixedUrlInput
+                id="profilePhotoUrl"
+                label="Profile photo URL"
+                helperText={
+                  <span>
+                    <span className="font-normal text-amber-600">(optional)</span> Path after{' '}
+                    <strong>https://</strong> to an image you already host. Leave blank for the initial letter on your
+                    public profile.
+                  </span>
+                }
+                prefix={REGISTRATION_HTTPS_PREFIX}
+                suffixPlaceholder="cdn.example.com/photos/me.jpg"
+                suffixFromStored={websitePathSuffixFromStored}
+                merge={mergeWebsitePath}
+                field={field}
+                error={errors.profilePhotoUrl?.message as string | undefined}
+              />
             )}
-          </div>
+          />
 
           {/* ── Specialities ── */}
           <div>
@@ -461,29 +528,26 @@ export default function RegisterPage() {
 
             {/* Background image URL */}
             <div className="mb-4">
-              <label htmlFor="backgroundImageUrl" className="block text-sm font-semibold text-amber-900 mb-1">
-                Background image URL
-              </label>
-              <p className="text-xs text-amber-600 mb-2">
-                Optional. HTTPS link for a wide banner-style image used on your public profile hero.
-              </p>
-              <input
-                id="backgroundImageUrl"
-                type="url"
-                inputMode="url"
-                autoComplete="off"
-                placeholder="https://example.com/banner.jpg"
-                {...register('backgroundImageUrl')}
-                className="w-full border border-amber-300 rounded-lg px-3 py-2 text-amber-900 placeholder-amber-400 focus:outline-none focus:ring-2 focus:ring-amber-500 min-h-[44px]"
+              <Controller
+                name="backgroundImageUrl"
+                control={control}
+                render={({ field }) => (
+                  <RegistrationPrefixedUrlInput
+                    id="backgroundImageUrl"
+                    label="Background image URL"
+                    helperText="Optional. Wide banner image for your public profile hero."
+                    prefix={REGISTRATION_HTTPS_PREFIX}
+                    suffixPlaceholder="example.com/banner.jpg"
+                    suffixFromStored={websitePathSuffixFromStored}
+                    merge={mergeWebsitePath}
+                    field={field}
+                    error={errors.backgroundImageUrl?.message as string | undefined}
+                  />
+                )}
               />
-              {errors.backgroundImageUrl && (
-                <p className="mt-1 text-sm text-red-600" role="alert">
-                  {errors.backgroundImageUrl.message as string}
-                </p>
-              )}
             </div>
 
-            {/* Bio / Musical Journey */}
+            {/* Bio / Musical Journey — min-height on ProseMirror (editorProps) so the whole box is clickable */}
             <div className="mb-4">
               <label className="block text-sm font-semibold text-amber-900 mb-1">
                 Bio / Musical Journey
@@ -491,7 +555,7 @@ export default function RegisterPage() {
               <EditorToolbar editor={editor} />
               <EditorContent
                 editor={editor}
-                className="border border-amber-300 rounded-b-md min-h-[120px] px-3 py-2 text-amber-900 focus-within:ring-2 focus-within:ring-amber-500 prose prose-sm max-w-none"
+                className="rounded-b-md border border-t-0 border-amber-300 bg-white focus-within:ring-2 focus-within:ring-amber-500"
               />
             </div>
 
@@ -502,21 +566,45 @@ export default function RegisterPage() {
               </label>
               <div className="space-y-2">
                 {websiteFields.map((field, index) => (
-                  <div key={field.id} className="flex gap-2">
-                    <input
-                      type="url"
-                      {...register(`websiteUrls.${index}.url`)}
-                      placeholder="https://yourwebsite.com"
-                      className="flex-1 border border-amber-300 rounded-lg px-3 py-2 text-amber-900 placeholder-amber-400 focus:outline-none focus:ring-2 focus:ring-amber-500 min-h-[44px]"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => removeWebsite(index)}
-                      className="px-3 py-2 text-red-600 border border-red-200 rounded-lg hover:bg-red-50 min-w-[44px] min-h-[44px]"
-                      aria-label="Remove website URL"
-                    >
-                      ×
-                    </button>
+                  <div key={field.id}>
+                    <div className="flex gap-2">
+                      <Controller
+                        name={`websiteUrls.${index}.url`}
+                        control={control}
+                        render={({ field: urlField }) => (
+                          <div className="flex min-h-[44px] min-w-0 flex-1 overflow-hidden rounded-lg border border-amber-300 bg-white focus-within:ring-2 focus-within:ring-amber-500">
+                            <span className="flex shrink-0 items-center border-r border-amber-200 bg-amber-50 px-2 py-2 text-xs font-medium text-amber-900 select-none">
+                              {REGISTRATION_HTTPS_PREFIX}
+                            </span>
+                            <input
+                              type="text"
+                              inputMode="url"
+                              autoComplete="off"
+                              name={urlField.name}
+                              ref={urlField.ref}
+                              onBlur={urlField.onBlur}
+                              value={websitePathSuffixFromStored(urlField.value ?? '')}
+                              onChange={(e) => urlField.onChange(mergeWebsitePath(e.target.value))}
+                              placeholder="yourwebsite.com"
+                              className="min-w-0 flex-1 border-0 bg-transparent px-2 py-2 text-sm text-amber-900 placeholder-amber-400 focus:outline-none focus:ring-0"
+                            />
+                          </div>
+                        )}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => removeWebsite(index)}
+                        className="px-3 py-2 text-red-600 border border-red-200 rounded-lg hover:bg-red-50 min-w-[44px] min-h-[44px]"
+                        aria-label="Remove website URL"
+                      >
+                        ×
+                      </button>
+                    </div>
+                    {errors.websiteUrls?.[index]?.url ? (
+                      <p className="mt-1 text-sm text-red-600" role="alert">
+                        {errors.websiteUrls[index]?.url?.message}
+                      </p>
+                    ) : null}
                   </div>
                 ))}
                 {websiteFields.length < 3 && (
@@ -536,28 +624,68 @@ export default function RegisterPage() {
               )}
             </div>
 
-            {/* Social Links */}
-            {[
-              { name: 'linkedinUrl' as const, label: 'LinkedIn URL', placeholder: 'https://linkedin.com/in/yourprofile' },
-              { name: 'instagramUrl' as const, label: 'Instagram URL', placeholder: 'https://instagram.com/yourhandle' },
-              { name: 'facebookUrl' as const, label: 'Facebook URL', placeholder: 'https://facebook.com/yourpage' },
-              { name: 'twitterUrl' as const, label: 'Twitter / X URL', placeholder: 'https://x.com/yourhandle' },
-              { name: 'youtubeUrl' as const, label: 'YouTube Channel URL', placeholder: 'https://youtube.com/@yourchannel' },
-            ].map(({ name, label, placeholder }) => (
+            {/* Social Links — fixed host prefix; type handle or path after it */}
+            {(
+              [
+                {
+                  name: 'linkedinUrl' as const,
+                  label: 'LinkedIn',
+                  prefix: REGISTRATION_LINKEDIN_PREFIX,
+                  merge: mergeLinkedinUrl,
+                  suffixFrom: linkedinSuffixFromStored,
+                  placeholder: 'your-profile-id',
+                },
+                {
+                  name: 'instagramUrl' as const,
+                  label: 'Instagram',
+                  prefix: REGISTRATION_INSTAGRAM_PREFIX,
+                  merge: mergeInstagramUrl,
+                  suffixFrom: instagramSuffixFromStored,
+                  placeholder: 'yourhandle',
+                },
+                {
+                  name: 'facebookUrl' as const,
+                  label: 'Facebook',
+                  prefix: REGISTRATION_FACEBOOK_PREFIX,
+                  merge: mergeFacebookUrl,
+                  suffixFrom: facebookSuffixFromStored,
+                  placeholder: 'your.page or profile path',
+                },
+                {
+                  name: 'twitterUrl' as const,
+                  label: 'Twitter / X',
+                  prefix: REGISTRATION_TWITTER_PREFIX,
+                  merge: mergeTwitterUrl,
+                  suffixFrom: twitterSuffixFromStored,
+                  placeholder: 'yourhandle',
+                },
+                {
+                  name: 'youtubeUrl' as const,
+                  label: 'YouTube',
+                  prefix: REGISTRATION_YOUTUBE_PREFIX,
+                  merge: mergeYoutubeUrl,
+                  suffixFrom: youtubeSuffixFromStored,
+                  placeholder: '@channel or watch?v=…',
+                },
+              ] as const
+            ).map(({ name, label, prefix, merge, suffixFrom, placeholder }) => (
               <div key={name} className="mb-4">
-                <label htmlFor={name} className="block text-sm font-semibold text-amber-900 mb-1">
-                  {label}
-                </label>
-                <input
-                  id={name}
-                  type="url"
-                  {...register(name)}
-                  placeholder={placeholder}
-                  className="w-full border border-amber-300 rounded-lg px-3 py-2 text-amber-900 placeholder-amber-400 focus:outline-none focus:ring-2 focus:ring-amber-500 min-h-[44px]"
+                <Controller
+                  name={name}
+                  control={control}
+                  render={({ field }) => (
+                    <RegistrationPrefixedUrlInput
+                      id={name}
+                      label={label}
+                      prefix={prefix}
+                      suffixPlaceholder={placeholder}
+                      suffixFromStored={suffixFrom}
+                      merge={merge}
+                      field={field}
+                      error={errors[name]?.message}
+                    />
+                  )}
                 />
-                {errors[name] && (
-                  <p className="mt-1 text-sm text-red-600" role="alert">{errors[name]?.message}</p>
-                )}
               </div>
             ))}
           </div>

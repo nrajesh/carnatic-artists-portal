@@ -150,10 +150,13 @@ const arbProfilePhotoUrl = fc.webUrl().map((u) =>
   u.startsWith('http://') ? u.replace('http://', 'https://') : u.startsWith('https://') ? u : `https://${u}`,
 );
 
+/** 7–15 digits, optional leading + */
+const arbContactNumber = fc.stringMatching(/^\+?\d{7,15}$/);
+
 const arbValidPayload = fc.record({
   fullName: arbNonEmptyString,
   email: arbEmail,
-  contactNumber: arbNonEmptyString,
+  contactNumber: arbContactNumber,
   contactType: arbContactType,
   profilePhotoUrl: fc.option(arbProfilePhotoUrl, { nil: undefined }),
   specialities: arbSpecialities,
