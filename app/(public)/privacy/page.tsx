@@ -2,7 +2,12 @@ import Link from "next/link";
 import { headers } from "next/headers";
 import { PosthogOptInHandler } from "@/components/posthog-opt-in-handler";
 import { PrivacyAnalyticsToggle } from "@/components/privacy-analytics-toggle";
-import { getServerAnalyticsOptOut } from "@/lib/server-analytics-opt-out";
+import {
+  getServerCookieAnalyticsOptOut,
+  getServerPrivacySignalOptOut,
+} from "@/lib/server-analytics-opt-out";
+
+export const dynamic = "force-dynamic";
 
 const OPT_OUT_PATH = "/privacy/opt-out";
 const LOCAL_OPT_OUT_SAMPLE = "http://localhost:3000/privacy/opt-out";
@@ -40,7 +45,10 @@ export default async function PrivacyPage({
   const optedOutBanner = analytics === "opted_out";
   const optedInBanner = analytics === "opted_in";
   const optOutDisplayUrl = await resolveOptOutDisplayUrl();
-  const serverAnalyticsOptOut = await getServerAnalyticsOptOut();
+  const [serverCookieOptOut, serverPrivacyHeaderOptOut] = await Promise.all([
+    getServerCookieAnalyticsOptOut(),
+    getServerPrivacySignalOptOut(),
+  ]);
 
   return (
     <main className="min-h-screen bg-amber-50">
@@ -72,14 +80,16 @@ export default async function PrivacyPage({
             <p className="font-semibold">Analytics opt-out is active for this browser.</p>
             <p className="mt-1 text-green-900">
               A cookie was set so PostHog does not record events or session replay here. To opt back in later, remove
-              the <code className="rounded bg-white/80 px-1 text-xs">ph_opt_out</code> cookie for this site in your
-              browser settings (and clear any PostHog local data if your browser still blocks capture).
+              the <code className="rounded bg-white/80 px-1 text-xs">adp_analytics_opt_out</code> cookie (or legacy{" "}
+              <code className="rounded bg-white/80 px-1 text-xs">ph_opt_out</code>) for this site in your browser
+              settings (and clear any PostHog local data if your browser still blocks capture).
             </p>
             <p className="mt-2 text-green-900">
               Other pages (for example Home) will show a normal URL like <code className="rounded bg-white/80 px-1 text-xs">/</code>{" "}
               - that is expected. Your opt-out is not stored in the address bar; it stays in the cookie until you remove
               it. Use your browser&apos;s developer tools (Application or Storage tab) to confirm{" "}
-              <code className="rounded bg-white/80 px-1 text-xs">ph_opt_out=1</code> is present for this site.
+              <code className="rounded bg-white/80 px-1 text-xs">adp_analytics_opt_out=1</code> (or legacy{" "}
+              <code className="rounded bg-white/80 px-1 text-xs">ph_opt_out=1</code>) is present for this site.
             </p>
           </div>
         ) : null}
@@ -261,7 +271,8 @@ export default async function PrivacyPage({
             <PrivacyAnalyticsToggle
               optOutDisplayUrl={optOutDisplayUrl}
               localOptOutSample={LOCAL_OPT_OUT_SAMPLE}
-              initialOptedOut={serverAnalyticsOptOut}
+              initialCookieOptedOut={serverCookieOptOut}
+              serverPrivacyHeaderOptOut={serverPrivacyHeaderOptOut}
             />
 
             <div className="flex items-start gap-4 border-t border-stone-100 pt-4">
@@ -269,12 +280,13 @@ export default async function PrivacyPage({
                 B
               </span>
               <div>
-                <p className="font-semibold text-stone-800">Do Not Track browser signal</p>
+                <p className="font-semibold text-stone-800">Do Not Track / Global Privacy Control</p>
                 <p className="mt-0.5 text-sm text-stone-500">
                   If your browser sends the <em>Do Not Track</em> header (
-                  <code className="rounded bg-stone-100 px-1 text-xs">DNT: 1</code>), the portal disables PostHog
-                  capture when the app loads. (There is no URL for this - enable DNT in your browser or OS privacy
-                  settings.)
+                  <code className="rounded bg-stone-100 px-1 text-xs">DNT: 1</code>) or{" "}
+                  <code className="rounded bg-stone-100 px-1 text-xs">Sec-GPC: 1</code>, the portal disables PostHog
+                  capture when the app loads. (There is no URL for this — enable the signal in your browser or OS
+                  privacy settings.)
                 </p>
               </div>
             </div>
@@ -286,10 +298,11 @@ export default async function PrivacyPage({
               <div>
                 <p className="font-semibold text-stone-800">Set the cookie yourself</p>
                 <p className="mt-0.5 text-sm text-stone-500">
-                  Create a cookie named <code className="rounded bg-stone-100 px-1 text-xs">ph_opt_out</code> with value{" "}
-                  <code className="rounded bg-stone-100 px-1 text-xs">1</code> for this site&apos;s origin, path{" "}
-                  <code className="rounded bg-stone-100 px-1 text-xs">/</code>. Option A does this for you automatically.
-                  To clear it without the button, delete that cookie or open{" "}
+                  Create a cookie named <code className="rounded bg-stone-100 px-1 text-xs">adp_analytics_opt_out</code>{" "}
+                  with value <code className="rounded bg-stone-100 px-1 text-xs">1</code> for this site&apos;s origin,
+                  path <code className="rounded bg-stone-100 px-1 text-xs">/</code> (legacy{" "}
+                  <code className="rounded bg-stone-100 px-1 text-xs">ph_opt_out=1</code> is still read if present).
+                  Option A does this for you automatically. To clear it without the button, delete that cookie or open{" "}
                   <code className="rounded bg-stone-100 px-1 text-xs">/privacy/opt-in</code> in the same way as the
                   opt-out URL.
                 </p>

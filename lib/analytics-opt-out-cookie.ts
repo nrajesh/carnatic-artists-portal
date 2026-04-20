@@ -1,7 +1,18 @@
+import {
+  ADP_ANALYTICS_OPT_OUT_COOKIE,
+  LEGACY_ANALYTICS_OPT_OUT_COOKIE,
+} from "@/lib/analytics-opt-out-cookies";
+
 /**
- * Client-only: detect PostHog opt-out cookie set by `/privacy/opt-out` and read by `PostHogProvider`.
+ * Client-only: detect opt-out cookie(s) set by `/privacy/opt-out` (read by provider + privacy UI).
  */
 export function hasAnalyticsOptOutCookie(): boolean {
   if (typeof document === "undefined") return false;
-  return document.cookie.split(";").some((c) => c.trim().startsWith("ph_opt_out=1"));
+  return document.cookie.split(";").some((c) => {
+    const t = c.trim();
+    return (
+      t.startsWith(`${ADP_ANALYTICS_OPT_OUT_COOKIE}=1`) ||
+      t.startsWith(`${LEGACY_ANALYTICS_OPT_OUT_COOKIE}=1`)
+    );
+  });
 }

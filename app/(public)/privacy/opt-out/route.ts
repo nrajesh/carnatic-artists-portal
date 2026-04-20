@@ -1,9 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
+import {
+  ADP_ANALYTICS_OPT_OUT_COOKIE,
+  LEGACY_ANALYTICS_OPT_OUT_COOKIE,
+} from "@/lib/analytics-opt-out-cookies";
 
 /**
- * GET /privacy/opt-out  -  sets the PostHog opt-out cookie expected by
- * `components/posthog-provider.tsx`, then redirects to /privacy with a confirmation flag.
- * Cookie is not HttpOnly so the client can detect `ph_opt_out=1` on the next load.
+ * GET /privacy/opt-out — sets first-party opt-out cookie(s) read by `PostHogProvider` and `/privacy`,
+ * then redirects to /privacy with a confirmation flag.
  */
 export async function GET(request: NextRequest) {
   const redirectUrl = request.nextUrl.clone();
@@ -12,12 +15,20 @@ export async function GET(request: NextRequest) {
 
   const res = NextResponse.redirect(redirectUrl);
   const secure = request.nextUrl.protocol === "https:";
-  res.cookies.set("ph_opt_out", "1", {
+  const base = {
     path: "/",
-    maxAge: 60 * 60 * 24 * 730, // ~2 years; user can clear cookies anytime
-    sameSite: "lax",
+    sameSite: "lax" as const,
     secure,
     httpOnly: false,
+  };
+  res.cookies.set(ADP_ANALYTICS_OPT_OUT_COOKIE, "1", {
+    ...base,
+    maxAge: 60 * 60 * 24 * 730,
+  });
+  // Migrate off legacy name so it cannot interact with PostHog's `ph_*` cookie namespace.
+  res.cookies.set(LEGACY_ANALYTICS_OPT_OUT_COOKIE, "", {
+    ...base,
+    maxAge: 0,
   });
   return res;
 }

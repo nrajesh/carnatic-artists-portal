@@ -18,7 +18,17 @@ export function hasNavigatorAnalyticsDnt(): boolean {
   return [nav.doNotTrack, nav.msDoNotTrack, w?.doNotTrack].some(isDntYesLike);
 }
 
-/** True when this browser should be treated as analytics-opted-out (app cookie or DNT). */
+/** Global Privacy Control (often paired with DNT-style behaviour). */
+export function hasNavigatorGlobalPrivacyControl(): boolean {
+  if (typeof navigator === "undefined") return false;
+  return (navigator as Navigator & { globalPrivacyControl?: boolean }).globalPrivacyControl === true;
+}
+
+/** True when capture should be off (cookie OR browser privacy signals). Used by `PostHogProvider` only. */
 export function hasBrowserAnalyticsOptOut(): boolean {
-  return hasAnalyticsOptOutCookie() || hasNavigatorAnalyticsDnt();
+  return (
+    hasAnalyticsOptOutCookie() ||
+    hasNavigatorAnalyticsDnt() ||
+    hasNavigatorGlobalPrivacyControl()
+  );
 }
