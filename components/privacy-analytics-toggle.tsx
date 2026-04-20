@@ -45,14 +45,22 @@ export function PrivacyAnalyticsToggle({
   const optInDisplayUrl =
     optOutDisplayUrl != null ? optOutDisplayUrl.replace(OPT_OUT_PATH, OPT_IN_PATH) : null;
 
+  /** Stable hook for DevTools: Elements → search `analytics-consent-debug` or console `#analytics-consent-debug`. */
+  const consentDebugProps = {
+    id: "analytics-consent-debug" as const,
+    "data-analytics-consent-server": initialOptedOut ? "opt-out" : "opt-in",
+    "data-analytics-consent-live": optedOut ? "opt-out" : "opt-in",
+  };
+
   if (optedOut) {
     return (
-      <div className="rounded-xl border border-green-200 bg-green-50 p-4">
+      <div className="rounded-xl border border-green-200 bg-green-50 p-4" {...consentDebugProps}>
         <p className="font-semibold text-green-950">A. Analytics are off for this browser</p>
         <p className="mt-2 text-sm text-green-900">
-          The <code className="rounded bg-white/90 px-1 text-xs ring-1 ring-green-200">ph_opt_out</code> cookie is set.
-          To allow PostHog events and session replay again on this site, use the button below (it clears the cookie and
-          opts you back in).
+          The{" "}
+          <code className="rounded bg-white/90 px-1 text-xs ring-1 ring-green-200">ph_opt_out</code>{" "}
+          cookie is set. To allow PostHog events and session replay again on this site, use the
+          button below (it clears the cookie and opts you back in).
         </p>
         {optInDisplayUrl ? (
           <p className="mt-2 text-xs text-green-800">
@@ -81,11 +89,12 @@ export function PrivacyAnalyticsToggle({
   }
 
   return (
-    <div className="rounded-xl border border-amber-300 bg-amber-50 p-4">
+    <div className="rounded-xl border border-amber-300 bg-amber-50 p-4" {...consentDebugProps}>
       <p className="font-semibold text-stone-900">A. One-click opt-out (easiest)</p>
       <p className="mt-2 text-sm text-stone-700">
-        Open this path on <strong className="text-stone-900">the same website</strong> you are using (copy the full
-        line, or tap the button). It sets the opt-out cookie and sends you back here with a confirmation.
+        Open this path on <strong className="text-stone-900">the same website</strong> you are using
+        (copy the full line, or tap the button). It sets the opt-out cookie and sends you back here
+        with a confirmation.
       </p>
       <ul className="mt-3 list-inside list-disc space-y-2 text-sm text-stone-800">
         <li>
@@ -117,9 +126,12 @@ export function PrivacyAnalyticsToggle({
       </p>
       <p className="mt-2 text-xs text-stone-600">
         After opting out, links like Home still use normal paths (for example{" "}
-        <code className="rounded bg-white px-1 text-[11px] ring-1 ring-amber-200">/</code>) - the address bar does not
-        stay on <code className="rounded bg-white px-1 text-[11px] ring-1 ring-amber-200">{OPT_OUT_PATH}</code>. The
-        cookie is what keeps analytics off.
+        <code className="rounded bg-white px-1 text-[11px] ring-1 ring-amber-200">/</code>) - the
+        address bar does not stay on{" "}
+        <code className="rounded bg-white px-1 text-[11px] ring-1 ring-amber-200">
+          {OPT_OUT_PATH}
+        </code>
+        . The cookie is what keeps analytics off.
       </p>
     </div>
   );
