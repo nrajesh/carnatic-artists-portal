@@ -52,6 +52,13 @@ export function DevAdminBadge() {
           >
             PostHog Cloud
           </a>
+          <Link
+            href="/dev/error-simulator"
+            prefetch={false}
+            className="underline decoration-amber-500/80 underline-offset-2 hover:text-white"
+          >
+            Error simulator
+          </Link>
         </nav>
       </div>
     </footer>

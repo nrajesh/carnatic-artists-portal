@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   parseAvailabilityWindowDates,
   windowOverlapsExisting,
@@ -6,6 +6,15 @@ import {
 } from "../availability";
 
 describe("availability helpers", () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-03-01T12:00:00.000Z"));
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
   it("parses valid date strings into UTC date boundaries", () => {
     const parsed = parseAvailabilityWindowDates({
       startDate: "2026-04-20",
@@ -39,6 +48,28 @@ describe("availability helpers", () => {
     expect(parsed.ok).toBe(false);
     if (parsed.ok) return;
     expect(parsed.error).toContain("same as or later");
+  });
+
+  it("rejects ended windows (no longer ongoing)", () => {
+    vi.setSystemTime(new Date("2026-06-15T12:00:00.000Z"));
+    const parsed = parseAvailabilityWindowDates({
+      startDate: "2026-05-20",
+      endDate: "2026-06-05",
+    });
+
+    expect(parsed.ok).toBe(false);
+    if (parsed.ok) return;
+    expect(parsed.error.toLowerCase()).toMatch(/past|today|later/);
+  });
+
+  it("allows ongoing ranges whose start date is already in the past", () => {
+    vi.setSystemTime(new Date("2026-04-21T12:00:00.000Z"));
+    const parsed = parseAvailabilityWindowDates({
+      startDate: "2026-04-01",
+      endDate: "2026-04-30",
+    });
+
+    expect(parsed.ok).toBe(true);
   });
 
   it("detects overlap when ranges intersect", () => {

@@ -1,16 +1,55 @@
 "use client";
 
 import Link from "next/link";
-import { FormEvent, useState, useTransition } from "react";
+import { FormEvent, useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import type { AdminSpecialityRow } from "@/lib/queries/admin-specialities";
+import {
+  pickRandomUniqueSpecialityColorPair,
+  specialityColorPairKey,
+} from "@/lib/speciality-random-colors";
 import { deleteSpecialityAction, updateSpecialityAction } from "./actions";
 
-export function SpecialityCard({ row }: { row: AdminSpecialityRow }) {
+const HEX6 = /^#[0-9A-Fa-f]{6}$/;
+
+export function SpecialityCard({
+  row,
+  allRows,
+}: {
+  row: AdminSpecialityRow;
+  allRows: AdminSpecialityRow[];
+}) {
   const router = useRouter();
   const [editing, setEditing] = useState(false);
+  const [draftPrimary, setDraftPrimary] = useState(row.primaryColor);
+  const [draftText, setDraftText] = useState(row.textColor);
   const [message, setMessage] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
+
+  const headerPrimary = editing && HEX6.test(draftPrimary) ? draftPrimary : row.primaryColor;
+  const headerTextCol = editing && HEX6.test(draftText) ? draftText : row.textColor;
+
+  const forbiddenPairKeysForRandomize = useMemo(() => {
+    const s = new Set<string>();
+    for (const r of allRows) {
+      if (r.id === row.id) continue;
+      s.add(specialityColorPairKey(r.primaryColor, r.textColor));
+    }
+    return s;
+  }, [allRows, row.id]);
+
+  function applyRandomColours() {
+    const pair = pickRandomUniqueSpecialityColorPair(forbiddenPairKeysForRandomize);
+    if (!pair) return;
+    setDraftPrimary(pair.primaryColor);
+    setDraftText(pair.textColor);
+  }
+
+  function openEditor() {
+    setDraftPrimary(row.primaryColor);
+    setDraftText(row.textColor);
+    setEditing(true);
+  }
 
   function onUpdate(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -43,9 +82,13 @@ export function SpecialityCard({ row }: { row: AdminSpecialityRow }) {
     <div className="overflow-hidden rounded-xl border border-stone-200 bg-white shadow-sm">
       <div
         className="flex h-12 items-center px-5"
-        style={{ background: `linear-gradient(135deg, ${row.primaryColor}, ${row.primaryColor}cc)` }}
+        style={{
+          background: `linear-gradient(135deg, ${headerPrimary}, ${headerPrimary}cc)`,
+        }}
       >
-        <span className="text-sm font-bold text-white">{row.name}</span>
+        <span className="text-sm font-bold" style={{ color: headerTextCol }}>
+          {row.name}
+        </span>
       </div>
       <div className="px-5 py-4">
         {message ? <p className="mb-2 text-sm text-red-600">{message}</p> : null}
@@ -70,7 +113,7 @@ export function SpecialityCard({ row }: { row: AdminSpecialityRow }) {
               )}
               <button
                 type="button"
-                onClick={() => setEditing(true)}
+                onClick={openEditor}
                 className="text-xs font-medium text-amber-700 underline underline-offset-2 hover:text-amber-900"
               >
                 Edit
@@ -98,13 +141,14 @@ export function SpecialityCard({ row }: { row: AdminSpecialityRow }) {
                 className="rounded border border-stone-300 px-2 py-1.5 text-sm"
               />
             </label>
-            <div className="flex flex-wrap gap-3">
+            <div className="flex flex-wrap items-end gap-3">
               <label className="flex flex-col gap-1 text-xs font-medium text-stone-600">
                 Primary
                 <input
                   name="primaryColor"
                   required
-                  defaultValue={row.primaryColor}
+                  value={draftPrimary}
+                  onChange={(e) => setDraftPrimary(e.target.value)}
                   pattern="^#[0-9A-Fa-f]{6}$"
                   className="w-24 rounded border border-stone-300 px-2 py-1.5 font-mono text-sm"
                 />
@@ -114,11 +158,29 @@ export function SpecialityCard({ row }: { row: AdminSpecialityRow }) {
                 <input
                   name="textColor"
                   required
-                  defaultValue={row.textColor}
+                  value={draftText}
+                  onChange={(e) => setDraftText(e.target.value)}
                   pattern="^#[0-9A-Fa-f]{6}$"
                   className="w-24 rounded border border-stone-300 px-2 py-1.5 font-mono text-sm"
                 />
               </label>
+              <div className="flex items-end gap-2">
+                <div
+                  className="h-8 w-8 shrink-0 rounded-md border border-stone-300 shadow-sm"
+                  style={{
+                    background: `linear-gradient(135deg, ${headerPrimary}, ${headerPrimary}cc)`,
+                  }}
+                  title="Preview of header colours"
+                  aria-hidden
+                />
+                <button
+                  type="button"
+                  onClick={applyRandomColours}
+                  className="rounded border border-stone-300 bg-white px-2 py-1.5 text-xs font-medium text-stone-700 hover:bg-stone-50"
+                >
+                  Randomize
+                </button>
+              </div>
             </div>
             <div className="flex gap-2">
               <button

@@ -10,7 +10,8 @@ export function BackNavButton() {
       router.back();
       return;
     }
-    router.push("/");
+    // Full navigation so we recover cleanly from error boundaries (soft push can stick on the error UI).
+    window.location.assign("/");
   }
 
   return (

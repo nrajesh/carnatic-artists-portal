@@ -1,11 +1,11 @@
 /**
- * Edge Middleware — JWT session validation for protected routes.
+ * Edge Middleware - JWT session validation for protected routes.
  *
  * Reads the `session` cookie, verifies it as a signed JWT, and either
  * allows the request through (with identity headers) or redirects to login.
  *
  * Uses the Edge runtime (`middleware.ts`). Next.js 16's `proxy.ts` defaults to the
- * Node.js runtime, which OpenNext for Cloudflare does not support yet — keep this file
+ * Node.js runtime, which OpenNext for Cloudflare does not support yet - keep this file
  * named `middleware.ts` until that ecosystem catches up.
  *
  * Requirements: 12.4, 12.5

@@ -1,21 +1,21 @@
 import Link from "next/link";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
+import { deploymentCalendarDateToday } from "@/lib/availability-calendar";
 import { getDeploymentClockLabelForUi } from "@/deployment.config";
-import { getDb } from "@/lib/db";
+import { listAvailabilityEntryViews } from "@/lib/availability-window-ops";
 import { verifySession } from "@/lib/session-jwt";
 import { AvailabilityManager } from "./availability-manager";
+
+export const dynamic = "force-dynamic";
 
 export default async function AvailabilityPage() {
   const token = (await cookies()).get("session")?.value ?? null;
   const session = token ? await verifySession(token) : null;
   if (!session) redirect("/auth/login");
 
-  const entries = await getDb().availabilityEntry.findMany({
-    where: { artistId: session.artistId },
-    orderBy: [{ startDate: "asc" }, { endDate: "asc" }],
-    select: { id: true, startDate: true, endDate: true },
-  });
+  const entries = await listAvailabilityEntryViews(session.artistId);
+  const minCalendarDate = deploymentCalendarDateToday();
 
   return (
     <main className="min-h-screen bg-amber-50 px-4 py-8 sm:px-8">
@@ -33,13 +33,7 @@ export default async function AvailabilityPage() {
           </p>
         </div>
 
-        <AvailabilityManager
-          initialEntries={entries.map((entry) => ({
-            id: entry.id,
-            startDate: entry.startDate.toISOString().slice(0, 10),
-            endDate: entry.endDate.toISOString().slice(0, 10),
-          }))}
-        />
+        <AvailabilityManager initialEntries={entries} minCalendarDate={minCalendarDate} />
       </div>
     </main>
   );

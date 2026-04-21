@@ -40,7 +40,7 @@ export default async function ArtistsPage({ searchParams }: PageProps) {
           <Link href="/" className="text-sm text-amber-700 hover:text-amber-900 mb-2 inline-block">
             ← Home
           </Link>
-          <h1 className="text-3xl font-bold text-stone-800">Artists</h1>
+          <h1 className="font-display text-3xl font-bold tracking-tight text-stone-800">Artists</h1>
           <p className="text-stone-500 mt-1">{allArtists.length} artists in The Netherlands</p>
         </div>
 

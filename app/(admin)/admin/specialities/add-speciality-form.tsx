@@ -1,14 +1,56 @@
 "use client";
 
-import { FormEvent, useState, useTransition } from "react";
+import { FormEvent, useLayoutEffect, useMemo, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { PortalSectionHeading } from "@/components/portal-section-heading";
+import {
+  pickRandomUniqueSpecialityColorPair,
+  specialityColorPairKey,
+} from "@/lib/speciality-random-colors";
 import { createSpecialityAction } from "./actions";
 
-export function AddSpecialityForm() {
+export function AddSpecialityForm({
+  occupiedColorPairs,
+}: {
+  occupiedColorPairs: { primaryColor: string; textColor: string }[];
+}) {
   const router = useRouter();
+  const primaryRef = useRef<HTMLInputElement>(null);
+  const textRef = useRef<HTMLInputElement>(null);
   const [message, setMessage] = useState<{ type: "ok" | "err"; text: string } | null>(null);
   const [pending, startTransition] = useTransition();
+
+  const forbiddenPairKeys = useMemo(() => {
+    const s = new Set<string>();
+    for (const p of occupiedColorPairs) {
+      s.add(specialityColorPairKey(p.primaryColor, p.textColor));
+    }
+    return s;
+  }, [occupiedColorPairs]);
+
+  const defaultAddFormPairKey = specialityColorPairKey("#92400E", "#FFFFFF");
+  const didAdjustInitialColours = useRef(false);
+  useLayoutEffect(() => {
+    if (didAdjustInitialColours.current) return;
+    if (!forbiddenPairKeys.has(defaultAddFormPairKey)) return;
+    if (!primaryRef.current || !textRef.current) return;
+    didAdjustInitialColours.current = true;
+    const pair = pickRandomUniqueSpecialityColorPair(forbiddenPairKeys);
+    if (!pair) return;
+    primaryRef.current.value = pair.primaryColor;
+    textRef.current.value = pair.textColor;
+  }, [forbiddenPairKeys, defaultAddFormPairKey]);
+
+  function applyRandomColours(extraForbidden?: ReadonlySet<string>) {
+    const merged =
+      extraForbidden && extraForbidden.size > 0
+        ? new Set([...forbiddenPairKeys, ...extraForbidden])
+        : forbiddenPairKeys;
+    const pair = pickRandomUniqueSpecialityColorPair(merged);
+    if (!pair || !primaryRef.current || !textRef.current) return;
+    primaryRef.current.value = pair.primaryColor;
+    textRef.current.value = pair.textColor;
+  }
 
   function onSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -19,9 +61,11 @@ export function AddSpecialityForm() {
       const result = await createSpecialityAction(fd);
       if (result.ok) {
         setMessage({ type: "ok", text: "Speciality added." });
+        const addedPrimary = (form.elements.namedItem("primaryColor") as HTMLInputElement).value;
+        const addedText = (form.elements.namedItem("textColor") as HTMLInputElement).value;
         form.reset();
-        (form.elements.namedItem("primaryColor") as HTMLInputElement).value = "#92400E";
-        (form.elements.namedItem("textColor") as HTMLInputElement).value = "#FFFFFF";
+        const justAdded = new Set<string>([specialityColorPairKey(addedPrimary, addedText)]);
+        applyRandomColours(justAdded);
         router.refresh();
       } else {
         setMessage({ type: "err", text: result.error });
@@ -59,6 +103,7 @@ export function AddSpecialityForm() {
         <label className="flex flex-col gap-1 text-sm text-stone-700">
           Primary colour
           <input
+            ref={primaryRef}
             name="primaryColor"
             type="text"
             required
@@ -70,6 +115,7 @@ export function AddSpecialityForm() {
         <label className="flex flex-col gap-1 text-sm text-stone-700">
           Text colour
           <input
+            ref={textRef}
             name="textColor"
             type="text"
             required
@@ -78,6 +124,13 @@ export function AddSpecialityForm() {
             className="min-h-[44px] w-28 rounded-lg border border-stone-300 px-3 py-2 font-mono text-sm"
           />
         </label>
+        <button
+          type="button"
+          onClick={() => applyRandomColours()}
+          className="min-h-[44px] rounded-lg border border-stone-300 bg-white px-3 py-2 text-sm font-medium text-stone-700 shadow-sm hover:bg-stone-50"
+        >
+          Randomize colours
+        </button>
         <button
           type="submit"
           disabled={pending}

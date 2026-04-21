@@ -65,7 +65,7 @@ export function isPosthogClientReady(): boolean {
   return !!ph.__loaded
 }
 
-/** Idempotent — safe to call from any client effect (runs before parent `PostHogProvider` effects). */
+/** Idempotent - safe to call from any client effect (runs before parent `PostHogProvider` effects). */
 export function initPostHog(): void {
   const ph = posthog as { __loaded?: boolean }
   if (ph.__loaded) {
@@ -107,7 +107,7 @@ export function initPostHog(): void {
     // Session replay depends on the same remote config + flags pipeline as feature flags.
     // Setting `advanced_disable_feature_flags` leaves recording stuck waiting for a "flags response".
     disable_surveys: false,
-    /** Verbose SDK logging — off by default; set NEXT_PUBLIC_POSTHOG_DEBUG=true when diagnosing. */
+    /** Verbose SDK logging - off by default; set NEXT_PUBLIC_POSTHOG_DEBUG=true when diagnosing. */
     debug: process.env.NEXT_PUBLIC_POSTHOG_DEBUG === 'true',
   })
 }

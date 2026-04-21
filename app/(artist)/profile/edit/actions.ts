@@ -10,6 +10,12 @@ import { buildExternalLinkRows } from "@/lib/artist-profile-links";
 import { isArtistCollabsRatingsEnabledServer } from "@/lib/feature-flags-server";
 import { buildEncryptedArtistPiiPayload } from "@/lib/artist-pii";
 import { emailLookupHash, normalizeEmailForLookup } from "@/lib/pii-crypto";
+import {
+  ARTIST_SLUG_TAKEN_FIELD,
+  ARTIST_SLUG_TAKEN_SUMMARY,
+  findArtistIdOwningSlug,
+  isArtistSlugUniqueConstraintError,
+} from "@/lib/artist-slug-uniqueness";
 
 export type UpdateProfileResult =
   | { ok: true }
@@ -61,6 +67,25 @@ export async function updateArtistProfile(input: ArtistProfileEditInput): Promis
   const db = getDb();
   const artistId = session.artistId;
 
+  const selfBefore = await db.artist.findUnique({
+    where: { id: artistId },
+    select: { slug: true },
+  });
+  if (!selfBefore) {
+    return { ok: false, error: "Artist not found." };
+  }
+  const previousSlug = selfBefore.slug;
+  if (data.slug !== previousSlug) {
+    const slugOwnerId = await findArtistIdOwningSlug(db, data.slug);
+    if (slugOwnerId !== null && slugOwnerId !== artistId) {
+      return {
+        ok: false,
+        error: ARTIST_SLUG_TAKEN_SUMMARY,
+        fieldErrors: { slug: ARTIST_SLUG_TAKEN_FIELD },
+      };
+    }
+  }
+
   const collabsRatingsEnabled = await isArtistCollabsRatingsEnabledServer({ distinctId: artistId });
   let openToCollab = data.openToCollab;
   if (!collabsRatingsEnabled) {
@@ -104,60 +129,68 @@ export async function updateArtistProfile(input: ArtistProfileEditInput): Promis
 
   const pii = buildEncryptedArtistPiiPayload(artistId, data.email, data.contactNumber);
 
-  await db.$transaction(async (tx) => {
-    await tx.artist.update({
-      where: { id: artistId },
-      data: {
-        fullName: data.fullName,
-        email: pii.emailPlaceholder,
-        contactNumber: null,
-        emailCipher: pii.emailCipher,
-        emailLookupHash: pii.emailLookupHash,
-        contactCipher: pii.contactCipher,
-        emailVisibility: data.emailVisibility,
-        contactVisibility: data.contactVisibility,
-        contactType: data.contactType,
-        province: data.province,
-        openToCollab,
-        profilePhotoUrl: data.profilePhotoUrl ?? null,
-        backgroundImageUrl: data.backgroundImageUrl ?? null,
-        bioRichText,
-      },
-    });
+  try {
+    await db.$transaction(async (tx) => {
+      await tx.artist.update({
+        where: { id: artistId },
+        data: {
+          slug: data.slug,
+          fullName: data.fullName,
+          email: pii.emailPlaceholder,
+          contactNumber: null,
+          emailCipher: pii.emailCipher,
+          emailLookupHash: pii.emailLookupHash,
+          contactCipher: pii.contactCipher,
+          emailVisibility: data.emailVisibility,
+          contactVisibility: data.contactVisibility,
+          contactType: data.contactType,
+          province: data.province,
+          openToCollab,
+          profilePhotoUrl: data.profilePhotoUrl ?? null,
+          backgroundImageUrl: data.backgroundImageUrl ?? null,
+          bioRichText,
+        },
+      });
 
-    await tx.artistSpeciality.deleteMany({ where: { artistId } });
-    await tx.artistSpeciality.createMany({
-      data: data.specialities.map((name, index) => ({
-        artistId,
-        specialityId: specIdByName.get(name)!,
-        displayOrder: index,
-      })),
-    });
+      await tx.artistSpeciality.deleteMany({ where: { artistId } });
+      await tx.artistSpeciality.createMany({
+        data: data.specialities.map((name, index) => ({
+          artistId,
+          specialityId: specIdByName.get(name)!,
+          displayOrder: index,
+        })),
+      });
 
-    await tx.externalLink.deleteMany({ where: { artistId } });
-    const linkRows = buildExternalLinkRows(artistId, {
-      linkedinUrl: data.linkedinUrl,
-      instagramUrl: data.instagramUrl,
-      facebookUrl: data.facebookUrl,
-      twitterUrl: data.twitterUrl,
-      youtubeUrl: data.youtubeUrl,
-      websiteUrls: data.websiteUrls ?? [],
+      await tx.externalLink.deleteMany({ where: { artistId } });
+      const linkRows = buildExternalLinkRows(artistId, {
+        linkedinUrl: data.linkedinUrl,
+        instagramUrl: data.instagramUrl,
+        facebookUrl: data.facebookUrl,
+        twitterUrl: data.twitterUrl,
+        youtubeUrl: data.youtubeUrl,
+        websiteUrls: data.websiteUrls ?? [],
+      });
+      if (linkRows.length > 0) {
+        await tx.externalLink.createMany({ data: linkRows });
+      }
     });
-    if (linkRows.length > 0) {
-      await tx.externalLink.createMany({ data: linkRows });
+  } catch (e) {
+    if (isArtistSlugUniqueConstraintError(e)) {
+      return {
+        ok: false,
+        error: ARTIST_SLUG_TAKEN_SUMMARY,
+        fieldErrors: { slug: ARTIST_SLUG_TAKEN_FIELD },
+      };
     }
-  });
-
-  const slugRow = await db.artist.findUnique({
-    where: { id: artistId },
-    select: { slug: true },
-  });
+    throw e;
+  }
 
   revalidatePath("/dashboard");
   revalidatePath("/profile/edit");
   revalidatePath(`/artists/${artistId}`);
-  if (slugRow?.slug) {
-    revalidatePath(`/artists/${slugRow.slug}`);
+  revalidatePath(`/artists/${previousSlug}`);
+  if (data.slug !== previousSlug) {
+    revalidatePath(`/artists/${data.slug}`);
   }
   revalidateHomeMarketing();
   return { ok: true };

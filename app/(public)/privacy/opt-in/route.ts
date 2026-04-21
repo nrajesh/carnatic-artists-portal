@@ -5,7 +5,7 @@ import {
 } from "@/lib/analytics-opt-out-cookies";
 
 /**
- * GET /privacy/opt-in — clears opt-out cookie(s), then redirects to /privacy
+ * GET /privacy/opt-in - clears opt-out cookie(s), then redirects to /privacy
  * with a flag so the client can call `posthog.opt_in_capturing()` (SDK may persist opt-out in storage).
  */
 export async function GET(request: NextRequest) {

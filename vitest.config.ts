@@ -8,6 +8,7 @@ export default defineConfig({
     env: {
       /** Deterministic test key - 32-byte zero buffer base64 */
       PII_ENCRYPTION_KEY: Buffer.alloc(32, 11).toString("base64"),
+      DEPLOYMENT_TIMEZONE: "UTC",
     },
     environment: "node",
     globals: true,

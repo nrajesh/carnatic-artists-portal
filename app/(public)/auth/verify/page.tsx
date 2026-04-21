@@ -39,7 +39,7 @@ export default async function VerifyPage({ searchParams }: VerifyPageProps) {
         </div>
 
         <div className="rounded-2xl border border-stone-200 bg-white p-8 shadow-sm">
-          <h1 className="mb-2 text-2xl font-bold text-stone-800">Finish signing in</h1>
+          <h1 className="mb-2 font-display text-2xl font-bold tracking-tight text-stone-800">Finish signing in</h1>
           <p className="mb-6 text-sm text-stone-600">
             Tap <strong className="font-semibold text-stone-800">Continue</strong> below to complete sign-in.
           </p>

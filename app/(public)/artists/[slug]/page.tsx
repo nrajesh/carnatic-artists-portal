@@ -91,7 +91,7 @@ export default async function ArtistProfilePage({ params, searchParams }: PagePr
     : [];
 
   const profileShareUrl = await getAbsoluteSiteUrl(`/artists/${encodeURIComponent(slug)}`);
-  const shareTitle = `${artist.name} — Artist profile`;
+  const shareTitle = `${artist.name} - Artist profile`;
   const shareText = `Check out ${artist.name} on the artist discovery portal`;
 
   return (
@@ -361,7 +361,7 @@ export default async function ArtistProfilePage({ params, searchParams }: PagePr
         </div>
         )}
 
-        {/* External links — feed-style cards (web + mobile) */}
+        {/* External links - feed-style cards (web + mobile) */}
         {artist.links.length > 0 && (
           <SectionCard title="Connect">
             <ArtistExternalLinksFeed links={artist.links} />

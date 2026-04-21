@@ -152,7 +152,7 @@ export function AdminSpecialitiesGrid({ rows }: { rows: AdminSpecialityRow[] }) 
                 />
               </div>
               <div className="pl-6">
-                <SpecialityCard row={row} />
+                <SpecialityCard row={row} allRows={rows} />
               </div>
             </div>
           );

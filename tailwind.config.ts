@@ -14,7 +14,7 @@ const config: Config = {
         display: ["var(--font-display)", "Georgia", "Times New Roman", "serif"],
       },
       maxWidth: {
-        /** ~65–70 characters for body text (WCAG readability guidance). */
+        /** ~65-70 characters for body text (WCAG readability guidance). */
         measure: "65ch",
       },
       typography: ({ theme }) => ({
@@ -26,7 +26,7 @@ const config: Config = {
               marginTop: "0.75em",
               marginBottom: "0.75em",
             },
-            /** Shift+Enter `<br>` inside one `<p>` — modest gap, not a full paragraph. */
+            /** Shift+Enter `<br>` inside one `<p>` - modest gap, not a full paragraph. */
             "p br:not(:last-child)": {
               display: "block",
               marginBottom: "0.65em",

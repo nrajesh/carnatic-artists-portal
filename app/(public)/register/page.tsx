@@ -344,7 +344,7 @@ export default function RegisterPage() {
       <main className="min-h-screen bg-amber-50 flex items-center justify-center px-4">
         <div className="max-w-md w-full bg-white rounded-2xl shadow-lg p-8 text-center border border-amber-200">
           <div className="text-5xl mb-4">🎵</div>
-          <h1 className="text-2xl font-bold text-amber-900 mb-3">Request Submitted!</h1>
+          <h1 className="mb-3 font-display text-2xl font-bold tracking-tight text-amber-900">Request Submitted!</h1>
           <p className="text-amber-800 leading-relaxed">
             Your registration request has been submitted. An admin will review it and you&apos;ll
             receive an email once approved.
@@ -366,7 +366,7 @@ export default function RegisterPage() {
 
         {/* Header */}
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-amber-900 mb-2">Join the Portal</h1>
+          <h1 className="mb-2 font-display text-3xl font-bold tracking-tight text-amber-900">Join the Portal</h1>
           <p className="text-amber-700">
             Register as a musician to create your portfolio and connect with fellow artists.
           </p>

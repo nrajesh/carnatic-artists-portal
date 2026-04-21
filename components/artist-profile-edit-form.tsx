@@ -27,7 +27,9 @@ import {
   websitePathSuffixFromStored,
   youtubeSuffixFromStored,
 } from "@/lib/registration-input-normalize";
+import { FeaturedArtistPhoto } from "@/components/featured-artist-photo";
 import { stripHtmlForSearch } from "@/lib/artist-directory-search";
+import { getThemeFromArtistSpecialities } from "@/lib/speciality-theme";
 import type { ArtistEditView } from "@/lib/queries/artists";
 import type { ArtistProfileEditInput } from "@/lib/artist-profile-update-schema";
 import { updateArtistProfile } from "@/app/(artist)/profile/edit/actions";
@@ -36,6 +38,7 @@ import { updateAdminArtistProfile } from "@/app/(admin)/admin/artists/[id]/edit/
 type Variant = "artist" | "admin";
 
 type FormFieldsSnapshot = {
+  slug: string;
   fullName: string;
   email: string;
   contactNumber: string;
@@ -69,6 +72,7 @@ function toArtistProfileEditInput(
   openToCollabWhenCollabsDisabled: boolean,
 ): ArtistProfileEditInput {
   return {
+    slug: fields.slug,
     fullName: fields.fullName,
     email: fields.email,
     contactNumber: fields.contactNumber,
@@ -93,6 +97,7 @@ function toArtistProfileEditInput(
 function fingerprintArtistProfileInput(p: ArtistProfileEditInput): string {
   const sites = (p.websiteUrls ?? []).map((r) => r.url.trim()).filter((u) => u.length > 0);
   return JSON.stringify({
+    slug: p.slug.trim().toLowerCase(),
     fullName: p.fullName.trim(),
     email: p.email.trim().toLowerCase(),
     contactNumber: p.contactNumber.trim(),
@@ -116,6 +121,7 @@ function fingerprintArtistProfileInput(p: ArtistProfileEditInput): string {
 
 function snapshotFromEditView(initial: ArtistEditView): FormFieldsSnapshot {
   return {
+    slug: initial.slug,
     fullName: initial.fullName,
     email: initial.email,
     contactNumber: initial.contactNumber,
@@ -159,6 +165,7 @@ export function ArtistProfileEditForm({
 }: ArtistProfileEditFormProps) {
   const router = useRouter();
   const posthog = usePostHog();
+  const [slug, setSlug] = useState(initial.slug);
   const [fullName, setFullName] = useState(initial.fullName);
   const [email, setEmail] = useState(initial.email);
   const [contactNumber, setContactNumber] = useState(initial.contactNumber);
@@ -203,6 +210,7 @@ export function ArtistProfileEditForm({
     return fingerprintArtistProfileInput(
       toArtistProfileEditInput(
         {
+          slug,
           fullName,
           email,
           contactNumber,
@@ -227,6 +235,7 @@ export function ArtistProfileEditForm({
       ),
     );
   }, [
+    slug,
     fullName,
     email,
     contactNumber,
@@ -251,8 +260,22 @@ export function ArtistProfileEditForm({
 
   const isDirty = baselineFingerprint !== currentFingerprint;
 
-  const primaryColor =
-    allSpecialities.find((s) => s.name === specialities[0])?.color ?? "#92400E";
+  const previewCardTheme = useMemo(() => {
+    const specs = specialities
+      .map((name) => {
+        const meta = allSpecialities.find((s) => s.name === name);
+        return meta ? { name: meta.name, color: meta.color } : null;
+      })
+      .filter((x): x is { name: string; color: string } => x !== null);
+    const theme = getThemeFromArtistSpecialities(specs);
+    const headerBg = theme.background.startsWith("linear-gradient")
+      ? theme.background
+      : `linear-gradient(135deg, ${theme.background}, ${theme.background}cc)`;
+    const avatarAccent = theme.background.startsWith("linear-gradient")
+      ? theme.background
+      : theme.accentColor;
+    return { headerBg, avatarAccent };
+  }, [specialities, allSpecialities]);
 
   function addWebsiteRow() {
     if (websiteUrls.length >= 3) return;
@@ -270,6 +293,7 @@ export function ArtistProfileEditForm({
   function buildPayload(): ArtistProfileEditInput {
     return toArtistProfileEditInput(
       {
+        slug,
         fullName,
         email,
         contactNumber,
@@ -342,14 +366,26 @@ export function ArtistProfileEditForm({
       >
         <div className="overflow-hidden rounded-xl border border-stone-100">
           <div
-            className="flex h-14 items-end px-5 pb-2"
-            style={{ background: `linear-gradient(135deg, ${primaryColor}, ${primaryColor}bb)` }}
+            className="flex h-20 items-end px-5 pb-3"
+            style={
+              backgroundImageUrl.trim()
+                ? {
+                    backgroundImage: `linear-gradient(rgba(0,0,0,0.38), rgba(0,0,0,0.48)), url(${backgroundImageUrl.trim()})`,
+                    backgroundSize: "cover",
+                    backgroundPosition: "center",
+                  }
+                : { background: previewCardTheme.headerBg }
+            }
           >
-            <div
-              className="flex h-10 w-10 flex-shrink-0 translate-y-5 items-center justify-center rounded-full border-2 border-white text-lg font-bold"
-              style={{ backgroundColor: primaryColor, color: "#FFFFFF" }}
-            >
-              {fullName[0] ?? "?"}
+            <div className="translate-y-6 flex-shrink-0">
+              <FeaturedArtistPhoto
+                photoUrl={profilePhotoUrl}
+                initial={(fullName.trim()[0] ?? "?").toUpperCase()}
+                accentColor={previewCardTheme.avatarAccent}
+                alt=""
+                sizeClassName="h-12 w-12 text-xl"
+                imgClassName="!ring-white border-2 border-white shadow-md"
+              />
             </div>
           </div>
           <div className="bg-stone-50 px-5 pb-4 pt-7">
@@ -372,6 +408,34 @@ export function ArtistProfileEditForm({
               {province.trim() ? `📍 ${province}` : "No province listed on your public profile"}
             </p>
           </div>
+        </div>
+
+        <div>
+          <label htmlFor="artist-profile-slug" className="mb-1 block text-sm font-semibold text-stone-700">
+            Public profile URL <span className="text-red-500">*</span>
+          </label>
+          <p className="mb-2 text-xs text-stone-500">
+            Lowercase letters, numbers, and hyphens. Spaces become hyphens; other symbols are removed when you
+            save.
+          </p>
+          <div
+            className={`flex w-full min-w-0 max-w-full flex-col rounded-lg border border-stone-200 bg-white focus-within:ring-2 sm:flex-row sm:items-stretch sm:overflow-hidden ${ring}`}
+          >
+            <span className="flex min-h-[48px] shrink-0 select-none items-center break-all border-b border-stone-200 bg-stone-50 px-3 text-sm font-medium leading-normal text-stone-600 sm:min-h-0 sm:border-b-0 sm:border-r">
+              /artists/
+            </span>
+            <input
+              id="artist-profile-slug"
+              type="text"
+              autoComplete="off"
+              spellCheck={false}
+              value={slug}
+              onChange={(e) => setSlug(e.target.value)}
+              className="min-h-[48px] min-w-0 w-full flex-1 border-0 bg-transparent px-3 py-2 text-sm leading-normal text-stone-800 placeholder-stone-400 focus:outline-none focus:ring-0 sm:min-h-[44px] sm:py-2.5"
+              placeholder="your-name"
+            />
+          </div>
+          {errors.slug && <p className="mt-1 text-xs text-red-500">{errors.slug}</p>}
         </div>
 
         <div>
@@ -719,7 +783,11 @@ export function ArtistProfileEditForm({
               </p>
             </div>
             <Link
-              href="/profile/availability"
+              href={
+                variant === "admin"
+                  ? `/admin/artists/${initial.id}/availability`
+                  : "/profile/availability"
+              }
               className="text-sm font-medium text-amber-700 underline underline-offset-2 hover:text-amber-900"
             >
               Manage →

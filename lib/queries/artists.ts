@@ -1,3 +1,4 @@
+import { sortAvailabilityEntriesAscending } from "@/lib/availability-calendar";
 import { formatDeploymentDateNumericDay, formatDeploymentMonthYear } from "@/lib/format-deployment-datetime";
 import {
   buildArtistKeywordHaystack,
@@ -360,7 +361,7 @@ export async function getArtistBySlug(
     openToCollab: artist.openToCollab,
     availableForCollab: artist.openToCollab,
     bio: artist.bioRichText ?? "",
-    availabilityDates: artist.availabilityEntries.map((e) => ({
+    availabilityDates: sortAvailabilityEntriesAscending(artist.availabilityEntries).map((e) => ({
       from: e.startDate.toISOString().slice(0, 10),
       to: e.endDate.toISOString().slice(0, 10),
     })),
@@ -590,7 +591,7 @@ export async function getArtistDashboardView(artistId: string): Promise<ArtistDa
     bioPlainPreview,
     hasBio,
     collabs: Array.from(collabMap.values()),
-    availabilityDates: artist.availabilityEntries.map((e) => ({
+    availabilityDates: sortAvailabilityEntriesAscending(artist.availabilityEntries).map((e) => ({
       from: e.startDate.toISOString().slice(0, 10),
       to: e.endDate.toISOString().slice(0, 10),
     })),
@@ -602,6 +603,7 @@ export async function getArtistDashboardView(artistId: string): Promise<ArtistDa
 
 export type ArtistEditView = {
   id: string;
+  slug: string;
   fullName: string;
   email: string;
   contactNumber: string;
@@ -636,7 +638,7 @@ export async function getArtistForEdit(artistIdOrSlug: string): Promise<ArtistEd
         include: { speciality: { select: { name: true } } },
       },
       externalLinks: { select: { linkType: true, url: true } },
-      _count: { select: { availabilityEntries: true } },
+      availabilityEntries: { select: { startDate: true, endDate: true } },
     },
   });
   if (!artist) return null;
@@ -644,6 +646,7 @@ export async function getArtistForEdit(artistIdOrSlug: string): Promise<ArtistEd
   const d = decryptArtistStoredContact(artist);
   return {
     id: artist.id,
+    slug: artist.slug,
     fullName: artist.fullName,
     email: d.email,
     contactNumber: d.contactNumber,
@@ -652,7 +655,7 @@ export async function getArtistForEdit(artistIdOrSlug: string): Promise<ArtistEd
     contactVisibility: artist.contactVisibility,
     province: artist.province,
     specialities: artist.specialities.map((j) => j.speciality.name),
-    availabilityWindowCount: artist._count.availabilityEntries,
+    availabilityWindowCount: artist.availabilityEntries.length,
     openToCollab: artist.openToCollab,
     profilePhotoUrl: artist.profilePhotoUrl ?? "",
     backgroundImageUrl: artist.backgroundImageUrl ?? "",

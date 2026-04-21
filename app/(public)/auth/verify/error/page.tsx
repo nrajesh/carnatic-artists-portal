@@ -59,7 +59,7 @@ export default async function VerifyErrorPage({ searchParams }: ErrorPageProps) 
           <div className="mb-4 text-4xl" aria-hidden="true">
             🔗
           </div>
-          <h1 className="mb-2 text-xl font-bold text-stone-800">{title}</h1>
+          <h1 className="mb-2 font-display text-xl font-bold tracking-tight text-stone-800">{title}</h1>
           <p className="mb-6 text-sm text-stone-500">{message}</p>
           {showRequestNew && (
             <Link

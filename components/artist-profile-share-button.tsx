@@ -71,7 +71,7 @@ export function ArtistProfileShareButton({
       ].join(" ")}
       aria-label={`Share ${shareTitle}`}
     >
-      {/* Three nodes + two connectors — explicit primitives avoid arc/path clipping issues */}
+      {/* Three nodes + two connectors - explicit primitives avoid arc/path clipping issues */}
       <svg
         className="h-5 w-5 shrink-0 opacity-95"
         viewBox="0 0 24 24"

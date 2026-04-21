@@ -92,7 +92,7 @@ export default function LoginPage() {
 
         {/* Card */}
         <div className="rounded-2xl border border-stone-200 bg-white p-8 shadow-sm">
-          <h1 className="mb-2 text-2xl font-bold text-stone-800">Sign in</h1>
+          <h1 className="mb-2 font-display text-2xl font-bold tracking-tight text-stone-800">Sign in</h1>
           <p className="mb-6 text-stone-500 text-sm">
             Enter your registered email address and we&apos;ll send you a login link.
           </p>

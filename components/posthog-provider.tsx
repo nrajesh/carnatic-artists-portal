@@ -16,7 +16,7 @@ function syncPosthogPrivacySignals(): void {
   if (shouldOptOut) {
     ph.opt_out_capturing()
   } else if (typeof ph.has_opted_out_capturing === 'function' && ph.has_opted_out_capturing()) {
-    // Cookie cleared (or DNT lifted) but SDK still opted out from persistence — resync without firing $opt_in.
+    // Cookie cleared (or DNT lifted) but SDK still opted out from persistence - resync without firing $opt_in.
     ph.opt_in_capturing({ captureEventName: false })
   }
 }

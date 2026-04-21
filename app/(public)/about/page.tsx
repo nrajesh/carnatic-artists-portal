@@ -76,7 +76,7 @@ function Section({ id, title, subtitle, children }: {
   return (
     <section id={id} className="mb-20 scroll-mt-8">
       <div className="mb-6">
-        <h2 className="text-2xl font-bold text-stone-800">{title}</h2>
+        <h2 className="font-display text-2xl font-bold tracking-tight text-stone-800">{title}</h2>
         {subtitle && <p className="text-stone-500 mt-1 text-sm">{subtitle}</p>}
       </div>
       {children}
@@ -118,7 +118,7 @@ export default async function AboutPage() {
       {/* Hero */}
       <div className="bg-gradient-to-br from-amber-900 via-amber-800 to-amber-700 text-white px-6 py-20 text-center">
         <p className="text-amber-300 text-sm font-semibold uppercase tracking-widest mb-3">Maintainer Reference</p>
-        <h1 className="text-4xl sm:text-5xl font-bold mb-4">Artist Discovery Portal</h1>
+        <h1 className="mb-4 font-display text-4xl font-bold tracking-tight sm:text-5xl">Artist Discovery Portal</h1>
         <p className="text-amber-200 text-lg max-w-2xl mx-auto mb-6">
           An artist discovery portal - connecting singers and instrumentalists
           through a beautiful, accessible and multilingual platform.

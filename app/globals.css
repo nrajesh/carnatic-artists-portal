@@ -28,7 +28,7 @@
     overflow: hidden;
   }
 
-  /** Short uppercase section labels (About, Links, …) — display font, stepped up from body. */
+  /** Short uppercase section labels (About, Links, …) - display font, stepped up from body. */
   .portal-section-heading {
     @apply border-b border-amber-400/70 pb-2 font-display text-base font-semibold uppercase tracking-wide text-stone-900 sm:text-lg;
   }
@@ -37,7 +37,7 @@
     @apply font-display text-base font-semibold uppercase tracking-wide text-stone-900 sm:text-lg;
   }
 
-  /** Sentence-case block titles (dashboard, collabs, …) — display font, clear hierarchy. */
+  /** Sentence-case block titles (dashboard, collabs, …) - display font, clear hierarchy. */
   .portal-section-heading-title {
     @apply border-b border-amber-400/70 pb-2 font-display text-lg font-semibold tracking-tight text-stone-900 sm:text-xl;
   }

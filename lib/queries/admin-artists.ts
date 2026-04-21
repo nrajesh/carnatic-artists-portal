@@ -1,3 +1,4 @@
+import { sortAvailabilityEntriesAscending } from "@/lib/availability-calendar";
 import { formatDeploymentDate, formatDeploymentDateNumericDay, formatDeploymentMonthYear } from "@/lib/format-deployment-datetime";
 import { decryptArtistStoredContact } from "@/lib/artist-pii";
 import { getDb } from "@/lib/db";
@@ -144,7 +145,7 @@ export async function getArtistProfileForAdmin(idOrSlug: string): Promise<AdminA
     openToCollab: artist.openToCollab,
     availableForCollab: artist.openToCollab,
     bio: artist.bioRichText ?? "",
-    availabilityDates: artist.availabilityEntries.map((e) => ({
+    availabilityDates: sortAvailabilityEntriesAscending(artist.availabilityEntries).map((e) => ({
       from: e.startDate.toISOString().slice(0, 10),
       to: e.endDate.toISOString().slice(0, 10),
     })),

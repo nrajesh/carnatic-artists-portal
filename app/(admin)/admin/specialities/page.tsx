@@ -19,7 +19,12 @@ export default async function AdminSpecialitiesPage() {
         </div>
       </div>
 
-      <AddSpecialityForm />
+      <AddSpecialityForm
+        occupiedColorPairs={specialities.map((s) => ({
+          primaryColor: s.primaryColor,
+          textColor: s.textColor,
+        }))}
+      />
 
       <AdminSpecialitiesGrid rows={specialities} />
 

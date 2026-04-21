@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { normalizeArtistSlugInput } from "@/lib/artist-slug-normalize";
 import {
   mergeFacebookUrl,
   mergeInstagramUrl,
@@ -32,8 +33,21 @@ const websiteRowUrlSchema = z.preprocess(
 
 const piiVisibilitySchema = z.enum(["PRIVATE", "COLLABORATORS_ONLY", "PUBLIC_PROFILE"]);
 
+const artistSlugField = z.preprocess(
+  (val) => (typeof val === "string" ? normalizeArtistSlugInput(val) : ""),
+  z
+    .string()
+    .min(2, "Profile URL needs at least 2 characters after cleaning (letters, numbers, hyphens).")
+    .max(80, "Profile URL is too long (max 80 characters).")
+    .regex(
+      /^[a-z0-9]+(?:-[a-z0-9]+)*$/,
+      "Use only lowercase letters, numbers, and single hyphens between words.",
+    ),
+);
+
 /** Shared validation for artist self-edit and admin edit of another artist. */
 export const artistProfileEditSchema = z.object({
+  slug: artistSlugField,
   fullName: z.string().trim().min(1, "Full name is required").max(120),
   email: z.string().trim().toLowerCase().email("Valid email is required"),
   contactNumber: z.preprocess(

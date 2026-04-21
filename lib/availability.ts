@@ -1,3 +1,8 @@
+import {
+  deploymentCalendarDateToday,
+  formatDateAsDeploymentCalendarDay,
+} from "@/lib/availability-calendar";
+
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 
 type WindowInput = {
@@ -29,6 +34,16 @@ export function parseAvailabilityWindowDates(
 
   if (endDate.getTime() < startDate.getTime()) {
     return { ok: false, error: "End date must be the same as or later than start date." };
+  }
+
+  const todayKey = deploymentCalendarDateToday();
+  const endKey = formatDateAsDeploymentCalendarDay(endDate);
+  if (endKey < todayKey) {
+    return {
+      ok: false,
+      error:
+        "End date cannot be in the past. Ongoing availability is ok (start may be earlier), but the window must still end today or later.",
+    };
   }
 
   return { ok: true, startDate, endDate };

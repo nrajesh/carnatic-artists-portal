@@ -19,7 +19,7 @@ import { initPostHog, isPosthogClientReady } from '@/lib/analytics-client'
 interface PostHogIdentifyProps {
   artistId: string
   province: string | null
-  /** PostHog person `role` (session role — admins are still identified by artistId). */
+  /** PostHog person `role` (session role - admins are still identified by artistId). */
   personRole?: 'artist' | 'admin'
   /** Path after identify (query stripped). Default `/dashboard`. */
   replacePath?: string

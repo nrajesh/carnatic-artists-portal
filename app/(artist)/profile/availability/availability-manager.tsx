@@ -7,14 +7,38 @@ import {
   createAvailabilityWindowAction,
   deleteAvailabilityWindowAction,
   updateAvailabilityWindowAction,
+  type AvailabilityActionResult,
   type AvailabilityEntryView,
 } from "./actions";
 
+/** Lexicographic max for YYYY-MM-DD strings. */
+function maxIsoDate(a: string, b: string): string {
+  return a >= b ? a : b;
+}
+
 type AvailabilityManagerProps = {
   initialEntries: AvailabilityEntryView[];
+  /** Earliest selectable calendar day (YYYY-MM-DD) for end-date fields - server-provided deployment today. */
+  minCalendarDate: string;
+  /** Defaults to signed-in artist; admin pages pass actions bound to a target artist id. */
+  createWindowAction?: (
+    input: { startDate: string; endDate: string },
+  ) => Promise<AvailabilityActionResult>;
+  updateWindowAction?: (input: {
+    id: string;
+    startDate: string;
+    endDate: string;
+  }) => Promise<AvailabilityActionResult>;
+  deleteWindowAction?: (input: { id: string }) => Promise<AvailabilityActionResult>;
 };
 
-export function AvailabilityManager({ initialEntries }: AvailabilityManagerProps) {
+export function AvailabilityManager({
+  initialEntries,
+  minCalendarDate,
+  createWindowAction = createAvailabilityWindowAction,
+  updateWindowAction = updateAvailabilityWindowAction,
+  deleteWindowAction = deleteAvailabilityWindowAction,
+}: AvailabilityManagerProps) {
   const posthog = usePostHog();
   const [entries, setEntries] = useState(initialEntries);
   const [newStartDate, setNewStartDate] = useState("");
@@ -52,7 +76,7 @@ export function AvailabilityManager({ initialEntries }: AvailabilityManagerProps
   function handleCreateWindow() {
     setMessage(null);
     startTransition(async () => {
-      const result = await createAvailabilityWindowAction({
+      const result = await createWindowAction({
         startDate: newStartDate,
         endDate: newEndDate,
       });
@@ -76,7 +100,7 @@ export function AvailabilityManager({ initialEntries }: AvailabilityManagerProps
 
     setMessage(null);
     startTransition(async () => {
-      const result = await updateAvailabilityWindowAction({
+      const result = await updateWindowAction({
         id,
         startDate: draft.startDate,
         endDate: draft.endDate,
@@ -93,10 +117,43 @@ export function AvailabilityManager({ initialEntries }: AvailabilityManagerProps
     });
   }
 
+  function setNewRowStart(value: string) {
+    let start = value;
+    let end = newEndDate;
+    if (start && end && end < start) end = start;
+    setNewStartDate(start);
+    setNewEndDate(end);
+  }
+
+  function setNewRowEnd(value: string) {
+    let start = newStartDate;
+    let end = value;
+    if (start && end && end < start) start = end;
+    setNewStartDate(start);
+    setNewEndDate(end);
+  }
+
+  function updateRowDraft(
+    id: string,
+    patch: Partial<{ startDate: string; endDate: string }>,
+  ) {
+    setRowDrafts((prev) => {
+      const cur = prev[id];
+      if (!cur) return prev;
+      let start = patch.startDate ?? cur.startDate;
+      let end = patch.endDate ?? cur.endDate;
+      if (start && end && end < start) {
+        if (patch.startDate !== undefined) end = start;
+        else start = end;
+      }
+      return { ...prev, [id]: { startDate: start, endDate: end } };
+    });
+  }
+
   function handleDeleteWindow(id: string) {
     setMessage(null);
     startTransition(async () => {
-      const result = await deleteAvailabilityWindowAction({ id });
+      const result = await deleteWindowAction({ id });
       if (!result.ok) {
         setMessage({ type: "error", text: result.error });
         return;
@@ -107,6 +164,12 @@ export function AvailabilityManager({ initialEntries }: AvailabilityManagerProps
       posthog.capture("availability_deleted", { window_count: result.entries.length });
     });
   }
+
+  const newStartMin = minCalendarDate;
+  const newStartMax = newEndDate || undefined;
+  const newEndMin = newStartDate
+    ? maxIsoDate(minCalendarDate, newStartDate)
+    : minCalendarDate;
 
   return (
     <div className="rounded-2xl border border-stone-200 bg-white p-6 shadow-sm">
@@ -131,8 +194,10 @@ export function AvailabilityManager({ initialEntries }: AvailabilityManagerProps
             Start date
             <input
               type="date"
+              min={newStartMin}
+              max={newStartMax}
               value={newStartDate}
-              onChange={(e) => setNewStartDate(e.target.value)}
+              onChange={(e) => setNewRowStart(e.target.value)}
               className="rounded-lg border border-stone-300 bg-white px-3 py-2 text-sm text-stone-700 focus:outline-none focus:ring-2 focus:ring-amber-400 min-h-[44px]"
             />
           </label>
@@ -140,8 +205,9 @@ export function AvailabilityManager({ initialEntries }: AvailabilityManagerProps
             End date
             <input
               type="date"
+              min={newEndMin}
               value={newEndDate}
-              onChange={(e) => setNewEndDate(e.target.value)}
+              onChange={(e) => setNewRowEnd(e.target.value)}
               className="rounded-lg border border-stone-300 bg-white px-3 py-2 text-sm text-stone-700 focus:outline-none focus:ring-2 focus:ring-amber-400 min-h-[44px]"
             />
           </label>
@@ -171,6 +237,12 @@ export function AvailabilityManager({ initialEntries }: AvailabilityManagerProps
                 startDate: entry.startDate,
                 endDate: entry.endDate,
               };
+              const rowStartMin = minCalendarDate;
+              const rowStartMax = draft.endDate || undefined;
+              const rowEndMin = draft.startDate
+                ? maxIsoDate(minCalendarDate, draft.startDate)
+                : minCalendarDate;
+
               return (
                 <li key={entry.id} className="rounded-xl border border-stone-200 bg-stone-50 p-4">
                   <div className="grid gap-3 sm:grid-cols-2">
@@ -178,12 +250,11 @@ export function AvailabilityManager({ initialEntries }: AvailabilityManagerProps
                       Start
                       <input
                         type="date"
+                        min={rowStartMin}
+                        max={rowStartMax}
                         value={draft.startDate}
                         onChange={(e) =>
-                          setRowDrafts((prev) => ({
-                            ...prev,
-                            [entry.id]: { ...draft, startDate: e.target.value },
-                          }))
+                          updateRowDraft(entry.id, { startDate: e.target.value })
                         }
                         className="rounded-lg border border-stone-300 bg-white px-3 py-2 text-sm normal-case tracking-normal text-stone-700 focus:outline-none focus:ring-2 focus:ring-amber-400"
                       />
@@ -192,12 +263,10 @@ export function AvailabilityManager({ initialEntries }: AvailabilityManagerProps
                       End
                       <input
                         type="date"
+                        min={rowEndMin}
                         value={draft.endDate}
                         onChange={(e) =>
-                          setRowDrafts((prev) => ({
-                            ...prev,
-                            [entry.id]: { ...draft, endDate: e.target.value },
-                          }))
+                          updateRowDraft(entry.id, { endDate: e.target.value })
                         }
                         className="rounded-lg border border-stone-300 bg-white px-3 py-2 text-sm normal-case tracking-normal text-stone-700 focus:outline-none focus:ring-2 focus:ring-amber-400"
                       />

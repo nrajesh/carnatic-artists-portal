@@ -56,7 +56,7 @@ export default async function PrivacyPage({
       {/* Header */}
       <div className="bg-gradient-to-br from-amber-900 via-amber-800 to-amber-700 px-6 py-16 text-center text-white">
         <div className="mb-4 text-4xl">🔒</div>
-        <h1 className="mb-3 text-3xl font-bold tracking-tight sm:text-4xl">Privacy Policy</h1>
+        <h1 className="mb-3 font-display text-3xl font-bold tracking-tight sm:text-4xl">Privacy Policy</h1>
         <p className="mx-auto max-w-xl text-base text-amber-200 sm:text-lg">
           How Artist Discovery Portal handles account contact details, analytics, and related product telemetry.
         </p>
@@ -172,8 +172,8 @@ export default async function PrivacyPage({
               <code className="rounded bg-stone-100 px-1 text-xs">/admin/dashboard?ph_identify=1</code> (including
               from local <code className="rounded bg-stone-100 px-1 text-xs">/api/dev/login</code> in development).
               That flag tells the PostHog client to associate this browser with your internal{" "}
-              <strong className="text-stone-900">artist ID</strong> — the same opaque id used for server-side events and
-              optional feature flags — using <code className="rounded bg-stone-100 px-1 text-xs">posthog.identify</code>.
+              <strong className="text-stone-900">artist ID</strong> - the same opaque id used for server-side events and
+              optional feature flags - using <code className="rounded bg-stone-100 px-1 text-xs">posthog.identify</code>.
               The query parameter is removed right away and does not remain in the address bar.
             </p>
           </div>
@@ -285,7 +285,7 @@ export default async function PrivacyPage({
                   If your browser sends the <em>Do Not Track</em> header (
                   <code className="rounded bg-stone-100 px-1 text-xs">DNT: 1</code>) or{" "}
                   <code className="rounded bg-stone-100 px-1 text-xs">Sec-GPC: 1</code>, the portal disables PostHog
-                  capture when the app loads. (There is no URL for this — enable the signal in your browser or OS
+                  capture when the app loads. (There is no URL for this - enable the signal in your browser or OS
                   privacy settings.)
                 </p>
               </div>

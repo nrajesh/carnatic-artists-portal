@@ -9,6 +9,7 @@
 
 import { describe, it, expect } from 'vitest';
 import fc from 'fast-check';
+import { contrastRatio } from '@/lib/speciality-wcag';
 
 // ---------------------------------------------------------------------------
 // Seed data (mirrors prisma/seed.ts - kept as a static array so the test
@@ -29,48 +30,6 @@ const SEEDED_SPECIALITIES = [
   { name: 'Morsing',           primaryColor: '#065F46', textColor: '#FFFFFF' },
   { name: 'Tavil',             primaryColor: '#1D4ED8', textColor: '#FFFFFF' },
 ];
-
-// ---------------------------------------------------------------------------
-// WCAG relative luminance and contrast ratio helpers
-// ---------------------------------------------------------------------------
-
-/**
- * Convert a single 8-bit sRGB channel value (0-255) to its linear-light
- * contribution as defined by the WCAG 2.1 relative luminance formula.
- */
-function linearise(channel8bit: number): number {
-  const sRGB = channel8bit / 255;
-  return sRGB <= 0.04045
-    ? sRGB / 12.92
-    : Math.pow((sRGB + 0.055) / 1.055, 2.4);
-}
-
-/**
- * Compute the WCAG relative luminance of a hex colour string (e.g. "#AABBCC").
- * Returns a value in [0, 1] where 0 = black and 1 = white.
- */
-export function relativeLuminance(hex: string): number {
-  const clean = hex.replace(/^#/, '');
-  if (clean.length !== 6) {
-    throw new Error(`Invalid hex colour: "${hex}". Expected 6-digit hex.`);
-  }
-  const r = parseInt(clean.slice(0, 2), 16);
-  const g = parseInt(clean.slice(2, 4), 16);
-  const b = parseInt(clean.slice(4, 6), 16);
-  return 0.2126 * linearise(r) + 0.7152 * linearise(g) + 0.0722 * linearise(b);
-}
-
-/**
- * Compute the WCAG contrast ratio between two hex colours.
- * Returns a value in [1, 21].
- */
-export function contrastRatio(hexA: string, hexB: string): number {
-  const lumA = relativeLuminance(hexA);
-  const lumB = relativeLuminance(hexB);
-  const lighter = Math.max(lumA, lumB);
-  const darker  = Math.min(lumA, lumB);
-  return (lighter + 0.05) / (darker + 0.05);
-}
 
 // ---------------------------------------------------------------------------
 // Arbitrary generators for fast-check

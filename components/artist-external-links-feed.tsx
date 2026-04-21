@@ -1,5 +1,6 @@
 import { siFacebook, siInstagram, siX, siYoutube } from "simple-icons";
 import type { SimpleIcon } from "simple-icons";
+import { WebsiteLinkIcon } from "@/components/website-link-icon";
 
 /** LinkedIn was removed from simple-icons; use canonical bug mark (brand color #0A66C2). */
 const siLinkedInCompat: SimpleIcon = {
@@ -153,7 +154,9 @@ export function ArtistExternalLinksFeed({ links }: { links: { type: string; url:
         const meta = platformMeta(key);
         const host = safeHostname(link.url);
         const title = key === "other" ? link.type.trim() || "Link" : meta.label;
-        const aria = `${title}${host ? ` (${host})` : ""} — opens in a new tab`;
+        const aria = `${title}${host ? ` (${host})` : ""} - opens in a new tab`;
+        const showSiteFavicon =
+          !!host && (key === "website" || key === "other");
 
         return (
           <li key={`${link.url}-${i}`}>
@@ -177,14 +180,22 @@ export function ArtistExternalLinksFeed({ links }: { links: { type: string; url:
                 className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl sm:h-14 sm:w-14"
                 style={{
                   backgroundColor: `${meta.accent}14`,
-                  ...(meta.icon !== "globe" ? { color: meta.accent } : {}),
+                  ...(showSiteFavicon ? {} : meta.icon !== "globe" ? { color: meta.accent } : {}),
                 }}
               >
-                <BrandGlyph
-                  icon={meta.icon}
-                  accent={meta.accent}
-                  className="h-6 w-6 sm:h-7 sm:w-7"
-                />
+                {showSiteFavicon ? (
+                  <WebsiteLinkIcon
+                    hostname={host}
+                    accent={meta.accent}
+                    className="h-6 w-6 sm:h-7 sm:w-7"
+                  />
+                ) : (
+                  <BrandGlyph
+                    icon={meta.icon}
+                    accent={meta.accent}
+                    className="h-6 w-6 sm:h-7 sm:w-7"
+                  />
+                )}
               </div>
 
               <div className="flex min-w-0 flex-1 flex-col justify-center gap-0.5 pr-1">

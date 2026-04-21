@@ -142,14 +142,14 @@ KV_REST_API_TOKEN=placeholder
 
 #### Generating `SESSION_SECRET`, `PII_ENCRYPTION_KEY`, and VAPID keys
 
-These are **not** issued by an external service — generate them locally and store them in `.env.local` (and in **Cloudflare Worker secrets** for production).
+These are **not** issued by an external service - generate them locally and store them in `.env.local` (and in **Cloudflare Worker secrets** for production).
 
 | Variable | Purpose | Command / notes |
 |---|---|---|
-| **`SESSION_SECRET`** | Signs session JWTs (`lib/session-jwt.ts`). | `openssl rand -base64 32` — use a **different** value in production than in dev; rotating it invalidates existing sessions. |
-| **`PII_ENCRYPTION_KEY`** | AES-256-GCM for email/phone at rest (`lib/pii-crypto.ts`). Must decode from base64 to **exactly 32 bytes**. | `openssl rand -base64 32` — **do not rotate** in production without a re-encryption plan; existing ciphertext becomes undecryptable if the key changes. |
+| **`SESSION_SECRET`** | Signs session JWTs (`lib/session-jwt.ts`). | `openssl rand -base64 32` - use a **different** value in production than in dev; rotating it invalidates existing sessions. |
+| **`PII_ENCRYPTION_KEY`** | AES-256-GCM for email/phone at rest (`lib/pii-crypto.ts`). Must decode from base64 to **exactly 32 bytes**. | `openssl rand -base64 32` - **do not rotate** in production without a re-encryption plan; existing ciphertext becomes undecryptable if the key changes. |
 | **`VAPID_PUBLIC_KEY` / `VAPID_PRIVATE_KEY`** | Web Push (`web-push`, `lib/notifications.ts`). | `npx web-push generate-vapid-keys` (uses the repo’s `web-push` dependency). |
-| **`VAPID_SUBJECT`** | Contact URI for the push sender (Web Push spec). | Not generated — set to e.g. `mailto:you@example.com` or `https://your-domain.com`. |
+| **`VAPID_SUBJECT`** | Contact URI for the push sender (Web Push spec). | Not generated - set to e.g. `mailto:you@example.com` or `https://your-domain.com`. |
 
 Equivalent for **`SESSION_SECRET`** / **`PII_ENCRYPTION_KEY`**:
 

@@ -34,6 +34,8 @@ export default async function HomePage({
     countsByProvince,
   } = await getCachedHomeMarketingData();
   const provincesWithArtists = Object.values(countsByProvince).filter((n) => n > 0).length;
+  /** Full artist directory - must match `app/(public)/artists/page.tsx` route (not `/register`). */
+  const artistsDirectoryHref = "/artists";
   const featuredTheme = featuredArtist
     ? getThemeFromArtistSpecialities(featuredArtist.specialities)
     : null;
@@ -68,16 +70,16 @@ export default async function HomePage({
         <p className="text-amber-200 text-lg sm:text-xl max-w-xl mx-auto mb-8">
           {collabsRatingsEnabled
             ? "Browse artists in the Netherlands - discover profiles, find collaborators, and grow your musical network."
-            : "Browse artists in the Netherlands - discover profiles and connect with talented musicians."}
+            : "Browse artists in the Netherlands - discover profiles and connect with talented artists."}
         </p>
         <div className="flex flex-wrap justify-center gap-4">
-          <JoinCtaButton />
           <Link
-            href="/artists"
+            href={artistsDirectoryHref}
             className="px-6 py-3 border-2 border-white text-white font-semibold rounded-lg hover:bg-white/10 transition-colors min-h-[44px] flex items-center"
           >
             Meet our artists
           </Link>
+          <JoinCtaButton />
         </div>
       </div>
 
@@ -86,26 +88,38 @@ export default async function HomePage({
           collabsRatingsEnabled ? "grid-cols-3" : "grid-cols-2"
         }`}
       >
-        <div className="bg-white rounded-2xl border border-amber-200 shadow-sm p-5 sm:p-6">
+        <Link
+          href={artistsDirectoryHref}
+          className="bg-white rounded-2xl border border-amber-200 shadow-sm p-5 sm:p-6 block transition-colors hover:border-amber-400 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:ring-offset-2 focus-visible:ring-offset-amber-50"
+          aria-label={`${totalArtists} artists on the portal - browse directory`}
+        >
           <div className="text-3xl font-bold text-amber-800">{totalArtists}</div>
-          <div className="text-xs sm:text-sm text-amber-600 mt-1">Musicians on the portal</div>
-        </div>
+          <div className="text-xs sm:text-sm text-amber-600 mt-1">Artists on the portal</div>
+        </Link>
         {collabsRatingsEnabled ? (
           <>
-            <div className="bg-white rounded-2xl border border-amber-200 shadow-sm p-5 sm:p-6">
+            <a
+              href="#home-province-map"
+              className="bg-white rounded-2xl border border-amber-200 shadow-sm p-5 sm:p-6 block transition-colors hover:border-amber-400 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:ring-offset-2 focus-visible:ring-offset-amber-50"
+              aria-label={`${seekingCollab} open to collaborate - jump to province map`}
+            >
               <div className="text-3xl font-bold text-amber-800">{seekingCollab}</div>
               <div className="text-xs sm:text-sm text-amber-600 mt-1">Open to collaborate</div>
-            </div>
+            </a>
             <div className="bg-white rounded-2xl border border-amber-200 shadow-sm p-5 sm:p-6">
               <div className="text-3xl font-bold text-amber-800">{totalCollabs}</div>
               <div className="text-xs sm:text-sm text-amber-600 mt-1">Collaborations live</div>
             </div>
           </>
         ) : (
-          <div className="bg-white rounded-2xl border border-amber-200 shadow-sm p-5 sm:p-6">
+          <a
+            href="#home-province-map"
+            className="bg-white rounded-2xl border border-amber-200 shadow-sm p-5 sm:p-6 block transition-colors hover:border-amber-400 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:ring-offset-2 focus-visible:ring-offset-amber-50"
+            aria-label={`${provincesWithArtists} provinces represented - jump to province map`}
+          >
             <div className="text-3xl font-bold text-amber-800">{provincesWithArtists}</div>
             <div className="text-xs sm:text-sm text-amber-600 mt-1">Provinces represented</div>
-          </div>
+          </a>
         )}
       </div>
 
@@ -151,7 +165,7 @@ export default async function HomePage({
                 </p>
                 {!collabsRatingsEnabled ? (
                   <p className="text-xs leading-relaxed text-stone-500">
-                    Browse the directory and map to find musicians by speciality and province.
+                    Browse the directory and map to find artists by speciality and province.
                   </p>
                 ) : featuredArtist.activeCollabs.length === 0 ? (
                   <p className="text-xs leading-relaxed text-stone-500">
@@ -181,9 +195,13 @@ export default async function HomePage({
         </div>
       )}
 
-      <section className="mx-auto max-w-5xl px-6 pb-10" aria-labelledby="home-province-map-heading">
+      <section
+        id="home-province-map"
+        className="mx-auto max-w-5xl px-6 pb-10 scroll-mt-24"
+        aria-labelledby="home-province-map-heading"
+      >
         <h2 id="home-province-map-heading" className="portal-section-article">
-          Find musicians near you
+          Find artists near you
         </h2>
         <p className="mt-1 max-w-xl text-sm text-stone-600">
           Explore who&apos;s already here by province - then join and put your corner of the Netherlands on the map.

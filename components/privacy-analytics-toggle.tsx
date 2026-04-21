@@ -21,7 +21,7 @@ type Props = {
   localOptOutSample: string;
   /** Cookie-only opt-out from the server (matches `document.cookie` for our opt-out names). */
   initialCookieOptedOut?: boolean;
-  /** DNT / Sec-GPC on this HTTP request — can flicker independently of cookies; not used to pick green vs amber. */
+  /** DNT / Sec-GPC on this HTTP request - can flicker independently of cookies; not used to pick green vs amber. */
   serverPrivacyHeaderOptOut?: boolean;
 };
 

@@ -5,7 +5,7 @@ import {
 } from "@/lib/analytics-opt-out-cookies";
 
 /**
- * GET /privacy/opt-out — sets first-party opt-out cookie(s) read by `PostHogProvider` and `/privacy`,
+ * GET /privacy/opt-out - sets first-party opt-out cookie(s) read by `PostHogProvider` and `/privacy`,
  * then redirects to /privacy with a confirmation flag.
  */
 export async function GET(request: NextRequest) {

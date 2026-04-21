@@ -7,6 +7,7 @@ import { getDb } from "@/lib/db";
 import { verifySession } from "@/lib/session-jwt";
 import { prismaStringIdArraySchema } from "@/lib/prisma-string-id";
 import { normalizeSpecialityLabel } from "@/lib/speciality-catalog";
+import { specialityColorPairKey } from "@/lib/speciality-random-colors";
 
 const hexColor = z.string().regex(/^#[0-9A-Fa-f]{6}$/, "Use a #RRGGBB colour");
 
@@ -50,12 +51,24 @@ export async function createSpecialityAction(formData: FormData): Promise<Specia
   const name = normalizeSpecialityLabel(parsed.data.name);
   if (name.length < 2) return { ok: false, error: "Name is too short." };
 
+  const primaryColor = parsed.data.primaryColor.trim().toUpperCase();
+  const textColor = parsed.data.textColor.trim().toUpperCase();
+  const pairKey = specialityColorPairKey(primaryColor, textColor);
+  const existingPairs = await getDb().speciality.findMany({
+    select: { primaryColor: true, textColor: true },
+  });
+  if (
+    existingPairs.some((r) => specialityColorPairKey(r.primaryColor, r.textColor) === pairKey)
+  ) {
+    return { ok: false, error: "Another speciality already uses this primary and text colour pair." };
+  }
+
   try {
     await getDb().speciality.create({
       data: {
         name,
-        primaryColor: parsed.data.primaryColor,
-        textColor: parsed.data.textColor,
+        primaryColor,
+        textColor,
       },
     });
   } catch (e: unknown) {
@@ -85,13 +98,24 @@ export async function updateSpecialityAction(formData: FormData): Promise<Specia
   const name = normalizeSpecialityLabel(parsed.data.name);
   if (name.length < 2) return { ok: false, error: "Name is too short." };
 
+  const primaryColor = parsed.data.primaryColor.trim().toUpperCase();
+  const textColor = parsed.data.textColor.trim().toUpperCase();
+  const pairKey = specialityColorPairKey(primaryColor, textColor);
+  const allOthers = await getDb().speciality.findMany({
+    where: { id: { not: parsed.data.id } },
+    select: { primaryColor: true, textColor: true },
+  });
+  if (allOthers.some((r) => specialityColorPairKey(r.primaryColor, r.textColor) === pairKey)) {
+    return { ok: false, error: "Another speciality already uses this primary and text colour pair." };
+  }
+
   try {
     await getDb().speciality.update({
       where: { id: parsed.data.id },
       data: {
         name,
-        primaryColor: parsed.data.primaryColor,
-        textColor: parsed.data.textColor,
+        primaryColor,
+        textColor,
       },
     });
   } catch (e: unknown) {
