@@ -1,22 +1,27 @@
 "use client";
 
-import { useSyncExternalStore } from "react";
-import { usePathname } from "next/navigation";
+import { Suspense, useCallback, useSyncExternalStore } from "react";
+import { usePathname, useSearchParams } from "next/navigation";
 import { hasAnalyticsOptOutCookie } from "@/lib/analytics-opt-out-cookie";
-
-const noopSubscribe = () => () => {};
+import { subscribeDocumentConsentSignals } from "@/lib/analytics-consent-subscribe";
 
 /**
  * Green footer reminder when the analytics opt-out cookie is present.
+ * Uses a real external-store subscription plus pathname/searchParams so we
+ * re-read `document.cookie` after opt-in (same path `/privacy`, query changes).
  */
-export function AnalyticsOptOutFooterNote() {
+function AnalyticsOptOutFooterNoteInner() {
   const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const getSnapshot = useCallback(() => {
+    void pathname;
+    void searchParams.toString();
+    return hasAnalyticsOptOutCookie();
+  }, [pathname, searchParams]);
+
   const optedOut = useSyncExternalStore(
-    noopSubscribe,
-    () => {
-      void pathname;
-      return hasAnalyticsOptOutCookie();
-    },
+    subscribeDocumentConsentSignals,
+    getSnapshot,
     () => false,
   );
 
@@ -29,5 +34,13 @@ export function AnalyticsOptOutFooterNote() {
     >
       You have opted out of analytics and session replay for this browser on this site.
     </p>
+  );
+}
+
+export function AnalyticsOptOutFooterNote() {
+  return (
+    <Suspense fallback={null}>
+      <AnalyticsOptOutFooterNoteInner />
+    </Suspense>
   );
 }

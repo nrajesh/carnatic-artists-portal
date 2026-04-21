@@ -1,13 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { useCallback, useState, useSyncExternalStore } from "react";
+import { usePathname, useSearchParams } from "next/navigation";
+import { Suspense, useCallback, useState, useSyncExternalStore } from "react";
 import { hasAnalyticsOptOutCookie } from "@/lib/analytics-opt-out-cookie";
+import { subscribeDocumentConsentSignals } from "@/lib/analytics-consent-subscribe";
 
 const STORAGE_KEY = "privacy_notice_banner_v1_ack";
-
-const noopSubscribe = () => () => {};
 
 function shouldShowPrivacyBanner(): boolean {
   try {
@@ -21,16 +20,20 @@ function shouldShowPrivacyBanner(): boolean {
 }
 
 /**
- * First-visit privacy notice with one-click analytics opt-out (sets `ph_opt_out` via /privacy/opt-out).
+ * First-visit privacy notice with one-click analytics opt-out (via /privacy/opt-out).
  */
-export function PrivacyNoticeBanner() {
+function PrivacyNoticeBannerInner() {
   const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const getSnapshot = useCallback(() => {
+    void pathname;
+    void searchParams.toString();
+    return shouldShowPrivacyBanner();
+  }, [pathname, searchParams]);
+
   const allowShow = useSyncExternalStore(
-    noopSubscribe,
-    () => {
-      void pathname;
-      return shouldShowPrivacyBanner();
-    },
+    subscribeDocumentConsentSignals,
+    getSnapshot,
     () => false,
   );
   const [dismissed, setDismissed] = useState(false);
@@ -77,5 +80,13 @@ export function PrivacyNoticeBanner() {
         </div>
       </div>
     </div>
+  );
+}
+
+export function PrivacyNoticeBanner() {
+  return (
+    <Suspense fallback={null}>
+      <PrivacyNoticeBannerInner />
+    </Suspense>
   );
 }

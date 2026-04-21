@@ -11,22 +11,10 @@ import {
   hasNavigatorAnalyticsDnt,
   hasNavigatorGlobalPrivacyControl,
 } from "@/lib/analytics-privacy-signals";
+import { subscribeDocumentConsentSignals } from "@/lib/analytics-consent-subscribe";
 
 const OPT_OUT_PATH = "/privacy/opt-out";
 const OPT_IN_PATH = "/privacy/opt-in";
-
-function subscribeAnalyticsOptOutSignals(onStoreChange: () => void): () => void {
-  const onStorage = () => onStoreChange();
-  const onVisibility = () => {
-    if (document.visibilityState === "visible") onStoreChange();
-  };
-  window.addEventListener("storage", onStorage);
-  document.addEventListener("visibilitychange", onVisibility);
-  return () => {
-    window.removeEventListener("storage", onStorage);
-    document.removeEventListener("visibilitychange", onVisibility);
-  };
-}
 
 type Props = {
   optOutDisplayUrl: string | null;
@@ -50,7 +38,7 @@ export function PrivacyAnalyticsToggle({
 }: Props) {
   const getSnapshot = useCallback(() => hasAnalyticsOptOutCookie(), []);
   const cookieOptedOut = useSyncExternalStore(
-    subscribeAnalyticsOptOutSignals,
+    subscribeDocumentConsentSignals,
     getSnapshot,
     () => initialCookieOptedOut,
   );
