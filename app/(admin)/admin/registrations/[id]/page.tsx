@@ -3,6 +3,8 @@ import { notFound } from "next/navigation";
 import { formatDeploymentRegistrationDate } from "@/lib/format-deployment-datetime";
 import { decryptRegistrationStoredContact } from "@/lib/artist-pii";
 import { getDb } from "@/lib/db";
+import { PortalSectionHeading } from "@/components/portal-section-heading";
+import { normalizeBioHtmlForDisplay } from "@/lib/bio-html-display";
 
 const LINK_LABELS: Record<string, string> = { linkedin: "LinkedIn", instagram: "Instagram", facebook: "Facebook", twitter: "Twitter/X", youtube: "YouTube", website: "Website" };
 
@@ -168,16 +170,23 @@ export default async function ReviewRegistrationPage({
 
         {/* Bio */}
         {reg.bioRichText && (
-          <div className="rounded-xl border border-stone-200 bg-white p-6 shadow-sm mb-6">
-            <h2 className="text-xs font-semibold text-stone-500 uppercase tracking-wide mb-3">Biographical Write-up</h2>
-            <div className="prose prose-stone max-w-none text-stone-700" dangerouslySetInnerHTML={{ __html: reg.bioRichText }} />
+          <div className="mb-6 rounded-xl border border-stone-200 bg-white p-6 shadow-sm sm:p-8">
+            <PortalSectionHeading variant="label" className="mb-4">
+              Biographical Write-up
+            </PortalSectionHeading>
+            <div
+              className="max-w-measure text-left font-sans prose prose-sm prose-stone sm:prose-base [text-wrap:pretty]"
+              dangerouslySetInnerHTML={{ __html: normalizeBioHtmlForDisplay(reg.bioRichText) }}
+            />
           </div>
         )}
 
         {/* Links */}
         {reg.links.length > 0 && (
           <div className="rounded-xl border border-stone-200 bg-white p-6 shadow-sm mb-6">
-            <h2 className="text-xs font-semibold text-stone-500 uppercase tracking-wide mb-3">External Links</h2>
+            <PortalSectionHeading variant="label" className="mb-3">
+              External Links
+            </PortalSectionHeading>
             <ul className="flex flex-col gap-2">
               {reg.links.map((link, i) => (
                 <li key={i} className="min-w-0">

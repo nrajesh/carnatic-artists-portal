@@ -1,12 +1,19 @@
 import posthog from 'posthog-js'
 
 /**
- * Browser ingest URL. In development we call PostHog Cloud directly so the SDK works without
- * `POSTHOG_HOST` on the server (the `/api/ph` proxy would otherwise return 503 and cause
- * "Failed to fetch" / RemoteConfig errors). Production keeps the same-origin proxy.
+ * Browser ingest URL.
+ * - Production: same-origin `/api/ph` proxy (avoids third-party cookie / CORS edge cases).
+ * - Development: defaults to PostHog Cloud directly so the SDK works without `POSTHOG_HOST`
+ *   on the server. Safari can block cross-site blob/worker traffic and spam the console; set
+ *   `NEXT_PUBLIC_POSTHOG_DEV_PROXY=true` with `POSTHOG_HOST` in `.env.local` to use the proxy
+ *   locally, or `NEXT_PUBLIC_POSTHOG_DISABLE_IN_DEV=true` to skip the SDK entirely.
  */
 function posthogApiHost(): string {
   if (process.env.NODE_ENV === 'development') {
+    const useProxy = process.env.NEXT_PUBLIC_POSTHOG_DEV_PROXY === 'true'
+    if (useProxy) {
+      return '/api/ph'
+    }
     const direct =
       process.env.NEXT_PUBLIC_POSTHOG_INGEST_HOST?.trim() ||
       'https://eu.i.posthog.com'
@@ -50,11 +57,31 @@ function sessionRecordingOffInDev(): boolean {
   return v !== 'true' && v !== '1' && v !== 'yes'
 }
 
-export function initPostHog(): void {
-  const key = process.env.NEXT_PUBLIC_POSTHOG_KEY
+let warnedMissingPosthogKey = false
 
+/** True after `posthog.init` ran successfully (SDK ready for `capture` / `identify`). */
+export function isPosthogClientReady(): boolean {
+  const ph = posthog as { __loaded?: boolean }
+  return !!ph.__loaded
+}
+
+/** Idempotent — safe to call from any client effect (runs before parent `PostHogProvider` effects). */
+export function initPostHog(): void {
+  const ph = posthog as { __loaded?: boolean }
+  if (ph.__loaded) {
+    return
+  }
+
+  if (process.env.NODE_ENV === 'development' && process.env.NEXT_PUBLIC_POSTHOG_DISABLE_IN_DEV === 'true') {
+    return
+  }
+
+  const key = process.env.NEXT_PUBLIC_POSTHOG_KEY?.trim()
   if (!key) {
-    console.warn('[analytics] NEXT_PUBLIC_POSTHOG_KEY is not set - analytics disabled')
+    if (process.env.NODE_ENV === 'development' && !warnedMissingPosthogKey) {
+      warnedMissingPosthogKey = true
+      console.warn('[analytics] NEXT_PUBLIC_POSTHOG_KEY is not set - analytics disabled')
+    }
     return
   }
 
@@ -80,7 +107,8 @@ export function initPostHog(): void {
     // Session replay depends on the same remote config + flags pipeline as feature flags.
     // Setting `advanced_disable_feature_flags` leaves recording stuck waiting for a "flags response".
     disable_surveys: false,
-    debug: process.env.NODE_ENV === 'development',
+    /** Verbose SDK logging — off by default; set NEXT_PUBLIC_POSTHOG_DEBUG=true when diagnosing. */
+    debug: process.env.NEXT_PUBLIC_POSTHOG_DEBUG === 'true',
   })
 }
 

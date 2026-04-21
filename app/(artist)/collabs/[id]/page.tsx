@@ -11,6 +11,7 @@ import {
   upsertFeedbackAction,
 } from "../actions";
 import { isArtistCollabsRatingsEnabledServer } from "@/lib/feature-flags-server";
+import { PortalSectionHeading } from "@/components/portal-section-heading";
 
 interface CollabChatPageProps {
   params: Promise<{ id: string }>;
@@ -84,7 +85,9 @@ export default async function CollabChatPage({ params }: CollabChatPageProps) {
 
         <div className="grid gap-6 sm:grid-cols-2">
           <section className="rounded-2xl border border-stone-200 bg-white p-6 shadow-sm">
-            <h2 className="mb-3 text-sm font-bold text-stone-800">Members</h2>
+            <PortalSectionHeading variant="title" className="mb-3">
+              Members
+            </PortalSectionHeading>
             <ul className="space-y-2">
               {collab.members.map((member) => (
                 <li key={member.artistId} className="rounded-lg border border-stone-100 px-3 py-2 text-sm">
@@ -100,7 +103,9 @@ export default async function CollabChatPage({ params }: CollabChatPageProps) {
           </section>
 
           <section className="rounded-2xl border border-stone-200 bg-white p-6 shadow-sm">
-            <h2 className="mb-3 text-sm font-bold text-stone-800">Chat</h2>
+            <PortalSectionHeading variant="title" className="mb-3">
+              Chat
+            </PortalSectionHeading>
             <div className="mb-4 max-h-64 space-y-2 overflow-auto rounded-lg border border-stone-100 p-3">
               {collab.messages.length === 0 ? (
                 <p className="text-sm italic text-stone-400">No messages yet.</p>
@@ -134,7 +139,9 @@ export default async function CollabChatPage({ params }: CollabChatPageProps) {
         </div>
 
         <section className="rounded-2xl border border-stone-200 bg-white p-6 shadow-sm">
-          <h2 className="mb-3 text-sm font-bold text-stone-800">Reviews (Create / Edit / Delete)</h2>
+          <PortalSectionHeading variant="title" className="mb-3">
+            Reviews (Create / Edit / Delete)
+          </PortalSectionHeading>
           {others.length === 0 ? (
             <p className="text-sm italic text-stone-400">No other active members to review.</p>
           ) : (
@@ -198,7 +205,9 @@ export default async function CollabChatPage({ params }: CollabChatPageProps) {
         </section>
 
         <section className="rounded-2xl border border-stone-200 bg-white p-6 shadow-sm">
-          <h2 className="mb-3 text-sm font-bold text-stone-800">Recent feedback in this collab</h2>
+          <PortalSectionHeading variant="title" className="mb-3">
+            Recent feedback in this collab
+          </PortalSectionHeading>
           {collab.feedback.length === 0 ? (
             <p className="text-sm italic text-stone-400">No feedback yet.</p>
           ) : (

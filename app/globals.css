@@ -1,3 +1,53 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+  }
+
+  :where(a, button, input, textarea, select):focus-visible {
+    @apply rounded-sm outline-2 outline-offset-2 outline-amber-700;
+  }
+}
+
+@layer components {
+  /**
+   * Injected by {@link normalizeBioHtmlForDisplay} for editor “blank line” paragraphs.
+   * Small block so gaps do not stack with full paragraph margins.
+   */
+  .prose .bio-para-gap {
+    display: block;
+    height: 0.5em;
+    min-height: 0.5em;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    overflow: hidden;
+  }
+
+  /** Short uppercase section labels (About, Links, …) — display font, stepped up from body. */
+  .portal-section-heading {
+    @apply border-b border-amber-400/70 pb-2 font-display text-base font-semibold uppercase tracking-wide text-stone-900 sm:text-lg;
+  }
+
+  .portal-section-heading-text {
+    @apply font-display text-base font-semibold uppercase tracking-wide text-stone-900 sm:text-lg;
+  }
+
+  /** Sentence-case block titles (dashboard, collabs, …) — display font, clear hierarchy. */
+  .portal-section-heading-title {
+    @apply border-b border-amber-400/70 pb-2 font-display text-lg font-semibold tracking-tight text-stone-900 sm:text-xl;
+  }
+
+  .portal-section-heading-title-text {
+    @apply font-display text-lg font-semibold tracking-tight text-stone-900 sm:text-xl;
+  }
+
+  /** Long-form page sections (privacy, marketing subheads). */
+  .portal-section-article {
+    @apply mb-3 border-b border-amber-400/50 pb-2 font-display text-xl font-bold tracking-tight text-stone-900 sm:text-2xl;
+  }
+}

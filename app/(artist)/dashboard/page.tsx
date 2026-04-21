@@ -8,6 +8,7 @@ import { getArtistDashboardView } from "@/lib/queries/artists";
 import { PostHogIdentify } from "@/components/posthog-identify";
 import { DashboardViewTracker, EditProfileLink } from "@/components/dashboard-tracker";
 import { isArtistCollabsRatingsEnabledServer } from "@/lib/feature-flags-server";
+import { PortalSectionHeading } from "@/components/portal-section-heading";
 
 export default async function ArtistDashboardPage({
   searchParams,
@@ -105,7 +106,9 @@ export default async function ArtistDashboardPage({
           <div className="mb-8 rounded-2xl border border-amber-300 bg-gradient-to-br from-amber-50 to-white p-6 shadow-sm">
             <div className="flex flex-col gap-1 sm:flex-row sm:items-start sm:justify-between">
               <div>
-                <h2 className="text-sm font-bold uppercase tracking-wide text-amber-900">Admin tools</h2>
+                <PortalSectionHeading variant="label" className="mb-0 border-amber-500/40 text-amber-950">
+                  Admin tools
+                </PortalSectionHeading>
                 <p className="mt-1 text-sm text-stone-600 max-w-xl">
                   Jump to moderation: open an artist, then use{" "}
                   <span className="font-medium text-stone-800">Edit profile</span> for their data and{" "}
@@ -162,7 +165,9 @@ export default async function ArtistDashboardPage({
           <div className="mb-8 rounded-2xl border border-stone-200 bg-white p-6 shadow-sm">
             <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
               <div className="min-w-0 flex-1">
-                <h2 className="text-sm font-bold text-stone-800">Your public bio</h2>
+                <PortalSectionHeading variant="title" className="mb-1">
+                  Your public bio
+                </PortalSectionHeading>
                 <p className="text-xs text-stone-500 mt-1">
                   This is what visitors read on your profile - keep it current together with your details.
                 </p>
@@ -236,15 +241,15 @@ export default async function ArtistDashboardPage({
         <div className="flex flex-col gap-6">
           {/* Notifications */}
           <div className="bg-white rounded-2xl border border-stone-200 shadow-sm p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-sm font-bold text-stone-800">
+            <div className="mb-4 flex flex-wrap items-end justify-between gap-2 border-b border-amber-400/70 pb-2">
+              <PortalSectionHeading variant="title" textOnly className="mb-0">
                 Notifications
                 {unreadNotificationsInView > 0 && (
-                  <span className="ml-2 inline-block bg-amber-600 text-white text-xs font-bold px-2 py-0.5 rounded-full">
+                  <span className="ml-2 inline-block rounded-full bg-amber-600 px-2 py-0.5 text-xs font-bold text-white">
                     {unreadNotificationsInView}
                   </span>
                 )}
-              </h2>
+              </PortalSectionHeading>
             </div>
             {notificationsForDisplay.length === 0 ? (
               <p className="text-stone-400 text-sm italic">No notifications yet.</p>
@@ -289,8 +294,10 @@ export default async function ArtistDashboardPage({
           {/* My Collabs */}
           {collabsRatingsEnabled && (
             <div className="bg-white rounded-2xl border border-stone-200 shadow-sm p-6">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-sm font-bold text-stone-800">My Collabs</h2>
+              <div className="mb-4 flex flex-wrap items-end justify-between gap-2 border-b border-amber-400/70 pb-2">
+                <PortalSectionHeading variant="title" textOnly className="mb-0">
+                  My Collabs
+                </PortalSectionHeading>
                 <Link
                   href="/collabs/new"
                   className="text-xs text-amber-700 hover:text-amber-900 font-medium underline underline-offset-2"
@@ -340,8 +347,10 @@ export default async function ArtistDashboardPage({
 
           {/* Availability */}
           <div className="bg-white rounded-2xl border border-stone-200 shadow-sm p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-sm font-bold text-stone-800">My Availability</h2>
+            <div className="mb-4 flex flex-wrap items-end justify-between gap-2 border-b border-amber-400/70 pb-2">
+              <PortalSectionHeading variant="title" textOnly className="mb-0">
+                My Availability
+              </PortalSectionHeading>
               <Link
                 href="/profile/availability"
                 className="text-xs text-amber-700 hover:text-amber-900 font-medium underline underline-offset-2"
@@ -374,7 +383,9 @@ export default async function ArtistDashboardPage({
 
           {/* Quick links */}
           <div className="bg-white rounded-2xl border border-stone-200 shadow-sm p-6">
-            <h2 className="text-sm font-bold text-stone-800 mb-4">Quick Links</h2>
+            <PortalSectionHeading variant="title" className="mb-4">
+              Quick Links
+            </PortalSectionHeading>
             <div className="grid grid-cols-2 gap-3">
               {[
                 { href: "/search", icon: "🔍", label: "Find artists" },

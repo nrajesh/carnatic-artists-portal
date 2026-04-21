@@ -10,6 +10,7 @@ import {
   deleteFeedbackAction,
   upsertFeedbackAction,
 } from "@/app/(artist)/collabs/actions";
+import { PortalSectionHeading } from "@/components/portal-section-heading";
 
 export default async function AdminCollabDetailPage({
   params,
@@ -54,7 +55,9 @@ export default async function AdminCollabDetailPage({
         </div>
 
         <div className="bg-white rounded-xl border border-stone-200 shadow-sm p-5 mb-6">
-          <h2 className="text-xs font-semibold text-stone-500 uppercase tracking-wide mb-3">Members ({collab.members.length})</h2>
+          <PortalSectionHeading variant="label" className="mb-3">
+            Members ({collab.members.length})
+          </PortalSectionHeading>
           <div className="flex flex-wrap gap-2">
             {collab.members.map((m) => (
               <span key={m.artistId} className="bg-stone-100 text-stone-700 text-xs px-3 py-1 rounded-full font-medium">
@@ -65,7 +68,9 @@ export default async function AdminCollabDetailPage({
         </div>
 
         <div className="bg-white rounded-xl border border-stone-200 shadow-sm p-5">
-          <h2 className="text-xs font-semibold text-stone-500 uppercase tracking-wide mb-4">Message History ({messages.length})</h2>
+          <PortalSectionHeading variant="label" className="mb-4">
+            Message History ({messages.length})
+          </PortalSectionHeading>
           {messages.length === 0 ? (
             <p className="text-stone-400 text-sm italic">No messages yet.</p>
           ) : (
@@ -111,9 +116,9 @@ export default async function AdminCollabDetailPage({
         </div>
 
         <div className="mt-6 rounded-xl border border-stone-200 bg-white p-5 shadow-sm">
-          <h2 className="text-xs font-semibold text-stone-500 uppercase tracking-wide mb-4">
+          <PortalSectionHeading variant="label" className="mb-4">
             Feedback Controls
-          </h2>
+          </PortalSectionHeading>
           {participantView ? (
             <div className="space-y-5">
               {others.length === 0 ? (

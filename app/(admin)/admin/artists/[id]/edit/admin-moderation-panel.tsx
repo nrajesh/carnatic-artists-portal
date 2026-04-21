@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { PortalSectionHeading } from "@/components/portal-section-heading";
 import { SuspendControls } from "./suspend-controls";
 
 type Props = {
@@ -54,7 +55,9 @@ export function AdminModerationPanel({ artistId, isSuspended, suspensionComment,
 
       {open ? (
         <div className="mt-4 border-t border-stone-100 pt-4">
-          <h2 className="mb-2 text-sm font-semibold text-stone-700">Moderation</h2>
+          <PortalSectionHeading variant="title" className="mb-2">
+            Moderation
+          </PortalSectionHeading>
           <SuspendControls
             artistId={artistId}
             initialSuspended={isSuspended}

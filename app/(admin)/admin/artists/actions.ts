@@ -2,14 +2,14 @@
 
 import { cookies } from "next/headers";
 import { revalidatePath } from "next/cache";
-import { z } from "zod";
 import { revalidateHomeMarketing } from "@/lib/cache/home-marketing";
 import { deleteArtistById } from "@/lib/admin-delete-artists";
 import { analyticsServer } from "@/lib/analytics-server";
 import { getDb } from "@/lib/db";
+import { prismaStringIdArraySchema } from "@/lib/prisma-string-id";
 import { verifySession } from "@/lib/session-jwt";
 
-const IdsSchema = z.array(z.string().uuid()).min(1).max(100);
+const IdsSchema = prismaStringIdArraySchema(100);
 
 export type BulkDeleteArtistsResult =
   | { ok: true; deleted: number }

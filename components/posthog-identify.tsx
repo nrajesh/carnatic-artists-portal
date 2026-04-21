@@ -14,6 +14,7 @@
 import { useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { usePostHog } from 'posthog-js/react'
+import { initPostHog, isPosthogClientReady } from '@/lib/analytics-client'
 
 interface PostHogIdentifyProps {
   artistId: string
@@ -36,11 +37,14 @@ export function PostHogIdentify({
   useEffect(() => {
     if (!artistId) return
 
+    initPostHog()
     try {
-      posthog.identify(artistId, {
-        role: personRole,
-        ...(province ? { province } : {}),
-      })
+      if (isPosthogClientReady() && typeof posthog.identify === 'function') {
+        posthog.identify(artistId, {
+          role: personRole,
+          ...(province ? { province } : {}),
+        })
+      }
     } catch {
       // Silently ignore analytics errors
     }

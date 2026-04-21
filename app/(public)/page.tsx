@@ -9,6 +9,7 @@ import { FeaturedArtistPhoto } from "@/components/featured-artist-photo";
 import { getDeploymentConfig } from "@/deployment.config";
 import { DEFAULT_ARTIST_ACCENT_COLOR, getThemeFromArtistSpecialities } from "@/lib/speciality-theme";
 import { verifySession } from "@/lib/session-jwt";
+import { PortalSectionHeading } from "@/components/portal-section-heading";
 
 export const dynamic = "force-dynamic";
 
@@ -63,7 +64,7 @@ export default async function HomePage({
 
       <div className="bg-gradient-to-br from-amber-900 via-amber-800 to-amber-700 text-white px-6 py-20 text-center">
         <div className="text-5xl mb-4">🎵</div>
-        <h1 className="text-4xl sm:text-5xl font-bold mb-4 tracking-tight">Artist Discovery Portal</h1>
+        <h1 className="mb-4 font-display text-4xl font-bold tracking-tight sm:text-5xl">Artist Discovery Portal</h1>
         <p className="text-amber-200 text-lg sm:text-xl max-w-xl mx-auto mb-8">
           {collabsRatingsEnabled
             ? "Browse artists in the Netherlands - discover profiles, find collaborators, and grow your musical network."
@@ -112,9 +113,9 @@ export default async function HomePage({
         <div className="mx-auto max-w-4xl px-6 pb-10">
           <div className="overflow-hidden rounded-2xl border border-amber-200 bg-white shadow-sm transition-all hover:border-amber-300 hover:shadow-md">
             <div className="border-b border-amber-100/80 px-6 pb-4 pt-6 sm:px-8 sm:pt-8">
-              <h2 className="mb-2 text-xs font-semibold uppercase tracking-widest text-amber-500">
+              <PortalSectionHeading variant="title" textOnly className="mb-2 text-amber-900">
                 In the spotlight today
-              </h2>
+              </PortalSectionHeading>
               <p className="mb-4 max-w-2xl text-xs text-stone-500">
                 Meet someone from our community - profiles rotate so every serious performer gets a moment to shine.
               </p>
@@ -181,7 +182,7 @@ export default async function HomePage({
       )}
 
       <section className="mx-auto max-w-5xl px-6 pb-10" aria-labelledby="home-province-map-heading">
-        <h2 id="home-province-map-heading" className="text-lg font-bold text-stone-800">
+        <h2 id="home-province-map-heading" className="portal-section-article">
           Find musicians near you
         </h2>
         <p className="mt-1 max-w-xl text-sm text-stone-600">
@@ -198,8 +199,10 @@ export default async function HomePage({
 
       {collabsRatingsEnabled && (
         <div className="max-w-4xl mx-auto px-6 pb-16">
-          <div className="mb-1 flex items-center justify-between">
-            <h2 className="text-lg font-bold text-stone-800">Collaborations in motion</h2>
+          <div className="mb-4 flex flex-wrap items-end justify-between gap-2 border-b border-amber-400/70 pb-2">
+            <PortalSectionHeading variant="title" textOnly className="mb-0 text-lg font-bold text-stone-900">
+              Collaborations in motion
+            </PortalSectionHeading>
             <Link href={collabsIndexHref} className="text-sm text-amber-700 hover:text-amber-900 font-medium underline underline-offset-2">
               View all →
             </Link>

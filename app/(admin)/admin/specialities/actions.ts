@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { getDb } from "@/lib/db";
 import { verifySession } from "@/lib/session-jwt";
+import { prismaStringIdArraySchema } from "@/lib/prisma-string-id";
 import { normalizeSpecialityLabel } from "@/lib/speciality-catalog";
 
 const hexColor = z.string().regex(/^#[0-9A-Fa-f]{6}$/, "Use a #RRGGBB colour");
@@ -131,7 +132,7 @@ export async function deleteSpecialityAction(formData: FormData): Promise<Specia
   return { ok: true };
 }
 
-const BulkIdsSchema = z.array(z.string().uuid()).min(1).max(100);
+const BulkIdsSchema = prismaStringIdArraySchema(100);
 
 export type BulkDeleteSpecialitiesResult =
   | { ok: true; deleted: number; blocked: number }

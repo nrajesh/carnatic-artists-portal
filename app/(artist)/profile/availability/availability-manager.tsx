@@ -2,6 +2,7 @@
 
 import { useMemo, useState, useTransition } from "react";
 import { usePostHog } from "posthog-js/react";
+import { PortalSectionHeading } from "@/components/portal-section-heading";
 import {
   createAvailabilityWindowAction,
   deleteAvailabilityWindowAction,
@@ -122,9 +123,9 @@ export function AvailabilityManager({ initialEntries }: AvailabilityManagerProps
       )}
 
       <section className="space-y-3 border-b border-stone-100 pb-5">
-        <h2 className="text-sm font-semibold uppercase tracking-wide text-stone-600">
+        <PortalSectionHeading variant="label" className="mb-1">
           Add availability window
-        </h2>
+        </PortalSectionHeading>
         <div className="grid gap-3 sm:grid-cols-2">
           <label className="flex flex-col gap-1 text-sm text-stone-700">
             Start date
@@ -156,9 +157,9 @@ export function AvailabilityManager({ initialEntries }: AvailabilityManagerProps
       </section>
 
       <section className="pt-5">
-        <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-stone-600">
+        <PortalSectionHeading variant="label" className="mb-3">
           Existing windows
-        </h2>
+        </PortalSectionHeading>
         {!hasEntries ? (
           <p className="rounded-lg border border-stone-200 bg-stone-50 px-4 py-3 text-sm italic text-stone-500">
             No availability windows added yet.

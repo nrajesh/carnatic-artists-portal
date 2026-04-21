@@ -5,6 +5,7 @@ import {
   getThemeFromArtistSpecialities,
 } from "@/lib/speciality-theme";
 import { DevUrlReveal } from "@/components/dev-url-reveal";
+import { PortalSectionHeading } from "@/components/portal-section-heading";
 import { isArtistCollabsRatingsEnabledServer } from "@/lib/feature-flags-server";
 
 export const dynamic = "force-dynamic";
@@ -141,7 +142,9 @@ export default async function AboutPage() {
 
         {/* TOC */}
         <nav className="bg-white rounded-2xl border border-stone-200 shadow-sm p-6 mb-16">
-          <h2 className="text-xs font-semibold text-stone-400 uppercase tracking-widest mb-4">Contents</h2>
+          <PortalSectionHeading variant="label" className="mb-4">
+            Contents
+          </PortalSectionHeading>
           <ol className="grid sm:grid-cols-2 gap-2 text-sm">
             {[
               ["#colour-theming",   "1. Speciality-based colour theming"],

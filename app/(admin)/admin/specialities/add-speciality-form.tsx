@@ -2,6 +2,7 @@
 
 import { FormEvent, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import { PortalSectionHeading } from "@/components/portal-section-heading";
 import { createSpecialityAction } from "./actions";
 
 export function AddSpecialityForm() {
@@ -33,7 +34,9 @@ export function AddSpecialityForm() {
       onSubmit={onSubmit}
       className="mb-8 rounded-xl border border-stone-200 bg-white p-5 shadow-sm"
     >
-      <h2 className="mb-3 text-sm font-semibold text-stone-700">Add speciality</h2>
+      <PortalSectionHeading variant="title" className="mb-3">
+        Add speciality
+      </PortalSectionHeading>
       {message ? (
         <p className={`mb-3 text-sm ${message.type === "ok" ? "text-green-700" : "text-red-700"}`}>
           {message.text}

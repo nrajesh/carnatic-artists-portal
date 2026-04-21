@@ -274,7 +274,7 @@ export default function RegisterPage() {
     editorProps: {
       attributes: {
         class:
-          'min-h-[12rem] cursor-text px-3 py-3 text-base text-amber-900 outline-none prose prose-sm max-w-none focus:outline-none sm:text-sm',
+          "prose prose-sm prose-stone max-w-measure min-h-[12rem] cursor-text px-4 py-4 text-left font-sans leading-relaxed text-amber-950 outline-none focus:outline-none sm:prose-base",
       },
     },
     onUpdate: ({ editor: ed }) => {

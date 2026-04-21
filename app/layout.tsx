@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
 import { cookies } from "next/headers";
 import "./globals.css";
+import { fontDisplay, fontSans } from "./fonts";
 import { PostHogProvider } from "@/components/posthog-provider";
 import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
@@ -10,8 +10,6 @@ import { PrivacyNoticeBanner } from "@/components/privacy-notice-banner";
 import { formatDeploymentDateTime } from "@/lib/format-deployment-datetime";
 import { getArtistFullNameById } from "@/lib/queries/artists";
 import { verifySession } from "@/lib/session-jwt";
-
-const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
   title: "Artist Discovery Portal",
@@ -36,8 +34,8 @@ export default async function RootLayout({
       : session.role);
 
   return (
-    <html lang="en">
-      <body className={`${inter.className} flex min-h-screen flex-col`}>
+    <html lang="en" className={`${fontSans.variable} ${fontDisplay.variable}`}>
+      <body className="flex min-h-screen flex-col font-sans antialiased text-stone-900">
         <SiteHeader />
         <div className="flex min-h-0 min-w-0 flex-1 flex-col">
           <PostHogProvider>{children}</PostHogProvider>

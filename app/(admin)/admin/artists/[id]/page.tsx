@@ -4,6 +4,8 @@ import { notFound } from "next/navigation";
 import { formatDeploymentCalendarDate, formatDeploymentDate } from "@/lib/format-deployment-datetime";
 import { getArtistProfileForAdmin } from "@/lib/queries/admin-artists";
 import { verifySession } from "@/lib/session-jwt";
+import { PortalSectionHeading } from "@/components/portal-section-heading";
+import { normalizeBioHtmlForDisplay } from "@/lib/bio-html-display";
 import { isArtistCollabsRatingsEnabledServer } from "@/lib/feature-flags-server";
 
 function StarRating({ rating }: { rating: number }) {
@@ -20,8 +22,10 @@ function StarRating({ rating }: { rating: number }) {
 
 function SectionCard({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <div className="mb-5 rounded-xl border border-stone-200 bg-white p-6 shadow-sm">
-      <h2 className="mb-4 text-xs font-semibold uppercase tracking-widest text-stone-400">{title}</h2>
+    <div className="mb-6 rounded-xl border border-stone-200 bg-white p-6 shadow-sm sm:mb-7 sm:p-8">
+      <PortalSectionHeading variant="label" className="mb-5">
+        {title}
+      </PortalSectionHeading>
       {children}
     </div>
   );
@@ -156,8 +160,8 @@ export default async function AdminArtistDetailPage({ params }: { params: Promis
         {artist.bio ? (
           <SectionCard title="About">
             <div
-              className="prose prose-stone max-w-none text-sm leading-relaxed text-stone-700"
-              dangerouslySetInnerHTML={{ __html: artist.bio }}
+              className="max-w-measure text-left font-sans prose prose-sm prose-stone sm:prose-base [text-wrap:pretty]"
+              dangerouslySetInnerHTML={{ __html: normalizeBioHtmlForDisplay(artist.bio) }}
             />
           </SectionCard>
         ) : null}

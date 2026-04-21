@@ -3,7 +3,7 @@
 import { useEffect } from 'react'
 import { Suspense } from 'react'
 import { PostHogProvider as PHProvider } from 'posthog-js/react'
-import { initPostHog, posthog } from '@/lib/analytics-client'
+import { posthog } from '@/lib/analytics-client'
 import { hasBrowserAnalyticsOptOut } from '@/lib/analytics-privacy-signals'
 import { PageViewTracker } from '@/components/page-view-tracker'
 
@@ -23,7 +23,7 @@ function syncPosthogPrivacySignals(): void {
 
 export function PostHogProvider({ children }: { children: React.ReactNode }): JSX.Element {
   useEffect(() => {
-    initPostHog()
+    /** Init runs in child effects (e.g. `PageViewTracker`) first; only sync here. */
     syncPosthogPrivacySignals()
 
     const onVisibility = () => {

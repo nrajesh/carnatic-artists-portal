@@ -99,7 +99,7 @@ export function BioRichTextEditor({ initialHtml, onHtmlChange, disabled }: BioRi
     editorProps: {
       attributes: {
         class:
-          "min-h-[12rem] cursor-text px-3 py-3 text-base text-stone-800 outline-none prose prose-sm max-w-none focus:outline-none sm:text-sm",
+          "prose prose-sm prose-stone max-w-measure min-h-[12rem] cursor-text px-4 py-4 text-left font-sans leading-relaxed text-stone-800 outline-none focus:outline-none sm:prose-base",
       },
     },
     onUpdate: ({ editor: ed }) => {

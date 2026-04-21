@@ -108,7 +108,7 @@ export default async function PrivacyPage({
 
         {/* 1. Account contact (email & phone) */}
         <section aria-labelledby="account-contact-details">
-          <h2 id="account-contact-details" className="mb-3 text-xl font-bold text-stone-800">
+          <h2 id="account-contact-details" className="portal-section-article">
             1. Email and phone number (artist accounts)
           </h2>
           <div className="space-y-3 rounded-2xl border border-amber-200 bg-white p-6 leading-relaxed text-stone-700 shadow-sm">
@@ -148,7 +148,7 @@ export default async function PrivacyPage({
 
         {/* 2. Analytics usage */}
         <section aria-labelledby="analytics-usage">
-          <h2 id="analytics-usage" className="mb-3 text-xl font-bold text-stone-800">
+          <h2 id="analytics-usage" className="portal-section-article">
             2. Product analytics (events)
           </h2>
           <div className="space-y-3 rounded-2xl border border-amber-200 bg-white p-6 leading-relaxed text-stone-700 shadow-sm">
@@ -181,7 +181,7 @@ export default async function PrivacyPage({
 
         {/* 3. Session replay */}
         <section aria-labelledby="session-replay">
-          <h2 id="session-replay" className="mb-3 text-xl font-bold text-stone-800">
+          <h2 id="session-replay" className="portal-section-article">
             3. Session replay (optional)
           </h2>
           <div className="space-y-3 rounded-2xl border border-amber-200 bg-white p-6 leading-relaxed text-stone-700 shadow-sm">
@@ -217,7 +217,7 @@ export default async function PrivacyPage({
 
         {/* 4. No PII in event properties */}
         <section aria-labelledby="no-pii">
-          <h2 id="no-pii" className="mb-3 text-xl font-bold text-stone-800">
+          <h2 id="no-pii" className="portal-section-article">
             4. Personal data in analytics <em>properties</em>
           </h2>
           <div className="space-y-3 rounded-2xl border border-amber-200 bg-white p-6 leading-relaxed text-stone-700 shadow-sm">
@@ -240,7 +240,7 @@ export default async function PrivacyPage({
 
         {/* 5. Data retention */}
         <section aria-labelledby="data-retention">
-          <h2 id="data-retention" className="mb-3 text-xl font-bold text-stone-800">
+          <h2 id="data-retention" className="portal-section-article">
             5. Data retention
           </h2>
           <div className="rounded-2xl border border-amber-200 bg-white p-6 leading-relaxed text-stone-700 shadow-sm">
@@ -258,7 +258,7 @@ export default async function PrivacyPage({
 
         {/* 6. Opt-out */}
         <section aria-labelledby="opt-out">
-          <h2 id="opt-out" className="mb-3 text-xl font-bold text-stone-800">
+          <h2 id="opt-out" className="portal-section-article">
             6. Opting out
           </h2>
           <div className="space-y-4 rounded-2xl border border-amber-200 bg-white p-6 leading-relaxed text-stone-700 shadow-sm">
@@ -313,7 +313,7 @@ export default async function PrivacyPage({
 
         {/* 7. Infrastructure */}
         <section aria-labelledby="infrastructure">
-          <h2 id="infrastructure" className="mb-3 text-xl font-bold text-stone-800">
+          <h2 id="infrastructure" className="portal-section-article">
             7. Where data is processed
           </h2>
           <div className="space-y-3 rounded-2xl border border-amber-200 bg-white p-6 leading-relaxed text-stone-700 shadow-sm">
@@ -337,7 +337,7 @@ export default async function PrivacyPage({
 
         {/* 8. Contact */}
         <section aria-labelledby="contact">
-          <h2 id="contact" className="mb-3 text-xl font-bold text-stone-800">
+          <h2 id="contact" className="portal-section-article">
             8. Questions
           </h2>
           <div className="rounded-2xl border border-amber-200 bg-white p-6 leading-relaxed text-stone-700 shadow-sm">

@@ -7,6 +7,8 @@ import { verifySession } from "@/lib/session-jwt";
 import { getThemeFromArtistSpecialities } from "@/lib/speciality-theme";
 import { getArtistBySlug } from "@/lib/queries/artists";
 import { isArtistCollabsRatingsEnabledServer } from "@/lib/feature-flags-server";
+import { PortalSectionHeading } from "@/components/portal-section-heading";
+import { normalizeBioHtmlForDisplay } from "@/lib/bio-html-display";
 import { ArtistProfileTracker } from "./artist-profile-tracker";
 
 export const dynamic = "force-dynamic";
@@ -23,8 +25,13 @@ function StarRating({ rating }: { rating: number }) {
 
 function SectionCard({ id, title, children }: { id?: string; title: string; children: React.ReactNode }) {
   return (
-    <div id={id} className="bg-white rounded-2xl border border-stone-200 shadow-sm p-6 mb-5 scroll-mt-6">
-      <h2 className="text-xs font-semibold text-stone-400 uppercase tracking-widest mb-4">{title}</h2>
+    <div
+      id={id}
+      className="mb-6 scroll-mt-6 rounded-2xl border border-stone-200 bg-white p-6 shadow-sm sm:p-8 sm:mb-7"
+    >
+      <PortalSectionHeading variant="label" className="mb-5">
+        {title}
+      </PortalSectionHeading>
       {children}
     </div>
   );
@@ -107,7 +114,7 @@ export default async function ArtistProfilePage({ params, searchParams }: PagePr
             imgClassName="!ring-white/50 border-4 border-white/40 shadow-lg"
           />
           <div>
-            <h1 className="text-3xl font-bold">{artist.name}</h1>
+            <h1 className="font-display text-3xl font-bold tracking-tight sm:text-4xl">{artist.name}</h1>
             <div className="flex flex-wrap gap-2 mt-2">
               {artist.specialities.map((s) => (
                 <span
@@ -162,8 +169,10 @@ export default async function ArtistProfilePage({ params, searchParams }: PagePr
 
         {/* Bio */}
         <SectionCard title="About">
-          <div className="prose prose-stone max-w-none text-stone-700 leading-relaxed"
-            dangerouslySetInnerHTML={{ __html: artist.bio }} />
+          <div
+            className="max-w-measure text-left font-sans prose prose-sm prose-stone sm:prose-base [text-wrap:pretty]"
+            dangerouslySetInnerHTML={{ __html: normalizeBioHtmlForDisplay(artist.bio) }}
+          />
         </SectionCard>
 
         {/* Collab history */}
@@ -237,12 +246,17 @@ export default async function ArtistProfilePage({ params, searchParams }: PagePr
 
         {/* Reviews - paginated, with anchors */}
         {collabsRatingsEnabled && (
-        <div id="reviews" className="bg-white rounded-2xl border border-stone-200 shadow-sm p-6 mb-5 scroll-mt-6">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-xs font-semibold text-stone-400 uppercase tracking-widest">
+        <div
+          id="reviews"
+          className="mb-6 scroll-mt-6 rounded-2xl border border-stone-200 bg-white p-6 shadow-sm sm:mb-7 sm:p-8"
+        >
+          <div className="mb-5 flex flex-wrap items-end justify-between gap-2 border-b border-amber-400/70 pb-2">
+            <PortalSectionHeading variant="label" textOnly className="mb-0">
               Reviews ({artist.reviews.length})
-              {avgRating && <span className="ml-2 text-amber-500 normal-case font-bold">{avgRating}★</span>}
-            </h2>
+              {avgRating && (
+                <span className="ml-2 font-sans text-base font-bold normal-case text-amber-600">{avgRating}★</span>
+              )}
+            </PortalSectionHeading>
             {totalPages > 1 && (
               <span className="text-xs text-stone-400">Page {reviewPage} of {totalPages}</span>
             )}

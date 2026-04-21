@@ -10,9 +10,10 @@ import {
 } from "@/lib/admin-registration-route-handlers";
 import { REGISTRATION_APPROVE_DEFAULT_COMMENT } from "@/lib/admin-review-comment";
 import { getDb } from "@/lib/db";
+import { prismaStringIdArraySchema } from "@/lib/prisma-string-id";
 import { verifySession } from "@/lib/session-jwt";
 
-const IdsSchema = z.array(z.string().uuid()).min(1).max(200);
+const IdsSchema = prismaStringIdArraySchema(200);
 
 const BULK_REJECT_COMMENT = "[Bulk] Rejected by admin.";
 

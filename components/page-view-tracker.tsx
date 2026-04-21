@@ -8,16 +8,24 @@
 
 import { useEffect } from 'react'
 import { usePathname, useSearchParams } from 'next/navigation'
-import { posthog } from '@/lib/analytics-client'
+import { initPostHog, isPosthogClientReady, posthog } from '@/lib/analytics-client'
 
 export function PageViewTracker(): null {
   const pathname = usePathname()
   const searchParams = useSearchParams()
 
   useEffect(() => {
+    initPostHog()
+    if (!isPosthogClientReady()) {
+      return
+    }
     const search = searchParams.toString()
     const url = pathname + (search ? `?${search}` : '')
-    posthog.capture('$pageview', { $current_url: url })
+    try {
+      posthog.capture('$pageview', { $current_url: url })
+    } catch {
+      // Never let analytics break navigation / RSC
+    }
   }, [pathname, searchParams])
 
   return null
