@@ -6,7 +6,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { revalidateHomeMarketing } from "@/lib/cache/home-marketing";
+import { decryptArtistStoredContact } from "@/lib/artist-pii";
 import { getDb } from "@/lib/db";
+import { sendSuspensionNoticeEmail } from "@/lib/suspension-email";
+import { suspensionThreadPayloadFromAdminNote } from "@/lib/suspension-thread";
 import { verifySession } from "@/lib/session-jwt";
 import { analyticsServer } from "@/lib/analytics-server";
 
@@ -40,7 +43,17 @@ export async function POST(
     return NextResponse.json({ error: "COMMENT_TOO_LONG" }, { status: 400 });
   }
 
-  const target = await getDb().artist.findUnique({ where: { id }, select: { id: true } });
+  const target = await getDb().artist.findUnique({
+    where: { id },
+    select: {
+      id: true,
+      isSuspended: true,
+      email: true,
+      emailCipher: true,
+      contactCipher: true,
+      contactNumber: true,
+    },
+  });
   if (!target) {
     return NextResponse.json({ error: "NOT_FOUND" }, { status: 404 });
   }
@@ -50,13 +63,24 @@ export async function POST(
     return NextResponse.json({ error: "CANNOT_SUSPEND_SELF" }, { status: 400 });
   }
 
+  const wasSuspended = target.isSuspended;
+  const becomesSuspended = body.suspended && !wasSuspended;
+
   await getDb().artist.update({
     where: { id },
     data: {
       isSuspended: body.suspended,
       suspensionComment: body.suspended ? commentRaw : null,
+      suspensionThread: body.suspended ? suspensionThreadPayloadFromAdminNote(commentRaw) : null,
     },
   });
+
+  if (becomesSuspended) {
+    const recipient = decryptArtistStoredContact(target).email;
+    if (recipient) {
+      void sendSuspensionNoticeEmail({ to: recipient, adminNote: commentRaw });
+    }
+  }
 
   revalidateHomeMarketing();
 

@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { verifySession } from "@/lib/session-jwt";
 import { getArtistForEdit, listSpecialities } from "@/lib/queries/artists";
 import { NL_DEFAULT_PROVINCES } from "@/lib/geo/nl-default-provinces";
+import { ArtistAccountStatus } from "@/components/artist-account-status";
 import { EditProfileForm } from "./edit-profile-form";
 import { isArtistCollabsRatingsEnabledServer } from "@/lib/feature-flags-server";
 
@@ -32,6 +33,9 @@ export default async function EditProfilePage() {
           <p className="text-stone-500 mt-1 text-sm">
             Changes are visible on your public profile immediately.
           </p>
+          <div className="mt-4">
+            <ArtistAccountStatus isSuspended={artist.isSuspended} initialMessages={artist.suspensionMessages} />
+          </div>
         </div>
 
         <EditProfileForm

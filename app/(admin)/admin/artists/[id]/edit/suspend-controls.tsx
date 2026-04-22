@@ -1,12 +1,14 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import type { SuspensionMessage } from "@/lib/suspension-thread";
 
 type SuspendControlsProps = {
   artistId: string;
   initialSuspended: boolean;
   initialSuspensionComment: string | null;
+  initialSuspensionMessages: SuspensionMessage[];
   /** When true, hide suspend controls while active (API also blocks self-suspend). */
   isSelf?: boolean;
 };
@@ -15,15 +17,21 @@ export function SuspendControls({
   artistId,
   initialSuspended,
   initialSuspensionComment,
+  initialSuspensionMessages,
   isSelf = false,
 }: SuspendControlsProps) {
   const router = useRouter();
   const [suspended, setSuspended] = useState(initialSuspended);
   const [suspensionComment, setSuspensionComment] = useState(initialSuspensionComment);
+  const [suspensionMessages, setSuspensionMessages] = useState(initialSuspensionMessages);
   const [commentDraft, setCommentDraft] = useState("");
   const [message, setMessage] = useState<string | null>(null);
   const [successNotice, setSuccessNotice] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
+
+  useEffect(() => {
+    setSuspensionMessages(initialSuspensionMessages);
+  }, [initialSuspensionMessages]);
 
   function setStatus(next: boolean, comment: string) {
     setMessage(null);
@@ -48,6 +56,12 @@ export function SuspendControls({
       }
       setSuspended(next);
       setSuspensionComment(next ? comment.trim() : null);
+      if (next) {
+        const at = new Date().toISOString();
+        setSuspensionMessages([{ role: "admin", body: comment.trim(), at }]);
+      } else {
+        setSuspensionMessages([]);
+      }
       if (!next) setCommentDraft("");
       setSuccessNotice(next ? "Account suspended." : "Account reactivated.");
       router.refresh();
@@ -73,7 +87,30 @@ export function SuspendControls({
       {message ? <p className="text-sm text-red-600">{message}</p> : null}
       {suspended ? (
         <>
-          {suspensionComment ? (
+          {suspensionMessages.length > 0 ? (
+            <div className="max-h-64 space-y-2 overflow-y-auto rounded-lg border border-stone-200 bg-stone-50/90 p-3">
+              <p className="text-[10px] font-semibold uppercase tracking-wide text-stone-500">Thread</p>
+              {suspensionMessages.map((m, i) => (
+                <div
+                  key={`${m.at}-${i}`}
+                  className={`flex flex-col gap-0.5 text-sm ${m.role === "admin" ? "items-start" : "items-end"}`}
+                >
+                  <div
+                    className={`max-w-[95%] rounded-xl px-3 py-2 ${
+                      m.role === "admin"
+                        ? "rounded-tl-sm border border-stone-200 bg-white text-stone-800"
+                        : "rounded-tr-sm border border-amber-200 bg-amber-50 text-amber-950"
+                    }`}
+                  >
+                    <span className="mb-0.5 block text-[10px] font-semibold uppercase tracking-wide text-stone-500">
+                      {m.role === "admin" ? "Team" : "Artist"}
+                    </span>
+                    <p className="whitespace-pre-wrap leading-relaxed">{m.body}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : suspensionComment ? (
             <div className="rounded-lg border border-stone-200 bg-stone-50 px-3 py-2 text-sm text-stone-700">
               <span className="font-semibold text-stone-800">Suspension reason: </span>
               <span className="whitespace-pre-wrap">{suspensionComment}</span>

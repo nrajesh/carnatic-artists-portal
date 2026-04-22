@@ -2,19 +2,27 @@
 
 import { useState } from "react";
 import { PortalSectionHeading } from "@/components/portal-section-heading";
+import type { SuspensionMessage } from "@/lib/suspension-thread";
 import { SuspendControls } from "./suspend-controls";
 
 type Props = {
   artistId: string;
   isSuspended: boolean;
   suspensionComment: string | null;
+  suspensionMessages: SuspensionMessage[];
   isSelf: boolean;
 };
 
 /**
  * Collapsible moderation UI so account status is not a dead-end: Edit → suspend / reactivate.
  */
-export function AdminModerationPanel({ artistId, isSuspended, suspensionComment, isSelf }: Props) {
+export function AdminModerationPanel({
+  artistId,
+  isSuspended,
+  suspensionComment,
+  suspensionMessages,
+  isSelf,
+}: Props) {
   const [open, setOpen] = useState(false);
 
   return (
@@ -62,6 +70,7 @@ export function AdminModerationPanel({ artistId, isSuspended, suspensionComment,
             artistId={artistId}
             initialSuspended={isSuspended}
             initialSuspensionComment={suspensionComment}
+            initialSuspensionMessages={suspensionMessages}
             isSelf={isSelf}
           />
         </div>

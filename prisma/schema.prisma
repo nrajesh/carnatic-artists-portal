@@ -54,6 +54,8 @@ model Artist {
   openToCollab       Boolean            @default(true)
   isSuspended        Boolean            @default(false)
   suspensionComment  String?
+  /** Admin + artist remarks about suspension; cleared when account is reactivated. */
+  suspensionThread   Json?
   createdAt          DateTime           @default(now())
   updatedAt          DateTime           @updatedAt
 

@@ -8,6 +8,7 @@ import { getArtistDashboardView } from "@/lib/queries/artists";
 import { PostHogIdentify } from "@/components/posthog-identify";
 import { DashboardViewTracker, EditProfileLink } from "@/components/dashboard-tracker";
 import { isArtistCollabsRatingsEnabledServer } from "@/lib/feature-flags-server";
+import { ArtistAccountStatus } from "@/components/artist-account-status";
 import { PortalSectionHeading } from "@/components/portal-section-heading";
 
 export default async function ArtistDashboardPage({
@@ -87,6 +88,9 @@ export default async function ArtistDashboardPage({
               {view.province.trim() ? (
                 <span className="text-xs text-stone-400">📍 {view.province}</span>
               ) : null}
+            </div>
+            <div className="mt-4">
+              <ArtistAccountStatus isSuspended={view.isSuspended} initialMessages={view.suspensionMessages} />
             </div>
           </div>
           <div className="flex flex-wrap gap-3">

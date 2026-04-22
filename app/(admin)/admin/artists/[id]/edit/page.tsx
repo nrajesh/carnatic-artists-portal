@@ -78,6 +78,7 @@ export default async function EditArtistPage({ params }: { params: Promise<{ id:
             artistId={artist.id}
             isSuspended={artist.isSuspended}
             suspensionComment={artist.suspensionComment}
+            suspensionMessages={artist.suspensionMessages}
             isSelf={isSelf}
           />
         </div>

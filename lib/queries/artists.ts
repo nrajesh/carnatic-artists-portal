@@ -1,6 +1,10 @@
 import { sortAvailabilityEntriesAscending } from "@/lib/availability-calendar";
 import { formatDeploymentDateNumericDay, formatDeploymentMonthYear } from "@/lib/format-deployment-datetime";
 import {
+  type SuspensionMessage,
+  resolveSuspensionMessages,
+} from "@/lib/suspension-thread";
+import {
   buildArtistKeywordHaystack,
   stripHtmlForSearch,
 } from "@/lib/artist-directory-search";
@@ -439,6 +443,8 @@ export type ArtistDashboardView = {
   avgRating: string | null;
   notifications: DashboardNotification[];
   unreadNotificationCount: number;
+  isSuspended: boolean;
+  suspensionMessages: SuspensionMessage[];
 };
 
 function formatRelativeTime(from: Date, now: Date): string {
@@ -581,6 +587,13 @@ export async function getArtistDashboardView(artistId: string): Promise<ArtistDa
   const bioPlainPreview =
     hasBio && bioPlain.length > 240 ? `${bioPlain.slice(0, 240).trimEnd()}…` : bioPlain;
 
+  const suspensionMessages = resolveSuspensionMessages({
+    isSuspended: artist.isSuspended,
+    suspensionComment: artist.suspensionComment,
+    suspensionThread: artist.suspensionThread,
+    updatedAt: artist.updatedAt,
+  });
+
   return {
     id: artist.id,
     slug: artist.slug,
@@ -598,6 +611,8 @@ export async function getArtistDashboardView(artistId: string): Promise<ArtistDa
     avgRating,
     notifications,
     unreadNotificationCount,
+    isSuspended: artist.isSuspended,
+    suspensionMessages,
   };
 }
 
@@ -627,6 +642,7 @@ export type ArtistEditView = {
   profileRevision: string;
   isSuspended: boolean;
   suspensionComment: string | null;
+  suspensionMessages: SuspensionMessage[];
 };
 
 export async function getArtistForEdit(artistIdOrSlug: string): Promise<ArtistEditView | null> {
@@ -664,6 +680,12 @@ export async function getArtistForEdit(artistIdOrSlug: string): Promise<ArtistEd
     profileRevision: artist.updatedAt.toISOString(),
     isSuspended: artist.isSuspended,
     suspensionComment: artist.suspensionComment ?? null,
+    suspensionMessages: resolveSuspensionMessages({
+      isSuspended: artist.isSuspended,
+      suspensionComment: artist.suspensionComment,
+      suspensionThread: artist.suspensionThread,
+      updatedAt: artist.updatedAt,
+    }),
   };
 }
 

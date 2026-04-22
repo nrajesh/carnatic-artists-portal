@@ -5,8 +5,11 @@ import { revalidatePath } from "next/cache";
 import { revalidateHomeMarketing } from "@/lib/cache/home-marketing";
 import { deleteArtistById } from "@/lib/admin-delete-artists";
 import { analyticsServer } from "@/lib/analytics-server";
+import { decryptArtistStoredContact } from "@/lib/artist-pii";
 import { getDb } from "@/lib/db";
 import { prismaStringIdArraySchema } from "@/lib/prisma-string-id";
+import { sendSuspensionNoticeEmail } from "@/lib/suspension-email";
+import { suspensionThreadPayloadFromAdminNote } from "@/lib/suspension-thread";
 import { verifySession } from "@/lib/session-jwt";
 
 const IdsSchema = prismaStringIdArraySchema(100);
@@ -90,19 +93,37 @@ export async function setArtistsStatusBulkAction(
           skipped += 1;
           continue;
         }
-        const row = await db.artist.findUnique({ where: { id }, select: { id: true } });
+        const row = await db.artist.findUnique({
+          where: { id },
+          select: {
+            id: true,
+            isSuspended: true,
+            email: true,
+            emailCipher: true,
+            contactCipher: true,
+            contactNumber: true,
+          },
+        });
         if (!row) {
           skipped += 1;
           continue;
         }
+        const wasSuspended = row.isSuspended;
         await db.artist.update({
           where: { id },
           data: {
             isSuspended: true,
             suspensionComment: BULK_SUSPEND_COMMENT,
+            suspensionThread: suspensionThreadPayloadFromAdminNote(BULK_SUSPEND_COMMENT),
           },
         });
         updated += 1;
+        if (!wasSuspended) {
+          const recipient = decryptArtistStoredContact(row).email;
+          if (recipient) {
+            void sendSuspensionNoticeEmail({ to: recipient, adminNote: BULK_SUSPEND_COMMENT });
+          }
+        }
         try {
           analyticsServer?.capture({
             distinctId: admin.artistId,
@@ -125,6 +146,7 @@ export async function setArtistsStatusBulkAction(
           data: {
             isSuspended: false,
             suspensionComment: null,
+            suspensionThread: null,
           },
         });
         updated += 1;
