@@ -3,6 +3,7 @@ import {
   ADP_ANALYTICS_OPT_OUT_COOKIE,
   LEGACY_ANALYTICS_OPT_OUT_COOKIE,
 } from "@/lib/analytics-opt-out-cookies";
+import { requestIsHttpsForCookies } from "@/lib/https-from-request";
 
 /**
  * GET /privacy/opt-out - sets first-party opt-out cookie(s) read by `PostHogProvider` and `/privacy`,
@@ -14,7 +15,7 @@ export async function GET(request: NextRequest) {
   redirectUrl.searchParams.set("analytics", "opted_out");
 
   const res = NextResponse.redirect(redirectUrl);
-  const secure = request.nextUrl.protocol === "https:";
+  const secure = requestIsHttpsForCookies(request);
   const base = {
     path: "/",
     sameSite: "lax" as const,

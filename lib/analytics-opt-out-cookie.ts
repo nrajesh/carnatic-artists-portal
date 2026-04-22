@@ -8,11 +8,13 @@ import {
  */
 export function hasAnalyticsOptOutCookie(): boolean {
   if (typeof document === "undefined") return false;
-  return document.cookie.split(";").some((c) => {
-    const t = c.trim();
-    return (
-      t.startsWith(`${ADP_ANALYTICS_OPT_OUT_COOKIE}=1`) ||
-      t.startsWith(`${LEGACY_ANALYTICS_OPT_OUT_COOKIE}=1`)
-    );
+  return document.cookie.split(";").some((part) => {
+    const t = part.trim();
+    const eq = t.indexOf("=");
+    if (eq < 0) return false;
+    const name = t.slice(0, eq).trim();
+    const value = t.slice(eq + 1).trim();
+    if (value !== "1") return false;
+    return name === ADP_ANALYTICS_OPT_OUT_COOKIE || name === LEGACY_ANALYTICS_OPT_OUT_COOKIE;
   });
 }

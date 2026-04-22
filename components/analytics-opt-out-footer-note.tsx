@@ -4,6 +4,10 @@ import { Suspense, useCallback, useSyncExternalStore } from "react";
 import { usePathname, useSearchParams } from "next/navigation";
 import { hasAnalyticsOptOutCookie } from "@/lib/analytics-opt-out-cookie";
 import { subscribeDocumentConsentSignals } from "@/lib/analytics-consent-subscribe";
+import {
+  hasNavigatorAnalyticsDnt,
+  hasNavigatorGlobalPrivacyControl,
+} from "@/lib/analytics-privacy-signals";
 
 /**
  * Green footer reminder when the analytics opt-out cookie is present.
@@ -25,15 +29,34 @@ function AnalyticsOptOutFooterNoteInner() {
     () => false,
   );
 
-  if (!optedOut) return null;
+  const browserLimitsAnalytics =
+    !optedOut &&
+    (hasNavigatorAnalyticsDnt() || hasNavigatorGlobalPrivacyControl());
+
+  if (!optedOut && !browserLimitsAnalytics) return null;
 
   return (
-    <p
-      className="mx-auto mt-4 max-w-xl rounded-lg border border-green-200 bg-green-50 px-4 py-2.5 text-center text-sm font-medium text-green-900"
-      role="status"
-    >
-      You have opted out of analytics and session replay for this browser on this site.
-    </p>
+    <div className="mx-auto mt-4 max-w-xl space-y-2 text-center">
+      {optedOut ? (
+        <p
+          className="rounded-lg border border-green-200 bg-green-50 px-4 py-2.5 text-sm font-medium text-green-900"
+          role="status"
+        >
+          You have opted out of analytics and session replay for this browser on this site (opt-out
+          cookie is set).
+        </p>
+      ) : null}
+      {browserLimitsAnalytics ? (
+        <p
+          className="rounded-lg border border-sky-200 bg-sky-50 px-4 py-2.5 text-sm font-medium text-sky-950"
+          role="status"
+        >
+          Your browser is sending a <strong>Do Not Track</strong> and/or{" "}
+          <strong>Global Privacy Control</strong> signal, so analytics and session replay stay off for
+          this site even without the opt-out cookie (common in private / incognito windows).
+        </p>
+      ) : null}
+    </div>
   );
 }
 

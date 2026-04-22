@@ -12,6 +12,7 @@ function read(rel: string): string {
 describe("PostHog consent contracts (source)", () => {
   it("PostHogProvider calls initPostHog before syncPosthogPrivacySignals in the provider effect", () => {
     const src = read("components/posthog-provider.tsx");
+    expect(read("lib/posthog-privacy-sync.ts")).toContain("export function syncPosthogPrivacySignals");
     const marker = "export function PostHogProvider";
     const start = src.indexOf(marker);
     expect(start).toBeGreaterThan(-1);
@@ -25,6 +26,14 @@ describe("PostHog consent contracts (source)", () => {
     expect(initIdx).toBeGreaterThan(-1);
     expect(syncIdx).toBeGreaterThan(-1);
     expect(initIdx).toBeLessThan(syncIdx);
+  });
+
+  it("PosthogRoutePrivacySync re-runs privacy sync when the URL changes", () => {
+    const src = read("components/posthog-route-privacy-sync.tsx");
+    expect(src).toContain("usePathname");
+    expect(src).toContain("useSearchParams");
+    expect(src).toContain("syncPosthogPrivacySignals");
+    expect(src).toMatch(/\[pathname,\s*searchParams\]/);
   });
 
   it("cookie-based consent components do not use noop useSyncExternalStore for document-driven state", () => {

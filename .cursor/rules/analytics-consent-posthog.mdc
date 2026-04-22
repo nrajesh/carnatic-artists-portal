@@ -1,6 +1,6 @@
 ---
 description: PostHog lifecycle, opt-out cookies, and consent UI — avoid known regressions
-globs: components/posthog-provider.tsx,components/page-view-tracker.tsx,components/analytics-opt-out-footer-note.tsx,components/privacy-notice-banner.tsx,components/privacy-analytics-toggle.tsx,lib/analytics-client.ts,lib/analytics-privacy-signals.ts,lib/analytics-consent-subscribe.ts,lib/analytics-opt-out-cookie.ts,lib/analytics-opt-out-cookies.ts,lib/server-analytics-opt-out.ts,app/(public)/privacy/**/*
+globs: components/posthog-provider.tsx,components/posthog-route-privacy-sync.tsx,components/page-view-tracker.tsx,components/analytics-opt-out-footer-note.tsx,components/privacy-notice-banner.tsx,components/privacy-analytics-toggle.tsx,lib/analytics-client.ts,lib/posthog-privacy-sync.ts,lib/analytics-privacy-signals.ts,lib/analytics-consent-subscribe.ts,lib/analytics-opt-out-cookie.ts,lib/analytics-opt-out-cookies.ts,lib/server-analytics-opt-out.ts,app/(public)/privacy/**/*
 alwaysApply: false
 ---
 
@@ -8,8 +8,9 @@ alwaysApply: false
 
 ## Initialisation order (critical)
 
-- **`PostHogProvider` must call `initPostHog()` before `syncPosthogPrivacySignals()`** in the same `useEffect` (or otherwise guarantee `posthog.__loaded` is true before sync).
+- **`PostHogProvider` must call `initPostHog()` before `syncPosthogPrivacySignals()`** in the same `useEffect` (or otherwise guarantee `posthog.__loaded` is true before sync). Implement sync in **`lib/posthog-privacy-sync.ts`** so it can be reused.
 - **Reason:** Parent effects run before child effects. Moving `initPostHog()` only into `PageViewTracker` (or any child) causes `syncPosthogPrivacySignals()` to no-op on first load because `__loaded` is still false — opt-in/opt-out from cookies and DNT stops applying until a `visibilitychange` event.
+- **`PosthogRoutePrivacySync`** (inside the same `Suspense` as `PageViewTracker`) must call **`initPostHog()` + `syncPosthogPrivacySignals()`** on **`pathname` / `searchParams` changes** so query-only navigations (e.g. stripping `?ph_identify=1` after login) re-apply consent.
 - **`PageViewTracker` may still call `initPostHog()`** before `$pageview`; `initPostHog` is idempotent.
 
 ## `useSyncExternalStore` and cookies

@@ -4,22 +4,9 @@ import { useEffect } from 'react'
 import { Suspense } from 'react'
 import { PostHogProvider as PHProvider } from 'posthog-js/react'
 import { initPostHog, posthog } from '@/lib/analytics-client'
-import { hasBrowserAnalyticsOptOut } from '@/lib/analytics-privacy-signals'
+import { syncPosthogPrivacySignals } from '@/lib/posthog-privacy-sync'
 import { PageViewTracker } from '@/components/page-view-tracker'
-
-function syncPosthogPrivacySignals(): void {
-  if (!process.env.NEXT_PUBLIC_POSTHOG_KEY?.trim()) return
-  const ph = posthog as typeof posthog & { __loaded?: boolean }
-  if (!ph.__loaded) return
-
-  const shouldOptOut = hasBrowserAnalyticsOptOut()
-  if (shouldOptOut) {
-    ph.opt_out_capturing()
-  } else if (typeof ph.has_opted_out_capturing === 'function' && ph.has_opted_out_capturing()) {
-    // Cookie cleared (or DNT lifted) but SDK still opted out from persistence - resync without firing $opt_in.
-    ph.opt_in_capturing({ captureEventName: false })
-  }
-}
+import { PosthogRoutePrivacySync } from '@/components/posthog-route-privacy-sync'
 
 export function PostHogProvider({ children }: { children: React.ReactNode }): JSX.Element {
   useEffect(() => {
@@ -40,6 +27,7 @@ export function PostHogProvider({ children }: { children: React.ReactNode }): JS
   return (
     <PHProvider client={posthog}>
       <Suspense fallback={null}>
+        <PosthogRoutePrivacySync />
         <PageViewTracker />
       </Suspense>
       {children}
