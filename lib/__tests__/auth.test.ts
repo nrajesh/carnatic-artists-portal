@@ -11,6 +11,7 @@
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { sendResendEmail } from '../resend-email';
 import * as fc from 'fast-check';
 
 // ---------------------------------------------------------------------------
@@ -126,6 +127,7 @@ describe('Property 6: Magic link token expiry invariant', () => {
     resetState();
     process.env.RESEND_API_KEY = 'test-key';
     process.env.NEXT_PUBLIC_APP_URL = 'https://example.com';
+    vi.mocked(sendResendEmail).mockResolvedValue(undefined);
   });
 
   afterEach(() => {
@@ -140,7 +142,8 @@ describe('Property 6: Magic link token expiry invariant', () => {
         mockState.mockArtist = { id: 'artist-1', email: 'test@example.com' };
 
         // Pass the frozen "now" directly to issueMagicLink
-        await issueMagicLink('test@example.com', issuedAt);
+        const issued = await issueMagicLink('test@example.com', issuedAt);
+        expect(issued).toEqual({ emailSent: true });
 
         expect(mockState.capturedTokenCreate).not.toBeNull();
         const token = mockState.capturedTokenCreate!;
@@ -150,6 +153,23 @@ describe('Property 6: Magic link token expiry invariant', () => {
       }),
       { numRuns: 100 },
     );
+  });
+
+  it('returns send_failed when Resend rejects the request (token still created)', async () => {
+    resetState();
+    mockState.mockArtist = { id: 'artist-1', email: 'test@example.com' };
+    vi.mocked(sendResendEmail).mockRejectedValueOnce(new Error('Resend HTTP 401'));
+    const out = await issueMagicLink('test@example.com');
+    expect(out).toEqual({ emailSent: false, reason: 'send_failed' });
+    expect(mockState.capturedTokenCreate).not.toBeNull();
+  });
+
+  it('uses a compact subject for admin_login_only email style', async () => {
+    resetState();
+    mockState.mockArtist = { id: 'artist-1', email: 'test@example.com' };
+    await issueMagicLink('test@example.com', undefined, { emailStyle: 'admin_login_only' });
+    const last = vi.mocked(sendResendEmail).mock.calls.at(-1);
+    expect(last?.[0].subject).toMatch(/^Sign in ·/);
   });
 });
 
@@ -163,6 +183,7 @@ describe('Property 20: Magic link invalidation on re-issue', () => {
     resetState();
     process.env.RESEND_API_KEY = 'test-key';
     process.env.NEXT_PUBLIC_APP_URL = 'https://example.com';
+    vi.mocked(sendResendEmail).mockResolvedValue(undefined);
   });
 
   afterEach(() => {
@@ -192,7 +213,8 @@ describe('Property 20: Magic link invalidation on re-issue', () => {
           usedAt: null,
         }));
 
-        await issueMagicLink('test@example.com', now);
+        const issued = await issueMagicLink('test@example.com', now);
+        expect(issued).toEqual({ emailSent: true });
 
         // invalidatePriorTokens should have been called (via updateMany)
         expect(mockState.capturedUpdateManyArgs).not.toBeNull();

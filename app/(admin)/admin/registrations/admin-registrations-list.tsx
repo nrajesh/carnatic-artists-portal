@@ -2,8 +2,80 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useCallback, useState, useTransition } from "react";
-import { deleteRegistrationRequestsAction, setRegistrationStatusBulkAction } from "./actions";
+import { useCallback, useRef, useState, useTransition } from "react";
+import { ConfirmDialog } from "@/components/confirm-dialog";
+import {
+  deleteRegistrationRequestsAction,
+  setRegistrationStatusBulkAction,
+  type RegistrationBulkSkipBreakdown,
+} from "./actions";
+
+type RegistrationBulkTarget = "pending" | "approved" | "rejected";
+
+function appliedStatusLabel(target: RegistrationBulkTarget): "Pending" | "Approved" | "Rejected" {
+  if (target === "pending") return "Pending";
+  if (target === "approved") return "Approved";
+  return "Rejected";
+}
+
+/** Labels only (no per-bucket counts). Uses the status being applied when it matches that skip bucket. */
+function describeRegistrationSkipBreakdown(
+  b: RegistrationBulkSkipBreakdown,
+  target: RegistrationBulkTarget,
+): string {
+  const applied = appliedStatusLabel(target);
+  const parts: string[] = [];
+
+  if (b.notFound) parts.push("Not found");
+
+  function pushBucket(count: number, row: "Pending" | "Approved" | "Rejected") {
+    if (count <= 0) return;
+    const label =
+      (target === "pending" && row === "Pending") ||
+      (target === "approved" && row === "Approved") ||
+      (target === "rejected" && row === "Rejected")
+        ? applied
+        : row;
+    parts.push(`Already ${label}`);
+  }
+
+  pushBucket(b.alreadyPending, "Pending");
+  pushBucket(b.alreadyApproved, "Approved");
+  pushBucket(b.alreadyRejected, "Rejected");
+
+  return parts.join(", ");
+}
+
+function registrationBulkStatusBannerText(
+  updated: number,
+  skipped: number,
+  breakdown: RegistrationBulkSkipBreakdown,
+  target: RegistrationBulkTarget,
+): string {
+  const head = `Updated ${updated}. Skipped ${skipped}`;
+  if (skipped === 0) return `${head}.`;
+
+  const { notFound, alreadyPending, alreadyApproved, alreadyRejected } = breakdown;
+  if (
+    target === "approved" &&
+    alreadyApproved > 0 &&
+    notFound === 0 &&
+    alreadyPending === 0 &&
+    alreadyRejected === 0
+  ) {
+    return `${head}: Some users were already Approved.`;
+  }
+
+  const detail = describeRegistrationSkipBreakdown(breakdown, target);
+  return `${head}: ${detail}.`;
+}
+
+function magicLinkEmailNotSentPhrase(count: number): string {
+  if (count <= 0) return "";
+  return count === 1
+    ? "Sign-in email was not sent for 1 approval (check RESEND_API_KEY and RESEND_FROM_EMAIL)."
+    : `Sign-in email was not sent for ${count} approvals (check RESEND_API_KEY and RESEND_FROM_EMAIL).`;
+}
 
 export type RegistrationListRow = {
   id: string;
@@ -30,11 +102,41 @@ function StatusBadge({ status }: { status: string }) {
   );
 }
 
+type ConfirmPanel = {
+  open: boolean;
+  title: string;
+  message: string;
+  tone: "default" | "danger";
+  confirmLabel: string;
+};
+
+const closedConfirm: ConfirmPanel = {
+  open: false,
+  title: "",
+  message: "",
+  tone: "default",
+  confirmLabel: "OK",
+};
+
 export function AdminRegistrationsList({ rows }: { rows: RegistrationListRow[] }) {
   const router = useRouter();
   const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set());
   const [banner, setBanner] = useState<{ type: "error" | "info"; text: string } | null>(null);
   const [pending, startTransition] = useTransition();
+  const [confirm, setConfirm] = useState<ConfirmPanel>(closedConfirm);
+  const pendingConfirmAction = useRef<(() => void) | null>(null);
+
+  const dismissConfirm = useCallback(() => {
+    pendingConfirmAction.current = null;
+    setConfirm(closedConfirm);
+  }, []);
+
+  const commitConfirm = useCallback(() => {
+    const run = pendingConfirmAction.current;
+    pendingConfirmAction.current = null;
+    setConfirm(closedConfirm);
+    run?.();
+  }, []);
 
   const onToggle = useCallback((id: string) => {
     setSelectedIds((prev) => {
@@ -65,19 +167,25 @@ export function AdminRegistrationsList({ rows }: { rows: RegistrationListRow[] }
   function onBulkDelete() {
     if (selectedIds.size === 0) return;
     const n = selectedIds.size;
-    if (!confirm(`Permanently delete ${n} registration request${n === 1 ? "" : "s"}? This cannot be undone.`)) {
-      return;
-    }
-    setBanner(null);
-    const ids = [...selectedIds];
-    startTransition(async () => {
-      const result = await deleteRegistrationRequestsAction(ids);
-      if (!result.ok) {
-        setBanner({ type: "error", text: result.error });
-        return;
-      }
-      setSelectedIds(new Set());
-      router.refresh();
+    pendingConfirmAction.current = () => {
+      setBanner(null);
+      const ids = [...selectedIds];
+      startTransition(async () => {
+        const result = await deleteRegistrationRequestsAction(ids);
+        if (!result.ok) {
+          setBanner({ type: "error", text: result.error });
+          return;
+        }
+        setSelectedIds(new Set());
+        router.refresh();
+      });
+    };
+    setConfirm({
+      open: true,
+      title: "Delete registration requests",
+      message: `Permanently delete ${n} registration request${n === 1 ? "" : "s"}? This cannot be undone.`,
+      tone: "danger",
+      confirmLabel: "Delete",
     });
   }
 
@@ -85,39 +193,48 @@ export function AdminRegistrationsList({ rows }: { rows: RegistrationListRow[] }
     if (selectedIds.size === 0) return;
     const n = selectedIds.size;
     const labels: Record<typeof next, string> = {
-      pending: "reopen (set to Pending)",
-      rejected: "mark as Rejected",
-      approved: "approve and create artist accounts",
+      pending: "reopened (set to Pending)",
+      rejected: "marked as Rejected",
+      approved: "approved, and artist accounts will be created",
     };
-    if (
-      !confirm(
-        `${n === 1 ? "This registration" : `${n} registrations`} will be ${labels[next]}. ` +
-          (next === "approved"
-            ? "Approving sends a magic link to each applicant. Continue?"
-            : "Continue?"),
-      )
-    ) {
-      return;
-    }
-    setBanner(null);
-    const ids = [...selectedIds];
-    startTransition(async () => {
-      const result = await setRegistrationStatusBulkAction(ids, next);
-      if (!result.ok) {
-        setBanner({ type: "error", text: result.error });
-        return;
-      }
-      const { updated, skipped } = result;
-      if (skipped > 0) {
-        setBanner({
-          type: "info",
-          text: `Updated ${updated}. Skipped ${skipped} (wrong current status for this action, or not found).`,
-        });
-      } else {
-        setBanner(null);
-      }
-      setSelectedIds(new Set());
-      router.refresh();
+    const body =
+      `${n === 1 ? "This registration" : `${n} registrations`} will be ${labels[next]}. ` +
+      (next === "approved"
+        ? "Approving sends a magic link to each applicant. Continue?"
+        : "Continue?");
+    pendingConfirmAction.current = () => {
+      setBanner(null);
+      const ids = [...selectedIds];
+      startTransition(async () => {
+        const result = await setRegistrationStatusBulkAction(ids, next);
+        if (!result.ok) {
+          setBanner({ type: "error", text: result.error });
+          return;
+        }
+        const { updated, skipped, skipBreakdown, magicLinkEmailNotSent } = result;
+        const emailMiss = magicLinkEmailNotSent ?? 0;
+        if (skipped > 0 || emailMiss > 0) {
+          const parts: string[] = [];
+          if (skipped > 0) {
+            parts.push(registrationBulkStatusBannerText(updated, skipped, skipBreakdown, next));
+          } else {
+            parts.push(`Updated ${updated}.`);
+          }
+          if (emailMiss > 0) parts.push(magicLinkEmailNotSentPhrase(emailMiss));
+          setBanner({ type: "info", text: parts.join(" ") });
+        } else {
+          setBanner(null);
+        }
+        setSelectedIds(new Set());
+        router.refresh();
+      });
+    };
+    setConfirm({
+      open: true,
+      title: "Update registration status",
+      message: body,
+      tone: "default",
+      confirmLabel: "Continue",
     });
   }
 
@@ -130,7 +247,18 @@ export function AdminRegistrationsList({ rows }: { rows: RegistrationListRow[] }
   }
 
   return (
-    <div className="space-y-4">
+    <>
+      <ConfirmDialog
+        open={confirm.open}
+        title={confirm.title}
+        message={confirm.message}
+        tone={confirm.tone}
+        confirmLabel={confirm.confirmLabel}
+        isPending={pending}
+        onConfirm={commitConfirm}
+        onCancel={dismissConfirm}
+      />
+      <div className="space-y-4">
       {banner ? (
         <p
           className={`rounded-lg border px-4 py-2 text-sm ${
@@ -238,5 +366,6 @@ export function AdminRegistrationsList({ rows }: { rows: RegistrationListRow[] }
         })}
       </ul>
     </div>
+    </>
   );
 }

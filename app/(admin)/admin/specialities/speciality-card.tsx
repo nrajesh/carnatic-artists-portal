@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { FormEvent, useMemo, useState, useTransition } from "react";
+import { FormEvent, useCallback, useMemo, useRef, useState, useTransition } from "react";
+import { ConfirmDialog } from "@/components/confirm-dialog";
 import { useRouter } from "next/navigation";
 import type { AdminSpecialityRow } from "@/lib/queries/admin-specialities";
 import {
@@ -11,6 +12,22 @@ import {
 import { deleteSpecialityAction, updateSpecialityAction } from "./actions";
 
 const HEX6 = /^#[0-9A-Fa-f]{6}$/;
+
+type ConfirmPanel = {
+  open: boolean;
+  title: string;
+  message: string;
+  tone: "default" | "danger";
+  confirmLabel: string;
+};
+
+const closedConfirm: ConfirmPanel = {
+  open: false,
+  title: "",
+  message: "",
+  tone: "default",
+  confirmLabel: "OK",
+};
 
 export function SpecialityCard({
   row,
@@ -25,6 +42,20 @@ export function SpecialityCard({
   const [draftText, setDraftText] = useState(row.textColor);
   const [message, setMessage] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
+  const [confirm, setConfirm] = useState<ConfirmPanel>(closedConfirm);
+  const pendingConfirmAction = useRef<(() => void) | null>(null);
+
+  const dismissConfirm = useCallback(() => {
+    pendingConfirmAction.current = null;
+    setConfirm(closedConfirm);
+  }, []);
+
+  const commitConfirm = useCallback(() => {
+    const run = pendingConfirmAction.current;
+    pendingConfirmAction.current = null;
+    setConfirm(closedConfirm);
+    run?.();
+  }, []);
 
   const headerPrimary = editing && HEX6.test(draftPrimary) ? draftPrimary : row.primaryColor;
   const headerTextCol = editing && HEX6.test(draftText) ? draftText : row.textColor;
@@ -67,19 +98,38 @@ export function SpecialityCard({
   }
 
   function onDelete() {
-    if (!confirm(`Delete "${row.name}"? This only works if no artists use it.`)) return;
-    setMessage(null);
-    startTransition(async () => {
-      const fd = new FormData();
-      fd.set("id", row.id);
-      const result = await deleteSpecialityAction(fd);
-      if (!result.ok) setMessage(result.error);
-      else router.refresh();
+    pendingConfirmAction.current = () => {
+      setMessage(null);
+      startTransition(async () => {
+        const fd = new FormData();
+        fd.set("id", row.id);
+        const result = await deleteSpecialityAction(fd);
+        if (!result.ok) setMessage(result.error);
+        else router.refresh();
+      });
+    };
+    setConfirm({
+      open: true,
+      title: "Delete speciality",
+      message: `Delete "${row.name}"? This only works if no artists use it.`,
+      tone: "danger",
+      confirmLabel: "Delete",
     });
   }
 
   return (
-    <div className="overflow-hidden rounded-xl border border-stone-200 bg-white shadow-sm">
+    <>
+      <ConfirmDialog
+        open={confirm.open}
+        title={confirm.title}
+        message={confirm.message}
+        tone={confirm.tone}
+        confirmLabel={confirm.confirmLabel}
+        isPending={pending}
+        onConfirm={commitConfirm}
+        onCancel={dismissConfirm}
+      />
+      <div className="overflow-hidden rounded-xl border border-stone-200 bg-white shadow-sm">
       <div
         className="flex h-12 items-center px-5"
         style={{
@@ -205,5 +255,6 @@ export function SpecialityCard({
         )}
       </div>
     </div>
+    </>
   );
 }

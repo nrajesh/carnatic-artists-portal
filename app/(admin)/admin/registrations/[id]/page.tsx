@@ -19,11 +19,12 @@ export default async function ReviewRegistrationPage({
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ done?: string; error?: string }>;
+  searchParams: Promise<{ done?: string; error?: string; email_warning?: string }>;
 }) {
   const { id } = await params;
-  const { done, error: queryError } = await searchParams;
+  const { done, error: queryError, email_warning: emailWarning } = await searchParams;
   const commentUpdated = done === "comment_updated";
+  const emailDeliveryWarning = emailWarning === "1";
   const [reg, catalogueRows] = await Promise.all([
     getDb().registrationRequest.findUnique({
       where: { id },
@@ -47,15 +48,42 @@ export default async function ReviewRegistrationPage({
 
   const catalogueLower = new Set(catalogueRows.map((c) => c.name.toLowerCase()));
 
-  const isProcessed = reg.status !== "pending";
+  const canApprove = reg.status === "pending" || reg.status === "rejected";
+  const canReject = reg.status === "pending";
+  const canSendLoginLink = reg.status === "approved";
 
   return (
     <main className="min-h-screen bg-stone-50 px-4 py-8 sm:px-8">
       <Link href="/admin/registrations" className="mb-6 inline-flex items-center gap-1 text-sm text-amber-700 hover:text-amber-900 font-medium">← Back to registrations</Link>
 
       {done === "approved" ? (
-        <div className="mx-auto mb-6 max-w-3xl rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-950">
-          Registration approved. The artist account was created and a login link was emailed to the applicant.
+        <div className="mx-auto mb-6 max-w-3xl space-y-3">
+          <div className="rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-950">
+            Registration approved. The artist account was created
+            {emailDeliveryWarning ? "." : " and a login link was emailed to the applicant."}
+          </div>
+          {emailDeliveryWarning ? (
+            <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950">
+              Resend did not accept the sign-in email (often an invalid <code className="rounded bg-amber-100/80 px-1">RESEND_API_KEY</code> or an unverified{" "}
+              <code className="rounded bg-amber-100/80 px-1">RESEND_FROM_EMAIL</code> domain). A token was still created; after fixing env vars, the artist can use
+              the public login page to request a new magic link.
+            </div>
+          ) : null}
+        </div>
+      ) : null}
+      {done === "login_link_sent" ? (
+        <div className="mx-auto mb-6 max-w-3xl space-y-3">
+          <div className="rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-950">
+            {emailDeliveryWarning
+              ? "A new sign-in link token was created (email was not delivered)."
+              : "A sign-in link email was sent to the applicant."}
+          </div>
+          {emailDeliveryWarning ? (
+            <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950">
+              Check <code className="rounded bg-amber-100/80 px-1">RESEND_API_KEY</code> and{" "}
+              <code className="rounded bg-amber-100/80 px-1">RESEND_FROM_EMAIL</code>. The artist can also use the public login page to request a link.
+            </div>
+          ) : null}
         </div>
       ) : null}
       {done === "rejected" ? (
@@ -86,6 +114,16 @@ export default async function ReviewRegistrationPage({
       {queryError === "comment_amend_pending" ? (
         <div className="mx-auto mb-6 max-w-3xl rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950">
           This registration is still pending. Use Approve or Reject below instead of updating the note only.
+        </div>
+      ) : null}
+      {queryError === "send_link_not_approved" ? (
+        <div className="mx-auto mb-6 max-w-3xl rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950">
+          Sign-in link emails are only available after this registration is approved.
+        </div>
+      ) : null}
+      {queryError === "send_link_no_artist" ? (
+        <div className="mx-auto mb-6 max-w-3xl rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950">
+          No artist account was found for this registration email, so a sign-in link could not be generated.
         </div>
       ) : null}
 
@@ -206,94 +244,158 @@ export default async function ReviewRegistrationPage({
         )}
 
         {/* Actions */}
-        {!isProcessed ? (
-          <div className="space-y-8">
-            <form action={`/api/admin/registrations/${reg.id}/approve`} method="POST" className="rounded-xl border border-green-200 bg-white p-5 shadow-sm">
-              <h2 className="mb-3 text-sm font-semibold text-stone-800">Approve</h2>
-              <label htmlFor="approve-comment" className="mb-1 block text-xs font-semibold uppercase tracking-wide text-stone-500">
-                Review note <span className="font-normal normal-case text-stone-400">(optional)</span>
-              </label>
-              <textarea
-                id="approve-comment"
-                name="comment"
-                rows={3}
-                maxLength={2000}
-                placeholder="Leave blank to store as “Approved”, or add a short internal note."
-                className="mb-4 w-full max-w-xl rounded-lg border border-stone-300 px-3 py-2 text-sm text-stone-800 focus:outline-none focus:ring-2 focus:ring-green-500"
-              />
-              <button type="submit" className="rounded-lg bg-green-600 px-6 py-3 text-sm font-semibold text-white hover:bg-green-700 min-h-[44px]">
-                Approve application
-              </button>
-            </form>
-            <form action={`/api/admin/registrations/${reg.id}/reject`} method="POST" className="rounded-xl border border-red-200 bg-white p-5 shadow-sm">
-              <h2 className="mb-3 text-sm font-semibold text-stone-800">Reject</h2>
-              <label htmlFor="reject-comment" className="mb-1 block text-xs font-semibold uppercase tracking-wide text-stone-500">
-                Reason for rejection <span className="text-red-600">*</span>
-              </label>
-              <textarea
-                id="reject-comment"
-                name="comment"
-                required
-                rows={4}
-                maxLength={2000}
-                placeholder="Explain why this application is being rejected (visible in admin history and notification emails)."
-                className="mb-4 w-full max-w-xl rounded-lg border border-stone-300 px-3 py-2 text-sm text-stone-800 focus:outline-none focus:ring-2 focus:ring-red-500"
-              />
-              <button type="submit" className="rounded-lg bg-red-600 px-6 py-3 text-sm font-semibold text-white hover:bg-red-700 min-h-[44px]">
-                Reject application
-              </button>
-            </form>
-          </div>
-        ) : (
-          <div className="space-y-6">
-            <div className="rounded-lg border border-stone-200 bg-stone-50 px-5 py-4 text-stone-600 text-sm space-y-3">
-              <p>
-                This request has already been <strong className="text-stone-800">{reg.status}</strong>. Approve and
-                reject are no longer available.
-              </p>
-              <div className="border-t border-stone-200 pt-3">
-                <p className="text-xs font-semibold uppercase tracking-wide text-stone-500 mb-1">Review comment</p>
-                {reg.reviewComment ? (
-                  <p className="text-stone-800 whitespace-pre-wrap">{reg.reviewComment}</p>
-                ) : (
-                  <p className="text-stone-500 italic">No comment was stored for this decision.</p>
-                )}
-              </div>
+        <div className="space-y-8">
+          {canApprove || canReject ? (
+            <div className="space-y-8">
+              {canApprove ? (
+                <form action={`/api/admin/registrations/${reg.id}/approve`} method="POST" className="rounded-xl border border-green-200 bg-white p-5 shadow-sm">
+                  <h2 className="mb-3 text-sm font-semibold text-stone-800">Approve</h2>
+                  {reg.status === "rejected" ? (
+                    <p className="mb-3 text-sm text-stone-600">
+                      This application was previously rejected. Approving will create the artist account and email a login link, same as for a new pending request.
+                    </p>
+                  ) : null}
+                  <label htmlFor="approve-comment" className="mb-1 block text-xs font-semibold uppercase tracking-wide text-stone-500">
+                    Review note <span className="font-normal normal-case text-stone-400">(optional)</span>
+                  </label>
+                  <textarea
+                    id="approve-comment"
+                    name="comment"
+                    rows={3}
+                    maxLength={2000}
+                    placeholder="Leave blank to store as “Approved”, or add a short internal note."
+                    className="mb-4 w-full max-w-xl rounded-lg border border-stone-300 px-3 py-2 text-sm text-stone-800 focus:outline-none focus:ring-2 focus:ring-green-500"
+                  />
+                  <button type="submit" className="rounded-lg bg-green-600 px-6 py-3 text-sm font-semibold text-white hover:bg-green-700 min-h-[44px]">
+                    Approve application
+                  </button>
+                </form>
+              ) : null}
+              {canReject ? (
+                <form action={`/api/admin/registrations/${reg.id}/reject`} method="POST" className="rounded-xl border border-red-200 bg-white p-5 shadow-sm">
+                  <h2 className="mb-3 text-sm font-semibold text-stone-800">Reject</h2>
+                  <label htmlFor="reject-comment" className="mb-1 block text-xs font-semibold uppercase tracking-wide text-stone-500">
+                    Reason for rejection <span className="text-red-600">*</span>
+                  </label>
+                  <textarea
+                    id="reject-comment"
+                    name="comment"
+                    required
+                    rows={4}
+                    maxLength={2000}
+                    placeholder="Explain why this application is being rejected (visible in admin history and notification emails)."
+                    className="mb-4 w-full max-w-xl rounded-lg border border-stone-300 px-3 py-2 text-sm text-stone-800 focus:outline-none focus:ring-2 focus:ring-red-500"
+                  />
+                  <button type="submit" className="rounded-lg bg-red-600 px-6 py-3 text-sm font-semibold text-white hover:bg-red-700 min-h-[44px]">
+                    Reject application
+                  </button>
+                </form>
+              ) : null}
             </div>
-            <form
-              action={`/api/admin/registrations/${reg.id}/review-comment`}
-              method="POST"
-              className="rounded-xl border border-stone-200 bg-white p-5 shadow-sm"
-            >
-              <h2 className="mb-1 text-sm font-semibold text-stone-800">Update review note</h2>
-              <p className="mb-3 text-xs text-stone-500">
-                Add or edit the internal note shown here. Submit with an empty field to clear the stored comment.
-              </p>
-              <label htmlFor="amend-comment" className="mb-1 block text-xs font-semibold uppercase tracking-wide text-stone-500">
-                Review note
-              </label>
-              <textarea
-                id="amend-comment"
-                name="comment"
-                rows={4}
-                maxLength={2000}
-                defaultValue={reg.reviewComment ?? ""}
-                placeholder={
-                  reg.status === "rejected"
-                    ? "Reason for rejection (for admin records; was missing on this request)."
-                    : "Optional internal note."
-                }
-                className="mb-4 w-full max-w-xl rounded-lg border border-stone-300 px-3 py-2 text-sm text-stone-800 focus:outline-none focus:ring-2 focus:ring-amber-500"
-              />
-              <button
-                type="submit"
-                className="rounded-lg bg-stone-800 px-6 py-3 text-sm font-semibold text-white hover:bg-stone-900 min-h-[44px]"
+          ) : null}
+
+          {canSendLoginLink ? (
+            <div className="space-y-6">
+              <form
+                action={`/api/admin/registrations/${reg.id}/send-login-link`}
+                method="POST"
+                className="rounded-xl border border-stone-200 bg-white p-5 shadow-sm"
               >
-                Save review note
-              </button>
-            </form>
-          </div>
-        )}
+                <h2 className="mb-2 text-sm font-semibold text-stone-800">Send sign-in link</h2>
+                <p className="mb-4 text-sm text-stone-600">
+                  This is separate from approval: it only emails a short sign-in message with a new link. It does not change status or review history. Previous unused links
+                  stop working when a new one is issued.
+                </p>
+                <button type="submit" className="rounded-lg bg-stone-800 px-6 py-3 text-sm font-semibold text-white hover:bg-stone-900 min-h-[44px]">
+                  Email sign-in link
+                </button>
+              </form>
+              <div className="rounded-lg border border-stone-200 bg-stone-50 px-5 py-4 text-stone-600 text-sm space-y-3">
+                <div className="border-b border-stone-200 pb-3">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-stone-500 mb-1">Review comment</p>
+                  {reg.reviewComment ? (
+                    <p className="text-stone-800 whitespace-pre-wrap">{reg.reviewComment}</p>
+                  ) : (
+                    <p className="text-stone-500 italic">No comment was stored for this decision.</p>
+                  )}
+                </div>
+              </div>
+              <form
+                action={`/api/admin/registrations/${reg.id}/review-comment`}
+                method="POST"
+                className="rounded-xl border border-stone-200 bg-white p-5 shadow-sm"
+              >
+                <h2 className="mb-1 text-sm font-semibold text-stone-800">Update review note</h2>
+                <p className="mb-3 text-xs text-stone-500">
+                  Add or edit the internal note shown here. Submit with an empty field to clear the stored comment.
+                </p>
+                <label htmlFor="amend-comment" className="mb-1 block text-xs font-semibold uppercase tracking-wide text-stone-500">
+                  Review note
+                </label>
+                <textarea
+                  id="amend-comment"
+                  name="comment"
+                  rows={4}
+                  maxLength={2000}
+                  defaultValue={reg.reviewComment ?? ""}
+                  placeholder="Optional internal note."
+                  className="mb-4 w-full max-w-xl rounded-lg border border-stone-300 px-3 py-2 text-sm text-stone-800 focus:outline-none focus:ring-2 focus:ring-amber-500"
+                />
+                <button type="submit" className="rounded-lg bg-stone-800 px-6 py-3 text-sm font-semibold text-white hover:bg-stone-900 min-h-[44px]">
+                  Save review note
+                </button>
+              </form>
+            </div>
+          ) : null}
+
+          {!canApprove && !canReject && !canSendLoginLink ? (
+            <div className="space-y-6">
+              <div className="rounded-lg border border-stone-200 bg-stone-50 px-5 py-4 text-stone-600 text-sm space-y-3">
+                <p>
+                  This request has already been <strong className="text-stone-800">{reg.status}</strong>. Approve and
+                  reject are no longer available.
+                </p>
+                <div className="border-t border-stone-200 pt-3">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-stone-500 mb-1">Review comment</p>
+                  {reg.reviewComment ? (
+                    <p className="text-stone-800 whitespace-pre-wrap">{reg.reviewComment}</p>
+                  ) : (
+                    <p className="text-stone-500 italic">No comment was stored for this decision.</p>
+                  )}
+                </div>
+              </div>
+              <form
+                action={`/api/admin/registrations/${reg.id}/review-comment`}
+                method="POST"
+                className="rounded-xl border border-stone-200 bg-white p-5 shadow-sm"
+              >
+                <h2 className="mb-1 text-sm font-semibold text-stone-800">Update review note</h2>
+                <p className="mb-3 text-xs text-stone-500">
+                  Add or edit the internal note shown here. Submit with an empty field to clear the stored comment.
+                </p>
+                <label htmlFor="amend-comment-legacy" className="mb-1 block text-xs font-semibold uppercase tracking-wide text-stone-500">
+                  Review note
+                </label>
+                <textarea
+                  id="amend-comment-legacy"
+                  name="comment"
+                  rows={4}
+                  maxLength={2000}
+                  defaultValue={reg.reviewComment ?? ""}
+                  placeholder={
+                    reg.status === "rejected"
+                      ? "Reason for rejection (for admin records; was missing on this request)."
+                      : "Optional internal note."
+                  }
+                  className="mb-4 w-full max-w-xl rounded-lg border border-stone-300 px-3 py-2 text-sm text-stone-800 focus:outline-none focus:ring-2 focus:ring-amber-500"
+                />
+                <button type="submit" className="rounded-lg bg-stone-800 px-6 py-3 text-sm font-semibold text-white hover:bg-stone-900 min-h-[44px]">
+                  Save review note
+                </button>
+              </form>
+            </div>
+          ) : null}
+        </div>
       </div>
     </main>
   );

@@ -1,7 +1,7 @@
 /**
  * POST /api/admin/registrations/[id]/approve
  *
- * Approves a pending RegistrationRequest (delegates to lib handler).
+ * Approves a pending or rejected RegistrationRequest (delegates to lib handler).
  */
 
 import { NextRequest, NextResponse } from "next/server";
@@ -49,6 +49,9 @@ export async function POST(
 
   revalidateAfterRegistrationMutation();
 
-  if (html) return redirectPublicPath(request, `/admin/registrations/${id}?done=approved`);
-  return NextResponse.json({ success: true });
+  if (html) {
+    const warn = result.magicLinkEmailSent ? "" : "&email_warning=1";
+    return redirectPublicPath(request, `/admin/registrations/${id}?done=approved${warn}`);
+  }
+  return NextResponse.json({ success: true, magicLinkEmailSent: result.magicLinkEmailSent });
 }

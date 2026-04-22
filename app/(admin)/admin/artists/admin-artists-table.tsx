@@ -2,7 +2,8 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useCallback, useState, useTransition } from "react";
+import { useCallback, useRef, useState, useTransition } from "react";
+import { ConfirmDialog } from "@/components/confirm-dialog";
 import SortableTable, { Column } from "@/components/sortable-table";
 import type { AdminArtistListRow } from "@/lib/queries/admin-artists";
 import { deleteArtistsAction, setArtistsStatusBulkAction } from "./actions";
@@ -77,11 +78,41 @@ const COLUMNS: Column<AdminArtistListRow>[] = [
   },
 ];
 
+type ConfirmPanel = {
+  open: boolean;
+  title: string;
+  message: string;
+  tone: "default" | "danger";
+  confirmLabel: string;
+};
+
+const closedConfirm: ConfirmPanel = {
+  open: false,
+  title: "",
+  message: "",
+  tone: "default",
+  confirmLabel: "OK",
+};
+
 export function AdminArtistsTable({ rows }: { rows: AdminArtistListRow[] }) {
   const router = useRouter();
   const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set());
   const [banner, setBanner] = useState<{ type: "error" | "info"; text: string } | null>(null);
   const [pending, startTransition] = useTransition();
+  const [confirm, setConfirm] = useState<ConfirmPanel>(closedConfirm);
+  const pendingConfirmAction = useRef<(() => void) | null>(null);
+
+  const dismissConfirm = useCallback(() => {
+    pendingConfirmAction.current = null;
+    setConfirm(closedConfirm);
+  }, []);
+
+  const commitConfirm = useCallback(() => {
+    const run = pendingConfirmAction.current;
+    pendingConfirmAction.current = null;
+    setConfirm(closedConfirm);
+    run?.();
+  }, []);
 
   const onToggle = useCallback((id: string) => {
     setSelectedIds((prev) => {
@@ -109,64 +140,85 @@ export function AdminArtistsTable({ rows }: { rows: AdminArtistListRow[] }) {
   function onBulkDelete() {
     if (selectedIds.size === 0) return;
     const n = selectedIds.size;
-    if (
-      !confirm(
-        `Permanently delete ${n} artist account${n === 1 ? "" : "s"}? This removes profiles, collabs they own, and related data. This cannot be undone.`,
-      )
-    ) {
-      return;
-    }
-    setBanner(null);
-    const ids = [...selectedIds];
-    startTransition(async () => {
-      const result = await deleteArtistsAction(ids);
-      if (!result.ok) {
-        setBanner({ type: "error", text: result.error });
-        return;
-      }
-      setSelectedIds(new Set());
-      router.refresh();
+    pendingConfirmAction.current = () => {
+      setBanner(null);
+      const ids = [...selectedIds];
+      startTransition(async () => {
+        const result = await deleteArtistsAction(ids);
+        if (!result.ok) {
+          setBanner({ type: "error", text: result.error });
+          return;
+        }
+        setSelectedIds(new Set());
+        router.refresh();
+      });
+    };
+    setConfirm({
+      open: true,
+      title: "Delete artist accounts",
+      message: `Permanently delete ${n} artist account${n === 1 ? "" : "s"}? This removes profiles, collabs they own, and related data. This cannot be undone.`,
+      tone: "danger",
+      confirmLabel: "Delete",
     });
   }
 
   function onBulkStatusChange(nextSuspended: boolean) {
     if (selectedIds.size === 0) return;
     const n = selectedIds.size;
+    pendingConfirmAction.current = () => {
+      setBanner(null);
+      const ids = [...selectedIds];
+      startTransition(async () => {
+        const result = await setArtistsStatusBulkAction(ids, nextSuspended);
+        if (!result.ok) {
+          setBanner({ type: "error", text: result.error });
+          return;
+        }
+        const { updated, skipped } = result;
+        if (skipped > 0) {
+          setBanner({
+            type: "info",
+            text: `Updated ${updated}. Skipped ${skipped} (not found${nextSuspended ? ", or cannot suspend your own account" : ""}).`,
+          });
+        } else {
+          setBanner(null);
+        }
+        setSelectedIds(new Set());
+        router.refresh();
+      });
+    };
     if (nextSuspended) {
-      if (
-        !confirm(
-          `Suspend ${n} artist account${n === 1 ? "" : "s"}? A standard bulk note will be stored on each profile. Your own account will be skipped if selected.`,
-        )
-      ) {
-        return;
-      }
-    } else if (!confirm(`Set ${n} artist account${n === 1 ? "" : "s"} to Active (not suspended)?`)) {
-      return;
+      setConfirm({
+        open: true,
+        title: "Suspend artist accounts",
+        message: `Suspend ${n} artist account${n === 1 ? "" : "s"}? A standard bulk note will be stored on each profile. Your own account will be skipped if selected.`,
+        tone: "danger",
+        confirmLabel: "Suspend",
+      });
+    } else {
+      setConfirm({
+        open: true,
+        title: "Activate artist accounts",
+        message: `Set ${n} artist account${n === 1 ? "" : "s"} to Active (not suspended)?`,
+        tone: "default",
+        confirmLabel: "Activate",
+      });
     }
-    setBanner(null);
-    const ids = [...selectedIds];
-    startTransition(async () => {
-      const result = await setArtistsStatusBulkAction(ids, nextSuspended);
-      if (!result.ok) {
-        setBanner({ type: "error", text: result.error });
-        return;
-      }
-      const { updated, skipped } = result;
-      if (skipped > 0) {
-        setBanner({
-          type: "info",
-          text: `Updated ${updated}. Skipped ${skipped} (not found${nextSuspended ? ", or cannot suspend your own account" : ""}).`,
-        });
-      } else {
-        setBanner(null);
-      }
-      setSelectedIds(new Set());
-      router.refresh();
-    });
   }
 
   return (
-    <div className="space-y-4">
+    <>
+      <ConfirmDialog
+        open={confirm.open}
+        title={confirm.title}
+        message={confirm.message}
+        tone={confirm.tone}
+        confirmLabel={confirm.confirmLabel}
+        isPending={pending}
+        onConfirm={commitConfirm}
+        onCancel={dismissConfirm}
+      />
+      <div className="space-y-4">
       {banner ? (
         <p
           className={`rounded-lg border px-4 py-2 text-sm ${
@@ -222,5 +274,6 @@ export function AdminArtistsTable({ rows }: { rows: AdminArtistListRow[] }) {
         }}
       />
     </div>
+    </>
   );
 }

@@ -1,16 +1,47 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useMemo, useState, useTransition } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
+import { ConfirmDialog } from "@/components/confirm-dialog";
 import type { AdminSpecialityRow } from "@/lib/queries/admin-specialities";
 import { deleteSpecialitiesBulkAction } from "./actions";
 import { SpecialityCard } from "./speciality-card";
+
+type ConfirmPanel = {
+  open: boolean;
+  title: string;
+  message: string;
+  tone: "default" | "danger";
+  confirmLabel: string;
+};
+
+const closedConfirm: ConfirmPanel = {
+  open: false,
+  title: "",
+  message: "",
+  tone: "default",
+  confirmLabel: "OK",
+};
 
 export function AdminSpecialitiesGrid({ rows }: { rows: AdminSpecialityRow[] }) {
   const router = useRouter();
   const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set());
   const [message, setMessage] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
+  const [confirm, setConfirm] = useState<ConfirmPanel>(closedConfirm);
+  const pendingConfirmAction = useRef<(() => void) | null>(null);
+
+  const dismissConfirm = useCallback(() => {
+    pendingConfirmAction.current = null;
+    setConfirm(closedConfirm);
+  }, []);
+
+  const commitConfirm = useCallback(() => {
+    const run = pendingConfirmAction.current;
+    pendingConfirmAction.current = null;
+    setConfirm(closedConfirm);
+    run?.();
+  }, []);
 
   const onToggle = useCallback((id: string) => {
     setSelectedIds((prev) => {
@@ -61,31 +92,48 @@ export function AdminSpecialitiesGrid({ rows }: { rows: AdminSpecialityRow[] }) 
   function onBulkDelete() {
     if (selectedIds.size === 0) return;
     const n = selectedIds.size;
-    if (!confirm(`Delete up to ${n} speciality record${n === 1 ? "" : "s"}? Items still used by artists will be skipped.`)) {
-      return;
-    }
-    setMessage(null);
-    const ids = [...selectedIds];
-    startTransition(async () => {
-      const result = await deleteSpecialitiesBulkAction(ids);
-      if (!result.ok) {
-        setMessage(result.error);
-        return;
-      }
-      if (result.blocked > 0) {
-        setMessage(
-          `Deleted ${result.deleted}. Skipped ${result.blocked} (still in use or error).`,
-        );
-      } else {
-        setMessage(null);
-      }
-      setSelectedIds(new Set());
-      router.refresh();
+    pendingConfirmAction.current = () => {
+      setMessage(null);
+      const ids = [...selectedIds];
+      startTransition(async () => {
+        const result = await deleteSpecialitiesBulkAction(ids);
+        if (!result.ok) {
+          setMessage(result.error);
+          return;
+        }
+        if (result.blocked > 0) {
+          setMessage(
+            `Deleted ${result.deleted}. Skipped ${result.blocked} (still in use or error).`,
+          );
+        } else {
+          setMessage(null);
+        }
+        setSelectedIds(new Set());
+        router.refresh();
+      });
+    };
+    setConfirm({
+      open: true,
+      title: "Delete specialities",
+      message: `Delete up to ${n} speciality record${n === 1 ? "" : "s"}? Items still used by artists will be skipped.`,
+      tone: "danger",
+      confirmLabel: "Delete",
     });
   }
 
   return (
-    <div className="space-y-4">
+    <>
+      <ConfirmDialog
+        open={confirm.open}
+        title={confirm.title}
+        message={confirm.message}
+        tone={confirm.tone}
+        confirmLabel={confirm.confirmLabel}
+        isPending={pending}
+        onConfirm={commitConfirm}
+        onCancel={dismissConfirm}
+      />
+      <div className="space-y-4">
       {message ? (
         <p className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-2 text-sm text-amber-950">{message}</p>
       ) : null}
@@ -159,5 +207,6 @@ export function AdminSpecialitiesGrid({ rows }: { rows: AdminSpecialityRow[] }) 
         })}
       </div>
     </div>
+    </>
   );
 }

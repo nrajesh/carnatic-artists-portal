@@ -79,7 +79,6 @@ vi.mock('../db', () => {
     },
     artist: {
       findUnique: vi.fn(async () => {
-        // Return null unless slug conflict is set
         return mockState.mockSlugConflict ? { id: 'existing', slug: 'test-slug' } : null;
       }),
       create: vi.fn(async (args: { data: Record<string, unknown> }) => {
@@ -118,6 +117,7 @@ vi.mock('../auth', () => {
     issueMagicLink: vi.fn(async (email: string) => {
       mockState.issueMagicLinkCallCount += 1;
       mockState.issueMagicLinkCalledWith = email;
+      return { emailSent: true as const };
     }),
   };
 });
@@ -212,6 +212,7 @@ describe('Property 4: Approval creates artist and token', () => {
 
         // Must succeed
         expect(result).toHaveProperty('success', true);
+        expect(result).toMatchObject({ magicLinkEmailSent: true });
 
         // Exactly one Artist created
         expect(mockState.artistCreateCallCount).toBe(1);
@@ -288,6 +289,27 @@ describe('Property 4: Approval creates artist and token', () => {
     expect(result).toEqual({ error: 'ALREADY_PROCESSED' });
     expect(mockState.artistCreateCallCount).toBe(0);
     expect(mockState.issueMagicLinkCallCount).toBe(0);
+  });
+
+  it('approves a previously rejected registration (same outcome as pending)', async () => {
+    resetState();
+    mockState.mockRegistration = {
+      id: 'reg-rejected',
+      status: 'rejected',
+      fullName: 'Retry User',
+      email: 'retry@example.com',
+      contactNumber: '+31612345678',
+      contactType: 'whatsapp',
+      profilePhotoUrl: 'https://cdn.example.com/photo.jpg',
+      specialities: [],
+      links: [],
+    };
+
+    const result = await approveRegistration('reg-rejected');
+    expect(result).toHaveProperty('success', true);
+    expect(mockState.artistCreateCallCount).toBe(1);
+    expect(mockState.issueMagicLinkCallCount).toBe(1);
+    expect(mockState.capturedRegistrationUpdate!.data.status).toBe('approved');
   });
 });
 

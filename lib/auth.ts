@@ -2,7 +2,7 @@
  * Authentication service - magic link issuance and verification.
  *
  * Implements:
- *   - issueMagicLink(email): generate + store + email a magic link token
+ *   - issueMagicLink(email): generate + store + email a magic link token (returns whether Resend accepted the send)
  *   - invalidatePriorTokens(artistId): mark all unused tokens as used
  *   - verifyMagicLink(rawToken): validate token, create session, return SessionData
  *
@@ -104,7 +104,18 @@ export async function invalidatePriorTokens(artistId: string, _now?: Date): Prom
  * @param email - The artist's email address.
  * @param _now - Optional "current time" override (used in tests).
  */
-export async function issueMagicLink(email: string, _now?: Date): Promise<void> {
+export type IssueMagicLinkResult = { emailSent: true } | { emailSent: false; reason: "artist_not_found" | "resend_not_configured" | "send_failed" };
+
+/** `admin_login_only`: shorter copy when an admin emails a link for an already-onboarded artist (not framed as a new approval). */
+export type IssueMagicLinkOptions = {
+  emailStyle?: "default" | "admin_login_only";
+};
+
+export async function issueMagicLink(
+  email: string,
+  _now?: Date,
+  options?: IssueMagicLinkOptions,
+): Promise<IssueMagicLinkResult> {
   const normalized = normalizeEmailForLookup(email);
   const lookup = emailLookupHash(normalized);
   const db = getDb();
@@ -116,7 +127,7 @@ export async function issueMagicLink(email: string, _now?: Date): Promise<void> 
         emailLookupHash: null,
       },
     }));
-  if (!artist) return;
+  if (!artist) return { emailSent: false, reason: "artist_not_found" };
 
   const now = _now ?? new Date();
 
@@ -150,28 +161,42 @@ export async function issueMagicLink(email: string, _now?: Date): Promise<void> 
   // The login route always returns generic success, so this does not leak to the client.
   if (!resendApiKey) {
     console.warn('[auth] RESEND_API_KEY is not set - magic link email was not sent');
-    return;
+    return { emailSent: false, reason: "resend_not_configured" };
   }
 
   try {
     const portal = getPortalNameForEmail();
-    const magicContent = {
-      title: `Sign in to ${portal}`,
-      paragraphs: [
-        `Use the button below to open the sign-in page, then tap Continue to finish. Some mail apps preview links in the background and can use the link up early - if that happens, request a new link from the login page.`,
-        `For your security, each link works once and expires in 72 hours.`,
-      ],
-      primaryCta: { href: magicLinkUrl, label: 'Open sign-in page' },
-      footnote: 'If you did not request this email, you can ignore it.',
-    };
+    const emailStyle = options?.emailStyle ?? "default";
+    const magicContent =
+      emailStyle === "admin_login_only"
+        ? {
+            title: `Sign in to ${portal}`,
+            paragraphs: [
+              "An administrator sent you this link so you can access your account.",
+              "The button below opens the sign-in page. This link works once and expires in 72 hours.",
+            ],
+            primaryCta: { href: magicLinkUrl, label: "Sign in" },
+            footnote: "If you did not expect this message, you can ignore it.",
+          }
+        : {
+            title: `Sign in to ${portal}`,
+            paragraphs: [
+              `Use the button below to open the sign-in page, then tap Continue to finish. Some mail apps preview links in the background and can use the link up early - if that happens, request a new link from the login page.`,
+              `For your security, each link works once and expires in 72 hours.`,
+            ],
+            primaryCta: { href: magicLinkUrl, label: "Open sign-in page" },
+            footnote: "If you did not request this email, you can ignore it.",
+          };
+    const subject = emailStyle === "admin_login_only" ? `Sign in · ${portal}` : `Your sign-in link · ${portal}`;
     await sendResendEmail({
       apiKey: resendApiKey,
       from: fromEmail,
       to: deliverTo,
-      subject: `Your sign-in link · ${portal}`,
+      subject,
       html: transactionalEmailHtml(magicContent),
       text: transactionalEmailPlainText(magicContent),
     });
+    return { emailSent: true };
   } catch (err) {
     // Do not rethrow: we must not reveal send failures to the client,
     // and an unverified domain / bad API key should not turn the login
@@ -180,6 +205,7 @@ export async function issueMagicLink(email: string, _now?: Date): Promise<void> 
       artistId: artist.id,
       resendFromConfigured: Boolean(fromEmail),
     });
+    return { emailSent: false, reason: "send_failed" };
   }
 }
 

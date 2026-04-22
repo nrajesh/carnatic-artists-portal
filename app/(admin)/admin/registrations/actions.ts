@@ -19,6 +19,18 @@ const BULK_REJECT_COMMENT = "[Bulk] Rejected by admin.";
 
 const StatusSchema = z.enum(["pending", "approved", "rejected"]);
 
+/** Counts for rows that did not change (used in bulk status banner). */
+export type RegistrationBulkSkipBreakdown = {
+  notFound: number;
+  alreadyPending: number;
+  alreadyApproved: number;
+  alreadyRejected: number;
+};
+
+function emptySkipBreakdown(): RegistrationBulkSkipBreakdown {
+  return { notFound: 0, alreadyPending: 0, alreadyApproved: 0, alreadyRejected: 0 };
+}
+
 export type BulkDeleteRegistrationsResult =
   | { ok: true; deleted: number }
   | { ok: false; error: string };
@@ -54,14 +66,21 @@ export async function deleteRegistrationRequestsAction(ids: string[]): Promise<B
 }
 
 export type SetRegistrationStatusBulkResult =
-  | { ok: true; updated: number; skipped: number }
+  | {
+      ok: true;
+      updated: number;
+      skipped: number;
+      skipBreakdown: RegistrationBulkSkipBreakdown;
+      /** Approvals where the sign-in email was not delivered (Resend misconfiguration or API error). */
+      magicLinkEmailNotSent?: number;
+    }
   | { ok: false; error: string };
 
 /**
  * Bulk status change. Rules:
  * - pending: only from rejected (reopens for review)
  * - rejected: only from pending
- * - approved: only from pending (full approve flow per row)
+ * - approved: from pending or rejected only (already-approved rows are skipped)
  */
 export async function setRegistrationStatusBulkAction(
   ids: string[],
@@ -84,10 +103,19 @@ export async function setRegistrationStatusBulkAction(
   const distinctId = admin.artistId;
   let updated = 0;
   let skipped = 0;
+  const skipBreakdown = emptySkipBreakdown();
+
+  const db = getDb();
 
   try {
     if (parsedStatus.data === "pending") {
-      const result = await getDb().registrationRequest.updateMany({
+      const rows = await db.registrationRequest.findMany({
+        where: { id: { in: unique } },
+        select: { id: true, status: true },
+      });
+      const statusById = new Map(rows.map((r) => [r.id, r.status]));
+
+      const result = await db.registrationRequest.updateMany({
         where: { id: { in: unique }, status: "rejected" },
         data: {
           status: "pending",
@@ -98,7 +126,23 @@ export async function setRegistrationStatusBulkAction(
       });
       updated = result.count;
       skipped = unique.length - result.count;
+
+      for (const id of unique) {
+        const st = statusById.get(id);
+        if (st === undefined) skipBreakdown.notFound += 1;
+        else if (st !== "rejected") {
+          if (st === "pending") skipBreakdown.alreadyPending += 1;
+          else if (st === "approved") skipBreakdown.alreadyApproved += 1;
+          else skipBreakdown.alreadyRejected += 1;
+        }
+      }
     } else if (parsedStatus.data === "rejected") {
+      const rows = await db.registrationRequest.findMany({
+        where: { id: { in: unique } },
+        select: { id: true, status: true },
+      });
+      const statusById = new Map(rows.map((r) => [r.id, r.status]));
+
       for (const registrationId of unique) {
         const res = await rejectPendingRegistrationRouteStyle({
           registrationId,
@@ -106,11 +150,26 @@ export async function setRegistrationStatusBulkAction(
           reviewComment: BULK_REJECT_COMMENT,
           analyticsDistinctId: distinctId,
         });
-        if (res.ok) updated += 1;
-        else skipped += 1;
+        if (res.ok) {
+          updated += 1;
+        } else {
+          skipped += 1;
+          const st = statusById.get(registrationId);
+          if (st === undefined) skipBreakdown.notFound += 1;
+          else if (st === "pending") skipBreakdown.alreadyPending += 1;
+          else if (st === "approved") skipBreakdown.alreadyApproved += 1;
+          else skipBreakdown.alreadyRejected += 1;
+        }
       }
     } else {
+      const rows = await db.registrationRequest.findMany({
+        where: { id: { in: unique } },
+        select: { id: true, status: true },
+      });
+      const statusById = new Map(rows.map((r) => [r.id, r.status]));
+
       let anyApproved = false;
+      let magicLinkEmailNotSent = 0;
       for (const registrationId of unique) {
         const res = await approvePendingRegistrationRouteStyle({
           registrationId,
@@ -121,13 +180,28 @@ export async function setRegistrationStatusBulkAction(
         if (res.ok) {
           updated += 1;
           anyApproved = true;
+          if (!res.magicLinkEmailSent) magicLinkEmailNotSent += 1;
         } else {
           skipped += 1;
+          const st = statusById.get(registrationId);
+          if (st === undefined) skipBreakdown.notFound += 1;
+          else if (st === "pending") skipBreakdown.alreadyPending += 1;
+          else if (st === "approved") skipBreakdown.alreadyApproved += 1;
+          else skipBreakdown.alreadyRejected += 1;
         }
       }
       if (anyApproved) {
         revalidateAfterRegistrationMutation();
       }
+      revalidatePath("/admin/registrations");
+      revalidatePath("/admin/dashboard");
+      return {
+        ok: true,
+        updated,
+        skipped,
+        skipBreakdown,
+        ...(magicLinkEmailNotSent > 0 ? { magicLinkEmailNotSent } : {}),
+      };
     }
   } catch {
     return { ok: false, error: "Could not update registration status." };
@@ -135,5 +209,5 @@ export async function setRegistrationStatusBulkAction(
 
   revalidatePath("/admin/registrations");
   revalidatePath("/admin/dashboard");
-  return { ok: true, updated, skipped };
+  return { ok: true, updated, skipped, skipBreakdown };
 }

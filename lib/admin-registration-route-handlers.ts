@@ -35,11 +35,33 @@ export async function generateRegistrationArtistSlug(fullName: string): Promise<
   return `${base}-${Date.now()}`;
 }
 
-export type ApproveRouteResult = { ok: true } | { ok: false; error: "NOT_FOUND" | "ALREADY_PROCESSED" };
+export type ApproveRouteResult =
+  | { ok: true; magicLinkEmailSent: boolean }
+  | { ok: false; error: "NOT_FOUND" | "ALREADY_PROCESSED" };
+
+export type SendLoginLinkForApprovedResult =
+  | { ok: true; magicLinkEmailSent: boolean }
+  | { ok: false; error: "NOT_FOUND" | "NOT_APPROVED" | "NO_ARTIST" };
 
 /**
- * Approves one pending registration (same behaviour as POST /api/admin/registrations/[id]/approve).
- * Does not revalidate caches - caller should revalidate once after bulk operations.
+ * For **approved** registrations only: emails a simple sign-in link (does not change status or review fields).
+ */
+export async function sendLoginLinkForApprovedRegistration(registrationId: string): Promise<SendLoginLinkForApprovedResult> {
+  const db = getDb();
+  const registration = await db.registrationRequest.findUnique({ where: { id: registrationId } });
+  if (!registration) return { ok: false, error: "NOT_FOUND" };
+  if (registration.status !== "approved") return { ok: false, error: "NOT_APPROVED" };
+  const plain = decryptRegistrationStoredContact(registration);
+  const magicLinkResult = await issueMagicLink(plain.email, undefined, { emailStyle: "admin_login_only" });
+  if (!magicLinkResult.emailSent && magicLinkResult.reason === "artist_not_found") {
+    return { ok: false, error: "NO_ARTIST" };
+  }
+  return { ok: true, magicLinkEmailSent: magicLinkResult.emailSent };
+}
+
+/**
+ * Approves **pending** or **rejected** (creates artist + magic link). Already **approved** is not handled here — use
+ * {@link sendLoginLinkForApprovedRegistration} instead.
  */
 export async function approvePendingRegistrationRouteStyle(options: {
   registrationId: string;
@@ -56,7 +78,10 @@ export async function approvePendingRegistrationRouteStyle(options: {
   });
 
   if (!registration) return { ok: false, error: "NOT_FOUND" };
-  if (registration.status !== "pending") return { ok: false, error: "ALREADY_PROCESSED" };
+
+  if (registration.status !== "pending" && registration.status !== "rejected") {
+    return { ok: false, error: "ALREADY_PROCESSED" };
+  }
 
   const now = new Date();
   const slug = await generateRegistrationArtistSlug(registration.fullName);
@@ -106,7 +131,7 @@ export async function approvePendingRegistrationRouteStyle(options: {
     });
   }
 
-  await issueMagicLink(plain.email);
+  const magicLinkResult = await issueMagicLink(plain.email);
 
   await db.registrationRequest.update({
     where: { id: registrationId },
@@ -144,7 +169,7 @@ export async function approvePendingRegistrationRouteStyle(options: {
     /* ignore */
   }
 
-  return { ok: true };
+  return { ok: true, magicLinkEmailSent: magicLinkResult.emailSent };
 }
 
 export type RejectRouteResult = { ok: true } | { ok: false; error: "NOT_FOUND" | "ALREADY_PROCESSED" };

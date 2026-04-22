@@ -19,6 +19,8 @@ export interface ApprovalResult {
   success: true;
   artistId: string;
   slug: string;
+  /** False when RESEND_API_KEY is missing or Resend rejected the send (token still created). */
+  magicLinkEmailSent: boolean;
 }
 
 export interface RejectionResult {
@@ -68,9 +70,8 @@ export async function generateSlug(fullName: string): Promise<string> {
 // ---------------------------------------------------------------------------
 
 /**
- * Approves a pending RegistrationRequest.
- * Creates Artist, ArtistSpeciality, ExternalLink records, issues magic link,
- * and marks the request as approved.
+ * Approves a RegistrationRequest in **pending** or **rejected** state.
+ * Already **approved** returns ALREADY_PROCESSED (use send-login-link for email-only).
  */
 export async function approveRegistration(
   registrationId: string,
@@ -82,7 +83,10 @@ export async function approveRegistration(
   });
 
   if (!registration) return { error: 'NOT_FOUND' };
-  if (registration.status !== 'pending') return { error: 'ALREADY_PROCESSED' };
+
+  if (registration.status !== 'pending' && registration.status !== 'rejected') {
+    return { error: 'ALREADY_PROCESSED' };
+  }
 
   const now = new Date();
   const slug = await generateSlug(registration.fullName);
@@ -136,7 +140,7 @@ export async function approveRegistration(
     });
   }
 
-  await issueMagicLink(plain.email);
+  const magicLinkResult = await issueMagicLink(plain.email);
 
   // Mark as approved
   await getDb().registrationRequest.update({
@@ -144,7 +148,7 @@ export async function approveRegistration(
     data: { status: 'approved', reviewedAt: now, reviewComment },
   });
 
-  return { success: true, artistId: artist.id, slug };
+  return { success: true, artistId: artist.id, slug, magicLinkEmailSent: magicLinkResult.emailSent };
 }
 
 // ---------------------------------------------------------------------------
