@@ -3,6 +3,7 @@ import { formatDeploymentDate, formatDeploymentDateNumericDay, formatDeploymentM
 import { decryptArtistStoredContact } from "@/lib/artist-pii";
 import { getDb } from "@/lib/db";
 import { type ArtistProfileView, specColor } from "@/lib/queries/artists";
+import { type SuspensionMessage, resolveSuspensionMessages } from "@/lib/suspension-thread";
 
 export type AdminArtistListRow = {
   id: string;
@@ -11,6 +12,8 @@ export type AdminArtistListRow = {
   province: string;
   specialities: { name: string; color: string }[];
   status: "active" | "suspended";
+  /** Admin + artist suspension thread (empty if not suspended or no data). */
+  suspensionMessages: SuspensionMessage[];
   joinedAt: Date;
   /** Pre-formatted in deployment timezone (table is a client component). */
   joinedAtDisplay: string;
@@ -46,6 +49,12 @@ export async function listArtistsForAdmin(filters?: {
     province: a.province,
     specialities: a.specialities.map((j) => specColor(j.speciality)),
     status: a.isSuspended ? "suspended" : "active",
+    suspensionMessages: resolveSuspensionMessages({
+      isSuspended: a.isSuspended,
+      suspensionComment: a.suspensionComment,
+      suspensionThread: a.suspensionThread,
+      updatedAt: a.updatedAt,
+    }),
     joinedAt: a.createdAt,
     joinedAtDisplay: formatDeploymentDate(a.createdAt),
   }));
