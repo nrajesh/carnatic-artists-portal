@@ -157,9 +157,10 @@ export function mergeYoutubeUrl(suffix: string): string {
   return `${YOUTUBE}${s.replace(/^\/+/, "")}`;
 }
 
-/** Digits only, optional single leading + (international prefix). No spaces or other symbols. */
+/** Digits only, optional single leading + (international prefix). No spaces or other symbols. Max 15 digits. */
 export function sanitizeContactNumberInput(raw: string): string {
-  const digits = raw.replace(/\D/g, "");
+  let digits = raw.replace(/\D/g, "");
+  if (digits.length > 15) digits = digits.slice(0, 15);
   const wantsPlus = /^\s*\+/.test(raw);
   if (!digits) return wantsPlus ? "+" : "";
   return wantsPlus ? `+${digits}` : digits;

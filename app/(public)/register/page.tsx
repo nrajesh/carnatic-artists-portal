@@ -17,6 +17,14 @@ import NextLink from 'next/link';
 import { usePostHog } from 'posthog-js/react';
 import SpecialityPicker, { type SpecialityCatalogItem } from '@/components/speciality-picker';
 import { RegistrationPrefixedUrlInput } from '@/components/registration-prefixed-url-input';
+import { FormFieldNotice } from '@/components/form-field-notice';
+import { useTimedFieldNotice } from '@/hooks/use-timed-field-notice';
+import {
+  contactNumberRestrictedHandlers,
+  emailFieldRestrictedHandlers,
+  personNameRestrictedHandlers,
+  urlSuffixRestrictedHandlers,
+} from '@/lib/restricted-input-handlers';
 import {
   facebookSuffixFromStored,
   instagramSuffixFromStored,
@@ -98,8 +106,7 @@ export const registrationSchema = z
     if (!isPlausibleContactNumber(phone)) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
-        message:
-          'Enter 7-15 digits; optional + only at the start (no spaces or other symbols)',
+        message: 'Use 7-15 digits. Optional + only at the start.',
         path: ['contactNumber'],
       });
     }
@@ -198,15 +205,20 @@ export default function RegisterPage() {
   const posthog = usePostHog();
   const bioRichTextDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  const formatNote = useTimedFieldNotice();
+
   const {
     register,
     handleSubmit,
     control,
     setValue,
+    watch,
     formState: { errors, isSubmitting },
   } = useForm<RegistrationFormData>({
     resolver: zodResolver(registrationSchema),
     defaultValues: {
+      fullName: '',
+      email: '',
       contactType: 'whatsapp',
       profilePhotoUrl: '',
       backgroundImageUrl: '',
@@ -403,6 +415,12 @@ export default function RegisterPage() {
           noValidate
           className="touch-manipulation space-y-6 rounded-2xl border border-amber-200 bg-white p-6 shadow-lg"
         >
+          {formatNote.message ? (
+            <FormFieldNotice tone="warning" className="mb-2">
+              {formatNote.message}
+            </FormFieldNotice>
+          ) : null}
+
           {/* ── Full Name ── */}
           <div>
             <label htmlFor="fullName" className="block text-sm font-semibold text-amber-900 mb-1">
@@ -410,8 +428,13 @@ export default function RegisterPage() {
             </label>
             <input
               id="fullName"
+              name="fullName"
               type="text"
-              {...register('fullName')}
+              autoComplete="name"
+              value={watch('fullName')}
+              {...personNameRestrictedHandlers(formatNote.show, (v) =>
+                setValue('fullName', v, { shouldDirty: true, shouldValidate: true, shouldTouch: true }),
+              )}
               className="w-full border border-amber-300 rounded-lg px-3 py-2 text-amber-900 placeholder-amber-400 focus:outline-none focus:ring-2 focus:ring-amber-500 min-h-[44px]"
               placeholder="Your full name"
             />
@@ -427,9 +450,13 @@ export default function RegisterPage() {
             </label>
             <input
               id="email"
+              name="email"
               type="email"
-              {...register('email')}
               autoComplete="email"
+              value={watch('email')}
+              {...emailFieldRestrictedHandlers(formatNote.show, (v) =>
+                setValue('email', v, { shouldDirty: true, shouldValidate: true, shouldTouch: true }),
+              )}
               className="ph-no-capture w-full border border-amber-300 rounded-lg px-3 py-2 text-amber-900 placeholder-amber-400 focus:outline-none focus:ring-2 focus:ring-amber-500 min-h-[44px]"
               placeholder="you@example.com"
             />
@@ -444,8 +471,8 @@ export default function RegisterPage() {
               Contact Number <span className="font-normal text-amber-600">(optional)</span>
             </label>
             <p className="mb-2 text-xs text-amber-600">
-              If you add a number: digits only (7-15), optional <strong>+</strong> at the start for a country code — no
-              spaces or other symbols. Choose WhatsApp or mobile below.
+              Optional. Digits only (7-15). You may start with <strong>+</strong> for country code. Then pick
+              WhatsApp or mobile.
             </p>
             <div className="flex flex-col sm:flex-row gap-3">
               <Controller
@@ -455,15 +482,15 @@ export default function RegisterPage() {
                   <input
                     id="contactNumber"
                     type="tel"
-                    inputMode="tel"
+                    inputMode="numeric"
                     autoComplete="tel"
                     name={field.name}
                     ref={field.ref}
                     onBlur={field.onBlur}
                     value={field.value ?? ''}
-                    onChange={(e) => field.onChange(sanitizeContactNumberInput(e.target.value))}
+                    {...contactNumberRestrictedHandlers(formatNote.show, field.onChange)}
                     className="ph-no-capture min-h-[44px] flex-1 rounded-lg border border-amber-300 px-3 py-2 text-amber-900 placeholder-amber-400 focus:outline-none focus:ring-2 focus:ring-amber-500"
-                    placeholder="+31 6 12345678"
+                    placeholder="+31612345678"
                   />
                 )}
               />
@@ -517,6 +544,7 @@ export default function RegisterPage() {
                 merge={mergeWebsitePath}
                 field={field}
                 error={errors.profilePhotoUrl?.message as string | undefined}
+                onFormatNote={formatNote.show}
               />
             )}
           />
@@ -568,6 +596,7 @@ export default function RegisterPage() {
                     merge={mergeWebsitePath}
                     field={field}
                     error={errors.backgroundImageUrl?.message as string | undefined}
+                    onFormatNote={formatNote.show}
                   />
                 )}
               />
@@ -610,7 +639,9 @@ export default function RegisterPage() {
                               ref={urlField.ref}
                               onBlur={urlField.onBlur}
                               value={websitePathSuffixFromStored(urlField.value ?? '')}
-                              onChange={(e) => urlField.onChange(mergeWebsitePath(e.target.value))}
+                              {...urlSuffixRestrictedHandlers(mergeWebsitePath, formatNote.show, (full) =>
+                                urlField.onChange(full),
+                              )}
                               placeholder="yourwebsite.com"
                               className="min-h-[48px] min-w-0 w-full flex-1 border-0 bg-transparent px-3 py-2 text-sm leading-normal text-amber-900 placeholder-amber-400 focus:outline-none focus:ring-0 sm:min-h-[44px] sm:py-2.5"
                             />
@@ -709,6 +740,7 @@ export default function RegisterPage() {
                       merge={merge}
                       field={field}
                       error={errors[name]?.message}
+                      onFormatNote={formatNote.show}
                     />
                   )}
                 />
@@ -717,11 +749,9 @@ export default function RegisterPage() {
           </div>
 
           {/* Submit error */}
-          {submitError && (
-            <div className="bg-red-50 border border-red-200 rounded-lg p-3">
-              <p className="text-sm text-red-700" role="alert">{submitError}</p>
-            </div>
-          )}
+          {submitError ? (
+            <FormFieldNotice tone="error">{submitError}</FormFieldNotice>
+          ) : null}
 
           {/* Submit button */}
           <button

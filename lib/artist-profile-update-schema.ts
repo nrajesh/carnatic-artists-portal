@@ -81,7 +81,7 @@ export const artistProfileEditSchema = z
     if (!isPlausibleContactNumber(phone)) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
-        message: "Enter 7-15 digits; optional + only at the start (no spaces or other symbols)",
+        message: "Use 7-15 digits. Optional + only at the start.",
         path: ["contactNumber"],
       });
     }

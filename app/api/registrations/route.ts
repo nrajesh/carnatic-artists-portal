@@ -85,7 +85,7 @@ export const registrationServerSchema = z
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         message:
-          'Use 7-15 digits only; optional + at the start for country code (no spaces or other symbols)',
+          'Use 7-15 digits. Optional + only at the start.',
         path: ['contactNumber'],
       });
     }

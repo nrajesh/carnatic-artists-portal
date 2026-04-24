@@ -13,6 +13,7 @@ describe("registration-input-normalize", () => {
   it("sanitizes contact number to digits and optional leading +", () => {
     expect(sanitizeContactNumberInput("+31 abc 612345678")).toBe("+31612345678");
     expect(sanitizeContactNumberInput("31 6 12")).toBe("31612");
+    expect(sanitizeContactNumberInput("1234567890123456")).toBe("123456789012345");
     expect(isPlausibleContactNumber("+31612345678")).toBe(true);
     expect(isPlausibleContactNumber("0612345678")).toBe(true);
     expect(isPlausibleContactNumber("+")).toBe(false);

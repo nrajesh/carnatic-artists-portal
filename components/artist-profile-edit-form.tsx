@@ -6,6 +6,15 @@ import { useRouter } from "next/navigation";
 import { usePostHog } from "posthog-js/react";
 import SpecialityPicker from "@/components/speciality-picker";
 import { RegistrationPrefixedUrlInput } from "@/components/registration-prefixed-url-input";
+import { FormFieldNotice } from "@/components/form-field-notice";
+import { useTimedFieldNotice } from "@/hooks/use-timed-field-notice";
+import {
+  contactNumberRestrictedHandlers,
+  emailFieldRestrictedHandlers,
+  personNameRestrictedHandlers,
+  slugLiveRestrictedHandlers,
+  urlSuffixRestrictedHandlers,
+} from "@/lib/restricted-input-handlers";
 import { BioRichTextEditor } from "@/components/bio-rich-text-editor";
 import {
   REGISTRATION_FACEBOOK_PREFIX,
@@ -192,6 +201,7 @@ export function ArtistProfileEditForm({
   const [saved, setSaved] = useState(false);
   const [serverError, setServerError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
+  const formatNote = useTimedFieldNotice();
 
   const baselineFingerprint = useMemo(
     () =>
@@ -354,17 +364,22 @@ export function ArtistProfileEditForm({
           ✓ Profile saved successfully!
         </div>
       )}
-      {serverError && (
-        <div className="mb-6 rounded-xl border border-red-200 bg-red-50 px-5 py-4 text-sm font-medium text-red-800">
+      {serverError ? (
+        <FormFieldNotice tone="error" className="mb-6 font-medium">
           {serverError}
-        </div>
-      )}
+        </FormFieldNotice>
+      ) : null}
 
       <form
         onSubmit={handleSave}
         noValidate
         className="space-y-6 rounded-2xl border border-stone-200 bg-white p-6 shadow-sm"
       >
+        {formatNote.message ? (
+          <FormFieldNotice tone="warning" className="-mt-1">
+            {formatNote.message}
+          </FormFieldNotice>
+        ) : null}
         <div className="overflow-hidden rounded-xl border border-stone-100">
           <div
             className="flex h-20 items-end px-5 pb-3"
@@ -431,7 +446,7 @@ export function ArtistProfileEditForm({
               autoComplete="off"
               spellCheck={false}
               value={slug}
-              onChange={(e) => setSlug(e.target.value)}
+              {...slugLiveRestrictedHandlers(formatNote.show, setSlug)}
               className="min-h-[48px] min-w-0 w-full flex-1 border-0 bg-transparent px-3 py-2 text-sm leading-normal text-stone-800 placeholder-stone-400 focus:outline-none focus:ring-0 sm:min-h-[44px] sm:py-2.5"
               placeholder="your-name"
             />
@@ -445,8 +460,10 @@ export function ArtistProfileEditForm({
           </label>
           <input
             type="text"
+            name="fullName"
+            autoComplete="name"
             value={fullName}
-            onChange={(e) => setFullName(e.target.value)}
+            {...personNameRestrictedHandlers(formatNote.show, setFullName)}
             className={`min-h-[44px] w-full rounded-lg border border-stone-200 px-3 py-2.5 text-stone-800 focus:outline-none focus:ring-2 ${ring}`}
           />
           {errors.fullName && <p className="mt-1 text-xs text-red-500">{errors.fullName}</p>}
@@ -458,9 +475,10 @@ export function ArtistProfileEditForm({
           </label>
           <input
             type="email"
+            name="email"
             autoComplete="email"
             value={email}
-            onChange={(e) => setEmail(e.target.value)}
+            {...emailFieldRestrictedHandlers(formatNote.show, setEmail)}
             className={`ph-no-capture min-h-[44px] w-full rounded-lg border border-stone-200 px-3 py-2.5 text-stone-800 focus:outline-none focus:ring-2 ${ring}`}
           />
           {errors.email && <p className="mt-1 text-xs text-red-500">{errors.email}</p>}
@@ -472,11 +490,13 @@ export function ArtistProfileEditForm({
           </label>
           <div className="flex flex-col gap-3 sm:flex-row">
             <input
-              type="text"
+              type="tel"
+              inputMode="numeric"
+              name="contactNumber"
               autoComplete="tel"
               value={contactNumber}
-              onChange={(e) => setContactNumber(e.target.value)}
-              placeholder="+31 6 12345678"
+              {...contactNumberRestrictedHandlers(formatNote.show, setContactNumber)}
+              placeholder="+31612345678"
               className={`ph-no-capture min-h-[44px] flex-1 rounded-lg border border-stone-200 px-3 py-2.5 text-stone-800 focus:outline-none focus:ring-2 ${ring}`}
             />
             <div className="flex items-center gap-4">
@@ -615,6 +635,7 @@ export function ArtistProfileEditForm({
               onBlur: () => {},
             }}
             error={errors.profilePhotoUrl}
+            onFormatNote={formatNote.show}
           />
         </div>
 
@@ -633,6 +654,7 @@ export function ArtistProfileEditForm({
               onBlur: () => {},
             }}
             error={errors.backgroundImageUrl}
+            onFormatNote={formatNote.show}
           />
         </div>
 
@@ -661,7 +683,9 @@ export function ArtistProfileEditForm({
                       inputMode="url"
                       autoComplete="off"
                       value={websitePathSuffixFromStored(row.url ?? "")}
-                      onChange={(e) => setWebsiteUrlAt(index, mergeWebsitePath(e.target.value))}
+                      {...urlSuffixRestrictedHandlers(mergeWebsitePath, formatNote.show, (full) =>
+                        setWebsiteUrlAt(index, full),
+                      )}
                       placeholder="yourwebsite.com"
                       className="min-h-[48px] min-w-0 w-full flex-1 border-0 bg-transparent px-3 py-2 text-sm leading-normal text-stone-800 placeholder-stone-400 focus:outline-none focus:ring-0 sm:min-h-[44px] sm:py-2.5"
                     />
@@ -767,6 +791,7 @@ export function ArtistProfileEditForm({
                 onBlur: () => {},
               }}
               error={row.err}
+              onFormatNote={formatNote.show}
             />
           </div>
         ))}

@@ -1,5 +1,9 @@
 "use client";
 
+import { FormFieldNotice } from "@/components/form-field-notice";
+import { useTimedFieldNotice } from "@/hooks/use-timed-field-notice";
+import { urlSuffixRestrictedHandlers, type FormatNoteFn } from "@/lib/restricted-input-handlers";
+
 type ControllerField = {
   value: string | undefined;
   onChange: (v: string) => void;
@@ -16,15 +20,22 @@ type Props = {
   merge: (suffixInput: string) => string;
   field: ControllerField;
   error?: string;
+  /** When set, paste/format notices go to the parent (e.g. one banner for the whole form). */
+  onFormatNote?: FormatNoteFn;
 };
 
 /**
  * Shows a fixed HTTPS / host prefix and edits only the path or handle; stored value is always a full URL or "".
  */
 export function RegistrationPrefixedUrlInput(props: Props): JSX.Element {
-  const { id, label, helperText, prefix, suffixPlaceholder, suffixFromStored, merge, field, error } = props;
+  const { id, label, helperText, prefix, suffixPlaceholder, suffixFromStored, merge, field, error, onFormatNote } =
+    props;
   const stored = field.value ?? "";
   const suffix = suffixFromStored(typeof stored === "string" ? stored : "");
+  const localNotice = useTimedFieldNotice();
+  const showFormatNote = onFormatNote ?? localNotice.show;
+  const formatMessage = onFormatNote ? null : localNotice.message;
+  const urlGuards = urlSuffixRestrictedHandlers(merge, showFormatNote, field.onChange);
 
   return (
     <div className="min-w-0 max-w-full">
@@ -47,15 +58,20 @@ export function RegistrationPrefixedUrlInput(props: Props): JSX.Element {
           autoComplete="off"
           value={suffix}
           onBlur={field.onBlur}
-          onChange={(e) => field.onChange(merge(e.target.value))}
+          {...urlGuards}
           placeholder={suffixPlaceholder}
           className="min-h-[48px] min-w-0 w-full flex-1 border-0 bg-transparent px-3 py-2 text-sm leading-normal text-amber-900 placeholder-amber-400 focus:outline-none focus:ring-0 sm:min-h-[44px] sm:py-2.5"
         />
       </div>
+      {formatMessage ? (
+        <FormFieldNotice tone="warning" className="mt-2">
+          {formatMessage}
+        </FormFieldNotice>
+      ) : null}
       {error ? (
-        <p className="mt-1 text-sm text-red-600" role="alert">
+        <FormFieldNotice tone="error" className="mt-1">
           {error}
-        </p>
+        </FormFieldNotice>
       ) : null}
     </div>
   );
