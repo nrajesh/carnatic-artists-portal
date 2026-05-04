@@ -1,19 +1,23 @@
 import type { Metadata } from "next";
 import { cookies } from "next/headers";
 import "./globals.css";
+import "leaflet/dist/leaflet.css";
 import { fontDisplay, fontSans } from "./fonts";
 import { PostHogProvider } from "@/components/posthog-provider";
 import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
 import { DevAdminBadge } from "@/components/dev-admin-badge";
 import { PrivacyNoticeBanner } from "@/components/privacy-notice-banner";
+import { getDeploymentDisplayConfig } from "@/lib/deployment-display";
 import { formatDeploymentDateTime } from "@/lib/format-deployment-datetime";
 import { getArtistFullNameById } from "@/lib/queries/artists";
 import { verifySession } from "@/lib/session-jwt";
 
+const displayConfig = getDeploymentDisplayConfig();
+
 export const metadata: Metadata = {
-  title: "Artist Discovery Portal",
-  description: "Discover artists and portfolios based in The Netherlands",
+  title: displayConfig.name,
+  description: `Discover artists and portfolios based in ${displayConfig.countryName}`,
 };
 
 export default async function RootLayout({
@@ -34,7 +38,7 @@ export default async function RootLayout({
       : session.role);
 
   return (
-    <html lang="en" className={`${fontSans.variable} ${fontDisplay.variable}`}>
+    <html lang={displayConfig.primaryLocale} className={`${fontSans.variable} ${fontDisplay.variable}`}>
       <body className="flex min-h-screen flex-col font-sans antialiased text-stone-900">
         <SiteHeader />
         <div className="flex min-h-0 min-w-0 flex-1 flex-col">

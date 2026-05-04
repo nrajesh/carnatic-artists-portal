@@ -3,10 +3,11 @@ import { cookies } from "next/headers";
 import { JoinCtaButton } from "./join-cta-button";
 import { PostHogReset } from "@/components/posthog-reset";
 import { getCachedHomeMarketingData } from "@/lib/cache/home-marketing";
-import { ArtistsProvinceMap } from "@/components/artists-province-map";
-import type { ArtistMiniCardArtist } from "@/components/artist-mini-card";
+import { ArtistsLocationExplorer } from "@/components/artists-location-explorer";
 import { FeaturedArtistPhoto } from "@/components/featured-artist-photo";
-import { getDeploymentConfig } from "@/deployment.config";
+import { getDeploymentDisplayConfig } from "@/lib/deployment-display";
+import { getDeploymentLocationConfig } from "@/lib/deployment-location";
+import { buildLocationMapPoints } from "@/lib/location-map-data";
 import { DEFAULT_ARTIST_ACCENT_COLOR, getThemeFromArtistSpecialities } from "@/lib/speciality-theme";
 import { verifySession } from "@/lib/session-jwt";
 import { PortalSectionHeading } from "@/components/portal-section-heading";
@@ -22,7 +23,6 @@ export default async function HomePage({
   const session = sessionCookie ? await verifySession(sessionCookie) : null;
   const collabsIndexHref = session?.role === "admin" ? "/admin/collabs" : "/collabs";
   const { ph_reset } = await searchParams;
-  const deployment = getDeploymentConfig();
   const {
     collabsRatingsEnabled,
     totalArtists,
@@ -31,9 +31,13 @@ export default async function HomePage({
     featuredArtist,
     homeCollabs,
     previewArtists,
-    countsByProvince,
   } = await getCachedHomeMarketingData();
-  const provincesWithArtists = Object.values(countsByProvince).filter((n) => n > 0).length;
+  const displayConfig = getDeploymentDisplayConfig();
+  const locationConfig = await getDeploymentLocationConfig();
+  const locationPoints = await buildLocationMapPoints(previewArtists, displayConfig.countryName);
+  const locationsWithArtists = locationPoints.filter((point) => point.count > 0).length;
+  const areaPluralTitle =
+    locationConfig.areaLabelPlural[0]?.toUpperCase() + locationConfig.areaLabelPlural.slice(1);
   /** Full artist directory - must match `app/(public)/artists/page.tsx` route (not `/register`). */
   const artistsDirectoryHref = "/artists";
   const featuredTheme = featuredArtist
@@ -48,17 +52,6 @@ export default async function HomePage({
     featuredArtist && featuredArtist.specialities.length > 0
       ? featuredArtist.specialities.map((s) => s.name).join(" · ")
       : "Artist";
-  const artistsByProvinceForMap: Record<string, ArtistMiniCardArtist[]> = {};
-  for (const a of previewArtists) {
-    const bucket = artistsByProvinceForMap[a.province] ?? (artistsByProvinceForMap[a.province] = []);
-    bucket.push({
-      slug: a.slug,
-      name: a.name,
-      province: a.province,
-      profilePhotoUrl: a.profilePhotoUrl ?? undefined,
-      specialities: a.specialities,
-    });
-  }
 
   return (
     <main className="min-h-screen bg-amber-50">
@@ -66,11 +59,11 @@ export default async function HomePage({
 
       <div className="bg-gradient-to-br from-amber-900 via-amber-800 to-amber-700 text-white px-6 py-20 text-center">
         <div className="text-5xl mb-4">🎵</div>
-        <h1 className="mb-4 font-display text-4xl font-bold tracking-tight sm:text-5xl">Artist Discovery Portal</h1>
+        <h1 className="mb-4 font-display text-4xl font-bold tracking-tight sm:text-5xl">{displayConfig.name}</h1>
         <p className="text-amber-200 text-lg sm:text-xl max-w-xl mx-auto mb-8">
           {collabsRatingsEnabled
-            ? "Browse artists in the Netherlands - discover profiles, find collaborators, and grow your musical network."
-            : "Browse artists in the Netherlands - discover profiles and connect with talented artists."}
+            ? `Browse artists in ${displayConfig.countryName} - discover profiles, find collaborators, and grow your musical network.`
+            : `Browse artists in ${displayConfig.countryName} - discover profiles and connect with talented artists.`}
         </p>
         <div className="flex flex-wrap justify-center gap-4">
           <Link
@@ -99,9 +92,9 @@ export default async function HomePage({
         {collabsRatingsEnabled ? (
           <>
             <a
-              href="#home-province-map"
+              href="#home-location-explorer"
               className="bg-white rounded-2xl border border-amber-200 shadow-sm p-5 sm:p-6 block transition-colors hover:border-amber-400 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:ring-offset-2 focus-visible:ring-offset-amber-50"
-              aria-label={`${seekingCollab} open to collaborate - jump to province map`}
+              aria-label={`${seekingCollab} open to collaborate - jump to location explorer`}
             >
               <div className="text-3xl font-bold text-amber-800">{seekingCollab}</div>
               <div className="text-xs sm:text-sm text-amber-600 mt-1">Open to collaborate</div>
@@ -113,12 +106,12 @@ export default async function HomePage({
           </>
         ) : (
           <a
-            href="#home-province-map"
+            href="#home-location-explorer"
             className="bg-white rounded-2xl border border-amber-200 shadow-sm p-5 sm:p-6 block transition-colors hover:border-amber-400 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:ring-offset-2 focus-visible:ring-offset-amber-50"
-            aria-label={`${provincesWithArtists} provinces represented - jump to province map`}
+            aria-label={`${locationsWithArtists} ${locationConfig.areaLabelPlural.toLowerCase()} represented - jump to location explorer`}
           >
-            <div className="text-3xl font-bold text-amber-800">{provincesWithArtists}</div>
-            <div className="text-xs sm:text-sm text-amber-600 mt-1">Provinces represented</div>
+            <div className="text-3xl font-bold text-amber-800">{locationsWithArtists}</div>
+            <div className="text-xs sm:text-sm text-amber-600 mt-1">{areaPluralTitle} represented</div>
           </a>
         )}
       </div>
@@ -165,7 +158,7 @@ export default async function HomePage({
                 </p>
                 {!collabsRatingsEnabled ? (
                   <p className="text-xs leading-relaxed text-stone-500">
-                    Browse the directory and map to find artists by speciality and province.
+                    Browse the directory and location explorer to find artists by speciality and area.
                   </p>
                 ) : featuredArtist.activeCollabs.length === 0 ? (
                   <p className="text-xs leading-relaxed text-stone-500">
@@ -196,21 +189,22 @@ export default async function HomePage({
       )}
 
       <section
-        id="home-province-map"
+        id="home-location-explorer"
         className="mx-auto max-w-5xl px-6 pb-10 scroll-mt-24"
-        aria-labelledby="home-province-map-heading"
+        aria-labelledby="home-location-explorer-heading"
       >
-        <h2 id="home-province-map-heading" className="portal-section-article">
+        <h2 id="home-location-explorer-heading" className="portal-section-article">
           Find artists near you
         </h2>
         <p className="mt-1 max-w-xl text-sm text-stone-600">
-          Explore who&apos;s already here by province - then join and put your corner of the Netherlands on the map.
+          {`Zoom into the map until nearby ${locationConfig.areaLabelPlural.toLowerCase()} separate into individual counts.`}
         </p>
         <div className="mt-5">
-          <ArtistsProvinceMap
-            artistsByProvince={artistsByProvinceForMap}
-            countsByProvince={countsByProvince}
-            geoJsonHref={deployment.mapGeoJsonUrl}
+          <ArtistsLocationExplorer
+            key={locationPoints.map((point) => `${point.locationValue}:${point.count}`).join("|")}
+            locationPoints={locationPoints}
+            areaLabelSingular={locationConfig.areaLabelSingular}
+            areaLabelPlural={locationConfig.areaLabelPlural}
           />
         </div>
       </section>

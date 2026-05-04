@@ -37,7 +37,7 @@ The landing page showcases **one vocalist per local calendar day** (timezone fol
 Artist search uses a typeahead speciality picker + province dropdown + optional date range - all server-side SQL, no external API calls. Deliberately avoids LLM-based NLP to preserve user trust and keep the platform self-contained.
 
 ### 🌍 Multi-region extensibility
-Deploy for Belgium, Singapore, or any country by swapping a GeoJSON file and a few env vars. No code changes needed. The home page **Netherlands** province map (`components/artists-province-map.tsx`), language switcher, and date formats all update automatically. When a province has **no** listed artists, the side panel promotes **Join the portal** instead of an empty directory browse link.
+Deploy for any country by updating env vars and, optionally, pointing to a deployment-specific GeoJSON file. No code changes needed. The home page location explorer (`components/artists-location-explorer.tsx`), language switcher, and date formats all update automatically. When no map is configured, the explorer falls back to text-only location summaries and filtering.
 
 ### 🏠 Home marketing bundle
 Homepage aggregates (totals, featured artist, province map inputs, preview grid) are loaded in **`lib/cache/home-marketing.ts`**. On **Cloudflare Workers** (OpenNext), `unstable_cache` is not used: it can break when incremental cache is not fully bound, so the module runs the DB bundle per request and uses **`revalidatePath("/")`** from **`revalidateHomeMarketing()`** after mutations (approvals, profile saves, collabs) to refresh the next view.
@@ -268,7 +268,7 @@ lib/
 └── analytics-server.ts  # PostHog Node capture for API routes
 
 components/
-├── artists-province-map.tsx  # NL map, province side panel (empty-state Join CTA)
+├── artists-location-explorer.tsx  # Deployment-aware location explorer with optional map
 ├── artist-mini-card.tsx       # Compact cards (multi-speciality chips + theme)
 ├── featured-artist-photo.tsx  # Spotlight photo + gradient initial fallback
 ├── speciality-picker.tsx      # Typeahead speciality selector

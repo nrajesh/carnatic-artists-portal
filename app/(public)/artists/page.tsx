@@ -4,6 +4,8 @@ import ArtistsSearch from "./artists-search";
 import { ArtistListingTracker } from "./artist-listing-tracker";
 import { FeaturedArtistPhoto } from "@/components/featured-artist-photo";
 import { artistMatchesDirectoryQuery } from "@/lib/artist-directory-search";
+import { getDeploymentDisplayConfig } from "@/lib/deployment-display";
+import { getDeploymentLocationConfig } from "@/lib/deployment-location";
 import { listArtistsForDirectory } from "@/lib/queries/artists";
 import { getThemeFromArtistSpecialities } from "@/lib/speciality-theme";
 import { isArtistCollabsRatingsEnabledServer } from "@/lib/feature-flags-server";
@@ -11,16 +13,24 @@ import { isArtistCollabsRatingsEnabledServer } from "@/lib/feature-flags-server"
 export const dynamic = "force-dynamic";
 
 interface PageProps {
-  searchParams: Promise<{ q?: string; speciality?: string; province?: string }>;
+  searchParams: Promise<{ q?: string; speciality?: string; location?: string; province?: string }>;
 }
 
 export default async function ArtistsPage({ searchParams }: PageProps) {
-  const { q = "", speciality = "", province = "" } = await searchParams;
-  const [allArtists, collabsRatingsEnabled] = await Promise.all([
+  const { q = "", speciality = "", location = "", province = "" } = await searchParams;
+  const selectedLocation = location || province;
+  const [allArtists, collabsRatingsEnabled, displayConfig, locationConfig] = await Promise.all([
     listArtistsForDirectory(),
     isArtistCollabsRatingsEnabledServer(),
+    Promise.resolve(getDeploymentDisplayConfig()),
+    getDeploymentLocationConfig(),
   ]);
-  const PROVINCES = Array.from(new Set(allArtists.map((a) => a.province))).sort();
+  const locationOptions = Array.from(
+    new Set([
+      ...locationConfig.areaOptions,
+      ...allArtists.map((artist) => artist.province.trim()).filter(Boolean),
+    ]),
+  ).sort((a, b) => a.localeCompare(b));
   const SPECIALITY_NAMES = Array.from(
     new Set(allArtists.flatMap((a) => a.specialities.map((s) => s.name))),
   ).sort();
@@ -28,8 +38,8 @@ export default async function ArtistsPage({ searchParams }: PageProps) {
   const filtered = allArtists.filter((a) => {
     const matchesText = !q || artistMatchesDirectoryQuery(a.keywordHaystack, q);
     const matchesSpeciality = !speciality || a.specialities.some((s) => s.name === speciality);
-    const matchesProvince = !province || a.province === province;
-    return matchesText && matchesSpeciality && matchesProvince;
+    const matchesLocation = !selectedLocation || a.province === selectedLocation;
+    return matchesText && matchesSpeciality && matchesLocation;
   });
 
   return (
@@ -41,11 +51,15 @@ export default async function ArtistsPage({ searchParams }: PageProps) {
             ← Home
           </Link>
           <h1 className="font-display text-3xl font-bold tracking-tight text-stone-800">Artists</h1>
-          <p className="text-stone-500 mt-1">{allArtists.length} artists in The Netherlands</p>
+          <p className="text-stone-500 mt-1">{allArtists.length} artists in {displayConfig.countryName}</p>
         </div>
 
         <Suspense>
-          <ArtistsSearch specialities={SPECIALITY_NAMES} provinces={PROVINCES} />
+          <ArtistsSearch
+            specialities={SPECIALITY_NAMES}
+            locationOptions={locationOptions}
+            locationAreaLabelPlural={locationConfig.areaLabelPlural}
+          />
         </Suspense>
 
         <p className="text-sm text-stone-500 mb-5">

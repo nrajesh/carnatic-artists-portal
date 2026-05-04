@@ -46,6 +46,7 @@ export const registrationServerSchema = z
   .object({
   fullName: z.string().min(1, 'Full name is required'),
   email: z.string().email('Valid email address is required'),
+  province: z.string().trim().max(120).optional(),
   contactNumber: z.preprocess(
     (v: unknown) => (typeof v === 'string' ? sanitizeContactNumberInput(v) : ''),
     z.string(),
@@ -121,6 +122,7 @@ export async function POST(request: NextRequest) {
   const rawData = {
     fullName: formData.get('fullName') as string | null,
     email: formData.get('email') as string | null,
+    province: (formData.get('province') as string | null) ?? undefined,
     contactNumber: formData.get('contactNumber') as string | null,
     contactType: formData.get('contactType') as string | null,
     profilePhotoUrl: formData.get('profilePhotoUrl') as string | null,
@@ -211,6 +213,7 @@ export async function POST(request: NextRequest) {
       data: {
         id: registrationId,
         fullName: validated.fullName,
+        province: validated.province?.trim() || "",
         email: null,
         contactNumber: null,
         emailCipher: encryptPiiField(normalizedEmail),

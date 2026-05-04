@@ -189,6 +189,12 @@ export default async function ReviewRegistrationPage({
                 )}
               </dd>
             </div>
+            <div>
+              <dt className="text-xs font-semibold text-stone-500 uppercase tracking-wide mb-1">Location</dt>
+              <dd className="text-stone-800">
+                {reg.province.trim() ? reg.province : <span className="text-stone-400">Not provided</span>}
+              </dd>
+            </div>
             <div className="sm:col-span-2">
               <dt className="text-xs font-semibold text-stone-500 uppercase tracking-wide mb-1">Specialities</dt>
               <dd className="flex flex-wrap gap-2">

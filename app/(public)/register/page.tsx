@@ -47,6 +47,7 @@ import {
   websitePathSuffixFromStored,
   youtubeSuffixFromStored,
 } from '@/lib/registration-input-normalize';
+import { getPublicDeploymentLocationInputConfig } from '@/lib/deployment-location-public';
 
 // ---------------------------------------------------------------------------
 // Zod schema
@@ -77,6 +78,7 @@ export const registrationSchema = z
   .object({
   fullName: z.string().min(1, 'Full name is required'),
   email: z.string().email('Valid email address is required'),
+  province: z.string().trim().max(120).optional(),
   contactNumber: z.preprocess(
     (v) => (typeof v === 'string' ? sanitizeContactNumberInput(v) : ''),
     z.string(),
@@ -206,6 +208,8 @@ export default function RegisterPage() {
   const bioRichTextDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const formatNote = useTimedFieldNotice();
+  const locationConfig = getPublicDeploymentLocationInputConfig();
+  const locationSuggestionsId = 'registration-location-suggestions';
 
   const {
     register,
@@ -219,7 +223,9 @@ export default function RegisterPage() {
     defaultValues: {
       fullName: '',
       email: '',
+      province: '',
       contactType: 'whatsapp',
+      contactNumber: '',
       profilePhotoUrl: '',
       backgroundImageUrl: '',
       specialities: [],
@@ -321,6 +327,7 @@ export default function RegisterPage() {
       const formData = new FormData();
       formData.append('fullName', data.fullName);
       formData.append('email', data.email);
+      formData.append('province', data.province?.trim() ?? '');
       formData.append('contactNumber', data.contactNumber.trim());
       if (data.contactNumber.trim()) {
         formData.append('contactType', data.contactType);
@@ -520,6 +527,32 @@ export default function RegisterPage() {
             )}
             {errors.contactType && (
               <p className="mt-1 text-sm text-red-600" role="alert">{errors.contactType.message}</p>
+            )}
+          </div>
+
+          <div>
+            <label className="block text-sm font-semibold text-amber-900 mb-1">
+              {locationConfig.areaLabelSingular} <span className="font-normal text-amber-600">(optional)</span>
+            </label>
+            <p className="mb-2 text-xs text-amber-700">
+              Enter any city, province, district, state, or area. Suggestions are there to help, not to limit you.
+            </p>
+            <input
+              type="text"
+              list={locationConfig.areaOptions.length > 0 ? locationSuggestionsId : undefined}
+              {...register('province')}
+              className="ph-no-capture w-full rounded-lg border border-amber-300 px-3 py-2 text-amber-900 placeholder-amber-400 focus:outline-none focus:ring-2 focus:ring-amber-500 min-h-[44px]"
+              placeholder={`Type a ${locationConfig.areaLabelSingular.toLowerCase()}, city, district, or area`}
+            />
+            {locationConfig.areaOptions.length > 0 ? (
+              <datalist id={locationSuggestionsId}>
+                {locationConfig.areaOptions.map((option) => (
+                  <option key={option} value={option} />
+                ))}
+              </datalist>
+            ) : null}
+            {errors.province && (
+              <p className="mt-1 text-sm text-red-600" role="alert">{errors.province.message}</p>
             )}
           </div>
 

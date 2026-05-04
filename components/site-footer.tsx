@@ -2,6 +2,7 @@ import Link from "next/link";
 import { cookies } from "next/headers";
 import { verifySession } from "@/lib/session-jwt";
 import { AnalyticsOptOutFooterNote } from "@/components/analytics-opt-out-footer-note";
+import { getDeploymentDisplayConfig } from "@/lib/deployment-display";
 
 /**
  * Global footer - safe for production (About, Privacy, auth state).
@@ -21,6 +22,7 @@ export async function SiteFooter() {
   const session = sessionCookie ? await verifySession(sessionCookie) : null;
   const isLoggedIn = session !== null;
   const dashboardHref = session?.role === "admin" ? "/admin/dashboard" : "/dashboard";
+  const displayConfig = getDeploymentDisplayConfig();
 
   const linkClass =
     "text-sm font-medium text-stone-700 underline-offset-4 transition-colors hover:text-amber-900 hover:underline";
@@ -60,7 +62,7 @@ export async function SiteFooter() {
         </nav>
         <AnalyticsOptOutFooterNote />
         <p className="mt-6 text-center text-xs text-stone-500">
-          Artist Discovery Portal - connecting musicians in the Netherlands
+          {displayConfig.name} - connecting musicians in {displayConfig.countryName}
         </p>
       </div>
     </footer>

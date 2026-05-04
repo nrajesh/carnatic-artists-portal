@@ -103,7 +103,7 @@ export async function approvePendingRegistrationRouteStyle(options: {
       profilePhotoUrl: registration.profilePhotoUrl ?? "",
       backgroundImageUrl: registration.backgroundImageUrl ?? undefined,
       bioRichText: registration.bioRichText ?? undefined,
-      province: "",
+      province: registration.province,
     },
   });
 

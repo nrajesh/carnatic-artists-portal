@@ -125,6 +125,7 @@ model ExternalLink {
 model RegistrationRequest {
   id                 String    @id @default(uuid())
   fullName           String
+  province           String    @default("")
   /** Deprecated: use ciphertext fields; nullable during migration from plaintext. */
   email              String?
   contactNumber      String?

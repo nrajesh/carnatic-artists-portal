@@ -13,6 +13,16 @@ const nextConfig = {
     // Type errors won't block builds during active development
     ignoreBuildErrors: true,
   },
+  env: {
+    NEXT_PUBLIC_DEPLOYMENT_NAME: process.env.DEPLOYMENT_NAME ?? "",
+    NEXT_PUBLIC_DEPLOYMENT_REGION: process.env.DEPLOYMENT_REGION ?? "",
+    NEXT_PUBLIC_DEPLOYMENT_LOCALE_PRIMARY: process.env.DEPLOYMENT_LOCALE_PRIMARY ?? "en",
+    NEXT_PUBLIC_DEPLOYMENT_LOCATION_LABEL_SINGULAR:
+      process.env.DEPLOYMENT_LOCATION_LABEL_SINGULAR ?? "",
+    NEXT_PUBLIC_DEPLOYMENT_LOCATION_LABEL_PLURAL:
+      process.env.DEPLOYMENT_LOCATION_LABEL_PLURAL ?? "",
+    NEXT_PUBLIC_DEPLOYMENT_LOCATION_OPTIONS: process.env.DEPLOYMENT_LOCATION_OPTIONS ?? "",
+  },
   webpack: (config, { isServer }) => {
     if (isServer) {
       // Prevent webpack from bundling native Node.js modules used by

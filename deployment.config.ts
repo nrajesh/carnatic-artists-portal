@@ -27,8 +27,8 @@ export interface DeploymentConfig {
     /** All supported UI language codes, e.g. ["en", "nl"] */
     supported: string[];
   };
-  /** Path or URL to the GeoJSON file describing the region's administrative areas */
-  mapGeoJsonUrl: string;
+  /** Optional path or URL to a GeoJSON file describing the region's administrative areas */
+  mapGeoJsonUrl: string | null;
   branding: {
     /** URL to the portal logo asset */
     logoUrl: string;
@@ -88,7 +88,7 @@ export function getDeploymentConfig(): DeploymentConfig {
   const name = requireEnv("DEPLOYMENT_NAME");
   const localePrimary = requireEnv("DEPLOYMENT_LOCALE_PRIMARY");
   const localeSecondary = process.env.DEPLOYMENT_LOCALE_SECONDARY;
-  const mapGeoJsonUrl = requireEnv("DEPLOYMENT_MAP_GEOJSON_URL");
+  const mapGeoJsonUrl = process.env.DEPLOYMENT_MAP_GEOJSON_URL?.trim() || null;
   const brandingLogoUrl = requireEnv("DEPLOYMENT_BRANDING_LOGO_URL");
 
   // Build the supported locales list: always includes primary; adds secondary if set

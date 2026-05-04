@@ -17,27 +17,14 @@ const SPECIALITIES = [
   "Tavil",
 ];
 
-const PROVINCES = [
-  "Noord-Holland",
-  "Zuid-Holland",
-  "Utrecht",
-  "Gelderland",
-  "Noord-Brabant",
-  "Overijssel",
-  "Groningen",
-  "Friesland",
-  "Drenthe",
-  "Flevoland",
-  "Zeeland",
-  "Limburg",
-];
-
 export default function ArtistsSearch({
   specialities = SPECIALITIES,
-  provinces = PROVINCES,
+  locationOptions = [],
+  locationAreaLabelPlural = "Regions",
 }: {
   specialities?: string[];
-  provinces?: string[];
+  locationOptions?: string[];
+  locationAreaLabelPlural?: string;
 }) {
   const router = useRouter();
   const pathname = usePathname();
@@ -46,7 +33,7 @@ export default function ArtistsSearch({
 
   const q = searchParams.get("q") ?? "";
   const speciality = searchParams.get("speciality") ?? "";
-  const province = searchParams.get("province") ?? "";
+  const location = searchParams.get("location") ?? searchParams.get("province") ?? "";
 
   const updateParam = useCallback(
     (key: string, value: string) => {
@@ -55,6 +42,9 @@ export default function ArtistsSearch({
         params.set(key, value);
       } else {
         params.delete(key);
+      }
+      if (key === "location") {
+        params.delete("province");
       }
       startTransition(() => {
         router.replace(`${pathname}?${params.toString()}`);
@@ -69,7 +59,7 @@ export default function ArtistsSearch({
     });
   };
 
-  const hasFilters = q || speciality || province;
+  const hasFilters = q || speciality || location;
 
   return (
     <div className="bg-white rounded-2xl border border-stone-200 shadow-sm p-4 mb-8">
@@ -93,23 +83,23 @@ export default function ArtistsSearch({
           className="sm:w-44 px-3 py-2.5 rounded-lg border border-stone-200 text-sm text-stone-700 bg-white focus:outline-none focus:ring-2 focus:ring-amber-400 min-h-[44px]"
         >
           <option value="">All specialities</option>
-          {SPECIALITIES.map((s) => (
+          {specialities.map((s) => (
             <option key={s} value={s}>
               {s}
             </option>
           ))}
         </select>
 
-        {/* Province dropdown */}
+        {/* Location dropdown */}
         <select
-          value={province}
-          onChange={(e) => updateParam("province", e.target.value)}
+          value={location}
+          onChange={(e) => updateParam("location", e.target.value)}
           className="sm:w-44 px-3 py-2.5 rounded-lg border border-stone-200 text-sm text-stone-700 bg-white focus:outline-none focus:ring-2 focus:ring-amber-400 min-h-[44px]"
         >
-          <option value="">All provinces</option>
-          {PROVINCES.map((p) => (
-            <option key={p} value={p}>
-              {p}
+          <option value="">All {locationAreaLabelPlural.toLowerCase()}</option>
+          {locationOptions.map((option) => (
+            <option key={option} value={option}>
+              {option}
             </option>
           ))}
         </select>
@@ -140,10 +130,10 @@ export default function ArtistsSearch({
               <button onClick={() => updateParam("speciality", "")} className="hover:text-amber-900 ml-1">×</button>
             </span>
           )}
-          {province && (
+          {location && (
             <span className="inline-flex items-center gap-1 bg-amber-50 border border-amber-200 text-amber-700 text-xs px-3 py-1 rounded-full font-medium">
-              {province}
-              <button onClick={() => updateParam("province", "")} className="hover:text-amber-900 ml-1">×</button>
+              {location}
+              <button onClick={() => updateParam("location", "")} className="hover:text-amber-900 ml-1">×</button>
             </span>
           )}
           {isPending && <span className="text-xs text-stone-400 self-center">Filtering…</span>}

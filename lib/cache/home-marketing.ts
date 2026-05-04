@@ -1,7 +1,6 @@
 import { revalidatePath } from "next/cache";
 import {
   countActiveArtists,
-  countActiveArtistsByProvince,
   countActiveCollabs,
   countOpenToCollabArtists,
   getDailyFeaturedArtistForHome,
@@ -32,18 +31,16 @@ export type HomeMarketingBundle = {
   featuredArtist: FeaturedArtistListing | null;
   homeCollabs: HomeCollabPreview[];
   previewArtists: ArtistListing[];
-  countsByProvince: Record<string, number>;
 };
 
 async function loadHomeMarketingBundle(): Promise<HomeMarketingBundle> {
   const collabsRatingsEnabled = await isArtistCollabsRatingsEnabledServer();
 
   if (!collabsRatingsEnabled) {
-    const [totalArtists, featuredArtist, previewArtists, countsByProvince] = await Promise.all([
+    const [totalArtists, featuredArtist, previewArtists] = await Promise.all([
       countActiveArtists(),
       getDailyFeaturedArtistForHome(),
       listArtistsForDirectory(),
-      countActiveArtistsByProvince(),
     ]);
     const featured: FeaturedArtistListing | null = featuredArtist
       ? { ...featuredArtist, activeCollabs: [] }
@@ -56,7 +53,6 @@ async function loadHomeMarketingBundle(): Promise<HomeMarketingBundle> {
       featuredArtist: featured,
       homeCollabs: [],
       previewArtists,
-      countsByProvince,
     };
   }
 
@@ -67,7 +63,6 @@ async function loadHomeMarketingBundle(): Promise<HomeMarketingBundle> {
     featuredArtist,
     homeCollabs,
     previewArtists,
-    countsByProvince,
   ] = await Promise.all([
     countActiveArtists(),
     countOpenToCollabArtists(),
@@ -75,7 +70,6 @@ async function loadHomeMarketingBundle(): Promise<HomeMarketingBundle> {
     getDailyFeaturedArtistForHome(),
     listCollabsForHome(3),
     listArtistsForDirectory(),
-    countActiveArtistsByProvince(),
   ]);
 
   return {
@@ -86,7 +80,6 @@ async function loadHomeMarketingBundle(): Promise<HomeMarketingBundle> {
     featuredArtist,
     homeCollabs,
     previewArtists,
-    countsByProvince,
   };
 }
 

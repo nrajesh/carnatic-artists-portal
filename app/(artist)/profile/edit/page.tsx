@@ -3,22 +3,21 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { verifySession } from "@/lib/session-jwt";
 import { getArtistForEdit, listSpecialities } from "@/lib/queries/artists";
-import { NL_DEFAULT_PROVINCES } from "@/lib/geo/nl-default-provinces";
+import { getDeploymentLocationConfig } from "@/lib/deployment-location";
 import { ArtistAccountStatus } from "@/components/artist-account-status";
 import { EditProfileForm } from "./edit-profile-form";
 import { isArtistCollabsRatingsEnabledServer } from "@/lib/feature-flags-server";
-
-const NL_PROVINCES = [...NL_DEFAULT_PROVINCES];
 
 export default async function EditProfilePage() {
   const sessionCookie = (await cookies()).get("session")?.value ?? null;
   const session = sessionCookie ? await verifySession(sessionCookie) : null;
   if (!session) redirect("/auth/login");
 
-  const [artist, allSpecialities, collabsRatingsEnabled] = await Promise.all([
+  const [artist, allSpecialities, collabsRatingsEnabled, locationConfig] = await Promise.all([
     getArtistForEdit(session.artistId),
     listSpecialities(),
     isArtistCollabsRatingsEnabledServer({ distinctId: session.artistId }),
+    getDeploymentLocationConfig(),
   ]);
   if (!artist) redirect("/auth/login");
 
@@ -43,7 +42,8 @@ export default async function EditProfilePage() {
           variant="artist"
           initial={artist}
           allSpecialities={allSpecialities}
-          provinces={NL_PROVINCES}
+          locationAreaLabel={locationConfig.areaLabelSingular}
+          locationOptions={locationConfig.areaOptions}
           collabsRatingsEnabled={collabsRatingsEnabled}
         />
       </div>

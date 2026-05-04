@@ -158,7 +158,8 @@ type ArtistProfileEditFormProps = {
   variant: Variant;
   initial: ArtistEditView;
   allSpecialities: { name: string; color: string }[];
-  provinces: string[];
+  locationAreaLabel: string;
+  locationOptions: string[];
   /** Admin edits another artist; ignored when variant is artist. */
   targetArtistId?: string;
   /** PostHog `artist-collabs-ratings`; when false, hide collaboration opt-in UI. */
@@ -169,7 +170,8 @@ export function ArtistProfileEditForm({
   variant,
   initial,
   allSpecialities,
-  provinces,
+  locationAreaLabel,
+  locationOptions,
   targetArtistId,
   collabsRatingsEnabled = true,
 }: ArtistProfileEditFormProps) {
@@ -202,6 +204,8 @@ export function ArtistProfileEditForm({
   const [serverError, setServerError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
   const formatNote = useTimedFieldNotice();
+  const locationAreaLabelLower = locationAreaLabel.toLowerCase();
+  const locationSuggestionsId = `location-suggestions-${variant}${targetArtistId ? `-${targetArtistId}` : ""}`;
 
   const baselineFingerprint = useMemo(
     () =>
@@ -421,7 +425,7 @@ export function ArtistProfileEditForm({
               })}
             </div>
             <p className="mt-1 text-xs text-stone-400">
-              {province.trim() ? `📍 ${province}` : "No province listed on your public profile"}
+              {province.trim() ? `📍 ${province}` : `No ${locationAreaLabelLower} listed on your public profile`}
             </p>
           </div>
         </div>
@@ -568,20 +572,26 @@ export function ArtistProfileEditForm({
 
         <div>
           <label className="mb-1 block text-sm font-semibold text-stone-700">
-            Province <span className="font-normal text-stone-400">(optional)</span>
+            {locationAreaLabel} <span className="font-normal text-stone-400">(optional)</span>
           </label>
-          <select
+          <input
+            type="text"
             value={province}
             onChange={(e) => setProvince(e.target.value)}
+            list={locationOptions.length > 0 ? locationSuggestionsId : undefined}
+            placeholder={`Type a ${locationAreaLabelLower}, city, district, or area`}
             className={`min-h-[44px] w-full rounded-lg border border-stone-200 bg-white px-3 py-2.5 text-stone-800 focus:outline-none focus:ring-2 ${ring}`}
-          >
-            <option value="">No province listed</option>
-            {provinces.map((p) => (
-              <option key={p} value={p}>
-                {p}
-              </option>
-            ))}
-          </select>
+          />
+          {locationOptions.length > 0 ? (
+            <datalist id={locationSuggestionsId}>
+              {locationOptions.map((option) => (
+                <option key={option} value={option} />
+              ))}
+            </datalist>
+          ) : null}
+          <p className="mt-1 text-xs text-stone-500">
+            Enter any place name. Suggestions are optional and won&apos;t limit what you can save.
+          </p>
           {errors.province && <p className="mt-1 text-xs text-red-500">{errors.province}</p>}
         </div>
 

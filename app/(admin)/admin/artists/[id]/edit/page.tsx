@@ -3,24 +3,23 @@ import { cookies } from "next/headers";
 import { notFound } from "next/navigation";
 import { verifySession } from "@/lib/session-jwt";
 import { getArtistForEdit, listSpecialities } from "@/lib/queries/artists";
-import { NL_DEFAULT_PROVINCES } from "@/lib/geo/nl-default-provinces";
+import { getDeploymentLocationConfig } from "@/lib/deployment-location";
 import { ArtistProfileEditForm } from "@/components/artist-profile-edit-form";
 import { AdminModerationPanel } from "./admin-moderation-panel";
 import { isArtistCollabsRatingsEnabledServer } from "@/lib/feature-flags-server";
-
-const NL_PROVINCES = [...NL_DEFAULT_PROVINCES];
 
 export default async function EditArtistPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const sessionCookie = (await cookies()).get("session")?.value ?? null;
   const session = sessionCookie ? await verifySession(sessionCookie) : null;
 
-  const [artist, allSpecialities, collabsRatingsEnabled] = await Promise.all([
+  const [artist, allSpecialities, collabsRatingsEnabled, locationConfig] = await Promise.all([
     getArtistForEdit(id),
     listSpecialities(),
     session?.artistId
       ? isArtistCollabsRatingsEnabledServer({ distinctId: session.artistId })
       : Promise.resolve(false),
+    getDeploymentLocationConfig(),
   ]);
   if (!artist) notFound();
 
@@ -69,7 +68,8 @@ export default async function EditArtistPage({ params }: { params: Promise<{ id:
             variant="admin"
             initial={artist}
             allSpecialities={allSpecialities}
-            provinces={NL_PROVINCES}
+            locationAreaLabel={locationConfig.areaLabelSingular}
+            locationOptions={locationConfig.areaOptions}
             targetArtistId={artist.id}
             collabsRatingsEnabled={collabsRatingsEnabled}
           />

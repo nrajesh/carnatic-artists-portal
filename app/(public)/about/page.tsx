@@ -283,7 +283,7 @@ export default async function AboutPage() {
                 All specialities ▾
               </div>
               <div className="sm:w-44 px-3 py-2.5 rounded-lg border border-stone-200 text-stone-400 text-sm bg-stone-50 min-h-[44px] flex items-center">
-                All provinces ▾
+                All locations ▾
               </div>
             </div>
             <p className="text-xs text-stone-400 italic">
@@ -472,15 +472,17 @@ export default async function AboutPage() {
 
         {/* 7. Multi-region */}
         <Section id="multiregion" title="7. Multi-region extensibility"
-          subtitle="Deploy for Belgium, Singapore, or any country by swapping a config file - zero code changes.">
+          subtitle="Deploy for any country by updating environment configuration - zero code changes.">
           <div className="bg-white rounded-2xl border border-stone-200 shadow-sm p-6 mb-6 font-mono text-sm">
-            <p className="text-stone-400 text-xs mb-3"># .env.local - Netherlands deployment</p>
+            <p className="text-stone-400 text-xs mb-3"># .env.local - example deployment</p>
             {[
-              ["DEPLOYMENT_REGION",          "NL"],
+              ["DEPLOYMENT_REGION",          "XX"],
               ["DEPLOYMENT_NAME",            "Artist Discovery Portal"],
               ["DEPLOYMENT_LOCALE_PRIMARY",  "en"],
-              ["DEPLOYMENT_LOCALE_SECONDARY","nl"],
-              ["DEPLOYMENT_MAP_GEOJSON_URL", "/geo/netherlands-provinces.geojson"],
+              ["DEPLOYMENT_LOCALE_SECONDARY",""],
+              ["DEPLOYMENT_LOCATION_LABEL_SINGULAR", "state"],
+              ["DEPLOYMENT_LOCATION_LABEL_PLURAL", "states"],
+              ["DEPLOYMENT_MAP_GEOJSON_URL", "/geo/deployment-areas.geojson"],
               ["DEPLOYMENT_BRANDING_LOGO_URL","/assets/logo.svg"],
             ].map(([key, val]) => (
               <div key={key} className="flex gap-3 py-1 border-b border-stone-50 last:border-0">
@@ -491,9 +493,8 @@ export default async function AboutPage() {
             ))}
           </div>
           <div className="bg-blue-50 border border-blue-200 rounded-xl p-5 text-sm text-blue-800">
-            <strong>To deploy for Belgium:</strong> swap <code>netherlands-provinces.geojson</code> for a Belgian provinces GeoJSON,
-            set <code>DEPLOYMENT_LOCALE_SECONDARY=fr</code> (or <code>nl</code>), and add French translations to <code>messages/fr.json</code>.
-            The home page map, language switcher, and date formats all update automatically. No application code changes needed.
+            Set the deployment&apos;s country code, display name, locale, optional subdivision labels, and optional GeoJSON path in environment variables.
+            When a map is not configured, the home page automatically falls back to text-only location summaries and filtering.
           </div>
         </Section>
 

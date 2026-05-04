@@ -3,6 +3,7 @@ import { cookies } from "next/headers";
 import { verifySession } from "@/lib/session-jwt";
 import { BackNavButton } from "@/components/back-nav-button";
 import { HardNavAnchor } from "@/components/hard-nav-anchor";
+import { getDeploymentDisplayConfig } from "@/lib/deployment-display";
 
 /**
  * Global header/nav shell.
@@ -16,6 +17,7 @@ export async function SiteHeader() {
   const sessionCookie = (await cookies()).get("session")?.value ?? null;
   const session = sessionCookie ? await verifySession(sessionCookie) : null;
   const dashboardHref = session?.role === "admin" ? "/admin/dashboard" : "/dashboard";
+  const displayConfig = getDeploymentDisplayConfig();
 
   const linkClass =
     "text-sm font-medium text-stone-700 underline-offset-4 transition-colors hover:text-amber-900 hover:underline";
@@ -26,7 +28,7 @@ export async function SiteHeader() {
         <div className="flex items-center gap-3">
           <BackNavButton />
           <HardNavAnchor href="/" className="text-sm font-semibold text-stone-800 hover:text-amber-900">
-            Artist Discovery Portal
+            {displayConfig.name}
           </HardNavAnchor>
         </div>
         <nav className="flex items-center gap-4">
