@@ -1,13 +1,19 @@
 "use client";
 
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import {
   siteNavIconBadgeClass,
   siteNavPillClass,
 } from "@/components/site-nav-styles";
 
-export function BackNavButton() {
+export function BackNavButton({ isAuthenticated }: { isAuthenticated?: boolean }) {
   const router = useRouter();
+  const pathname = usePathname();
+
+  // Drop the back button in home page, and do NOT display it when user is NOT logged in.
+  if (pathname === "/" || !isAuthenticated) {
+    return null;
+  }
 
   function handleBack() {
     if (typeof window !== "undefined" && window.history.length > 1) {

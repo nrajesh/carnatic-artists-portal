@@ -26,14 +26,15 @@ export default async function ArtistsPage({ searchParams }: PageProps) {
     getDeploymentLocationConfig(),
   ]);
   const locationOptions = Array.from(
-    new Set([
-      ...locationConfig.areaOptions,
-      ...allArtists.map((artist) => artist.province.trim()).filter(Boolean),
-    ]),
+    new Set(allArtists.map((artist) => artist.province.trim()).filter(Boolean)),
   ).sort((a, b) => a.localeCompare(b));
-  const SPECIALITY_NAMES = Array.from(
-    new Set(allArtists.flatMap((a) => a.specialities.map((s) => s.name))),
-  ).sort();
+  const uniqueSpecialitiesMap = new Map<string, string>();
+  allArtists.forEach(a => a.specialities.forEach(s => uniqueSpecialitiesMap.set(s.name, s.color)));
+  const specialitiesCatalog = Array.from(uniqueSpecialitiesMap.entries())
+    .map(([name, color]) => ({ label: name, color }))
+    .sort((a, b) => a.label.localeCompare(b.label));
+
+  const locationOptionsList = locationOptions.map(label => ({ label }));
 
   const filtered = allArtists.filter((a) => {
     const matchesText = !q || artistMatchesDirectoryQuery(a.keywordHaystack, q);
@@ -51,13 +52,13 @@ export default async function ArtistsPage({ searchParams }: PageProps) {
             ← Home
           </Link>
           <h1 className="font-display text-3xl font-bold tracking-tight text-stone-800">Artists</h1>
-          <p className="text-stone-500 mt-1">{allArtists.length} artists in {displayConfig.countryName}</p>
+          <p className="text-stone-500 mt-1">{allArtists.length} approved artists</p>
         </div>
 
         <Suspense>
           <ArtistsSearch
-            specialities={SPECIALITY_NAMES}
-            locationOptions={locationOptions}
+            specialities={specialitiesCatalog}
+            locationOptions={locationOptionsList}
             locationAreaLabelPlural={locationConfig.areaLabelPlural}
           />
         </Suspense>

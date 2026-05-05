@@ -28,7 +28,7 @@ export async function SiteHeader() {
     <header className="relative z-20 border-b border-amber-200/80 bg-gradient-to-b from-amber-50/95 to-amber-100/60">
       <div className="mx-auto w-full max-w-5xl px-4 py-3 sm:py-4">
         <nav className={siteNavShellClass} aria-label="Primary">
-          <BackNavButton />
+          <BackNavButton isAuthenticated={!!session} />
           <HardNavAnchor href="/" className={siteBrandHomeClass}>
             <SiteBrandMark className="h-5 w-5" />
             <span className="sr-only">Home</span>
