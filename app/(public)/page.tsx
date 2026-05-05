@@ -11,7 +11,7 @@ import { buildLocationMapPoints } from "@/lib/location-map-data";
 import { DEFAULT_ARTIST_ACCENT_COLOR, getThemeFromArtistSpecialities } from "@/lib/speciality-theme";
 import { verifySession } from "@/lib/session-jwt";
 import { PortalSectionHeading } from "@/components/portal-section-heading";
-import { SiteBrandMark } from "@/components/site-brand-mark";
+
 
 export const dynamic = "force-dynamic";
 
@@ -54,16 +54,60 @@ export default async function HomePage({
       ? featuredArtist.specialities.map((s) => s.name).join(" · ")
       : "Artist";
 
+  let discoveryContent = (
+    <p className="text-xs leading-relaxed text-stone-500">
+      Browse the directory and location explorer to find artists by speciality and area.
+    </p>
+  );
+
+  if (featuredArtist) {
+    const websiteLink = featuredArtist.links?.find(l => l.type.toLowerCase() === 'website');
+    const instaLink = featuredArtist.links?.find(l => l.type.toLowerCase() === 'instagram');
+    const youtubeLink = featuredArtist.links?.find(l => l.type.toLowerCase() === 'youtube');
+    const priorityLink = websiteLink || instaLink || youtubeLink;
+
+    if (priorityLink) {
+      const type = priorityLink.type.toLowerCase();
+      const isWebsite = type === 'website';
+      const isInstagram = type === 'instagram';
+      
+      const icon = isWebsite ? (
+        <svg className="h-5 w-5 text-stone-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+      ) : isInstagram ? (
+        <svg className="h-5 w-5 text-pink-600" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 100 12.324 6.162 6.162 0 000-12.324zM12 16a4 4 0 110-8 4 4 0 010 8zm6.406-11.845a1.44 1.44 0 100 2.881 1.44 1.44 0 000-2.881z"/></svg>
+      ) : (
+        <svg className="h-5 w-5 text-red-600" fill="currentColor" viewBox="0 0 24 24"><path d="M19.615 3.184c-3.604-.246-11.631-.245-15.23 0-3.897.266-4.356 2.62-4.385 8.816.029 6.185.484 8.549 4.385 8.816 3.6.245 11.626.246 15.23 0 3.897-.266 4.356-2.62 4.385-8.816-.029-6.185-.484-8.549-4.385-8.816zm-10.615 12.816v-8l8 3.993-8 4.007z"/></svg>
+      );
+      
+      const label = isWebsite ? 'Visit website' : isInstagram ? 'View Instagram' : 'Watch on YouTube';
+
+      discoveryContent = (
+        <a href={priorityLink.url} target="_blank" rel="noopener noreferrer" className="mt-1 flex items-center gap-3 rounded-xl border border-amber-200/80 bg-white/50 p-3 shadow-sm backdrop-blur-md transition-all hover:scale-[1.02] hover:border-amber-300 hover:bg-white/70 hover:shadow">
+          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white shadow-sm border border-stone-100">
+            {icon}
+          </div>
+          <span className="text-sm font-medium text-stone-800">{label}</span>
+          <span className="ml-auto text-stone-400">→</span>
+        </a>
+      );
+    } else if (featuredArtist.bioPlainPreview) {
+      discoveryContent = (
+        <p className="text-xs leading-relaxed text-stone-500">
+          {featuredArtist.bioPlainPreview}
+          <Link href={`/artists/${featuredArtist.slug}`} className="ml-1 text-amber-700 hover:underline whitespace-nowrap">
+            more
+          </Link>
+        </p>
+      );
+    }
+  }
+
   return (
     <main className="min-h-screen bg-amber-50">
       {ph_reset === "1" && <PostHogReset />}
 
       <div className="bg-gradient-to-br from-amber-900 via-amber-800 to-amber-700 px-6 py-14 text-center text-white sm:py-20">
-        <div className="mb-3 flex justify-center sm:mb-4">
-          <span className="flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-br from-amber-400 via-orange-500 to-amber-700 text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.36),0_12px_24px_rgba(69,26,3,0.28)] ring-1 ring-white/30">
-            <SiteBrandMark className="h-9 w-9" />
-          </span>
-        </div>
+
         <h1 className="mb-3 font-display text-3xl font-bold tracking-tight sm:mb-4 sm:text-5xl">
           {displayConfig.name}
         </h1>
@@ -164,9 +208,7 @@ export default async function HomePage({
                   {collabsRatingsEnabled ? "Happening now" : "Discovery"}
                 </p>
                 {!collabsRatingsEnabled ? (
-                  <p className="text-xs leading-relaxed text-stone-500">
-                    Browse the directory and location explorer to find artists by speciality and area.
-                  </p>
+                  discoveryContent
                 ) : featuredArtist.activeCollabs.length === 0 ? (
                   <p className="text-xs leading-relaxed text-stone-500">
                     They&apos;re between projects - say hello or start something new together.

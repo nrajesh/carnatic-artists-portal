@@ -40,6 +40,8 @@ export type ArtistListing = {
 /** Home spotlight - directory fields plus photo URL and active collab teasers */
 export type FeaturedArtistListing = ArtistListing & {
   activeCollabs: { slug: string; name: string }[];
+  bioPlainPreview?: string;
+  links?: { type: string; url: string }[];
 };
 
 export function specColor(s: Speciality) {
@@ -107,15 +109,21 @@ function toFeaturedArtistListing(
     profilePhotoUrl: string | null;
     specialities: { speciality: Speciality }[];
     bioRichText?: string | null;
-    externalLinks?: { url: string }[];
+    externalLinks?: { url: string; linkType?: string }[];
   },
   listingEmail: string,
   activeCollabs: { slug: string; name: string }[],
 ): FeaturedArtistListing {
+  const bioPlain = a.bioRichText ? stripHtmlForSearch(a.bioRichText).trim() : "";
+  const firstLine = bioPlain ? bioPlain.split('\n')[0].trim() : "";
+  const bioPlainPreview = firstLine.length > 100 ? `${firstLine.slice(0, 100)}...` : firstLine;
+
   return {
-    ...toArtistListing(a, listingEmail),
+    ...toArtistListing(a as any, listingEmail),
     profilePhotoUrl: a.profilePhotoUrl,
     activeCollabs,
+    bioPlainPreview: bioPlainPreview || undefined,
+    links: a.externalLinks?.filter(l => l.linkType).map(l => ({ type: l.linkType!.charAt(0).toUpperCase() + l.linkType!.slice(1), url: l.url })),
   };
 }
 
@@ -181,7 +189,7 @@ export async function getDailyFeaturedArtistForHome(): Promise<FeaturedArtistLis
             orderBy: { displayOrder: "asc" },
             include: { speciality: true },
           },
-          externalLinks: { select: { url: true } },
+    externalLinks: { select: { linkType: true, url: true } },
         },
       },
     },
@@ -201,7 +209,7 @@ export async function getDailyFeaturedArtistForHome(): Promise<FeaturedArtistLis
       orderBy: { displayOrder: "asc" as const },
       include: { speciality: true },
     },
-    externalLinks: { select: { url: true } as const },
+    externalLinks: { select: { linkType: true, url: true } as const },
   };
 
   const vocalists = await db.artist.findMany({

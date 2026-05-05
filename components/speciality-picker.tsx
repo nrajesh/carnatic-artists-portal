@@ -146,7 +146,7 @@ export default function SpecialityPicker({
             className="min-h-[44px] w-full rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-stone-800 placeholder:text-amber-400 focus:outline-none focus:ring-2 focus:ring-amber-400 sm:w-64"
           />
 
-          {open && catalog.length > 0 && (available.length > 0 || customEligible) && (
+          {open && catalog.length > 0 && query.trim().length >= 2 && (available.length > 0 || customEligible) && (
             <ul className="absolute z-20 mt-1 max-h-52 w-full overflow-y-auto rounded-xl border border-stone-200 bg-white shadow-lg sm:w-64">
               {available.map((s) => (
                 <li key={s.name}>
@@ -186,7 +186,7 @@ export default function SpecialityPicker({
 
           {open &&
             catalog.length > 0 &&
-            query.trim().length > 0 &&
+            query.trim().length >= 2 &&
             available.length === 0 &&
             !customEligible && (
               <div className="absolute z-20 mt-1 w-full rounded-xl border border-stone-200 bg-white px-4 py-3 text-sm text-stone-400 shadow-lg sm:w-64">
