@@ -1,7 +1,10 @@
 import Link from "next/link";
 import { cookies } from "next/headers";
 import { notFound } from "next/navigation";
-import { formatDeploymentCalendarDate, formatDeploymentDate } from "@/lib/format-deployment-datetime";
+import {
+  formatDeploymentCalendarDate,
+  formatDeploymentDate,
+} from "@/lib/format-deployment-datetime";
 import { getArtistProfileForAdmin } from "@/lib/queries/admin-artists";
 import { verifySession } from "@/lib/session-jwt";
 import { PortalSectionHeading } from "@/components/portal-section-heading";
@@ -47,8 +50,15 @@ function collabBadgeLabel(status: string) {
   return status;
 }
 
-export default async function AdminArtistDetailPage({ params }: { params: Promise<{ id: string }> }) {
+export default async function AdminArtistDetailPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ id: string }>;
+  searchParams: Promise<{ done?: string; error?: string; email_warning?: string }>;
+}) {
   const { id } = await params;
+  const { done, error: queryError, email_warning: emailWarning } = await searchParams;
   const sessionCookie = (await cookies()).get("session")?.value ?? null;
   const session = sessionCookie ? await verifySession(sessionCookie) : null;
   const artist = await getArtistProfileForAdmin(id);
@@ -58,11 +68,15 @@ export default async function AdminArtistDetailPage({ params }: { params: Promis
     distinctId: session?.artistId ?? "anonymous",
   });
 
-  const completedCollabs = artist.collabs.filter((c) => c.status === "completed" || c.status === "completed_other");
+  const completedCollabs = artist.collabs.filter(
+    (c) => c.status === "completed" || c.status === "completed_other",
+  );
   const activeCollabs = artist.collabs.filter((c) => c.status === "active");
   const avgRating = artist.reviews.length
     ? (artist.reviews.reduce((s, r) => s + r.rating, 0) / artist.reviews.length).toFixed(1)
     : null;
+  const canSendLoginLink = artist.email.trim().length > 0;
+  const emailDeliveryWarning = emailWarning === "1";
 
   const primaryTint = artist.specialities[0]?.color ?? "#92400E";
   const joinedLabel = formatDeploymentDate(artist.createdAt);
@@ -70,8 +84,33 @@ export default async function AdminArtistDetailPage({ params }: { params: Promis
   return (
     <main className="min-h-screen bg-stone-50 px-4 py-8 sm:px-8">
       <div className="mx-auto max-w-3xl">
+        {done === "login_link_sent" ? (
+          <div className="mb-6 space-y-3">
+            <div className="rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-950">
+              {emailDeliveryWarning
+                ? "A new sign-in link token was created for this artist (email was not delivered)."
+                : "A sign-in link email was sent to this artist."}
+            </div>
+            {emailDeliveryWarning ? (
+              <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950">
+                Check <code className="rounded bg-amber-100/80 px-1">RESEND_API_KEY</code> and{" "}
+                <code className="rounded bg-amber-100/80 px-1">RESEND_FROM_EMAIL</code>. The artist
+                can also request a link from the public login page.
+              </div>
+            ) : null}
+          </div>
+        ) : null}
+        {queryError === "send_link_no_email" ? (
+          <div className="mb-6 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950">
+            This artist does not have an email address on file, so a sign-in link could not be
+            generated.
+          </div>
+        ) : null}
         <div className="mb-6 flex items-center gap-3">
-          <Link href="/admin/artists" className="text-sm font-medium text-amber-700 hover:text-amber-900">
+          <Link
+            href="/admin/artists"
+            className="text-sm font-medium text-amber-700 hover:text-amber-900"
+          >
             ← Artists
           </Link>
           <span className="text-stone-300">/</span>
@@ -130,6 +169,18 @@ export default async function AdminArtistDetailPage({ params }: { params: Promis
                 >
                   Edit profile
                 </Link>
+                {canSendLoginLink ? (
+                  <form action={`/api/admin/artists/${artist.id}/send-login-link`} method="POST">
+                    <button
+                      type="submit"
+                      className="cursor-pointer border-0 bg-transparent p-0 text-xs font-medium text-amber-700 underline underline-offset-2 hover:text-amber-900"
+                    >
+                      Send sign-in link
+                    </button>
+                  </form>
+                ) : (
+                  <span className="text-right text-xs text-stone-400">No email on file</span>
+                )}
               </div>
             </div>
 
@@ -216,7 +267,9 @@ export default async function AdminArtistDetailPage({ params }: { params: Promis
                       </p>
                     </div>
                     <div className="flex flex-shrink-0 items-center gap-3">
-                      <span className={`rounded-full border px-2 py-0.5 text-xs font-semibold ${collabBadgeClass(c.status)}`}>
+                      <span
+                        className={`rounded-full border px-2 py-0.5 text-xs font-semibold ${collabBadgeClass(c.status)}`}
+                      >
                         {collabBadgeLabel(c.status)}
                       </span>
                       <Link
@@ -234,30 +287,32 @@ export default async function AdminArtistDetailPage({ params }: { params: Promis
         )}
 
         {collabsRatingsEnabled && (
-        <SectionCard title={`Reviews received (${artist.reviews.length})`}>
-          {artist.reviews.length === 0 ? (
-            <p className="text-sm italic text-stone-400">No reviews yet.</p>
-          ) : (
-            <div className="flex flex-col gap-4">
-              {artist.reviews.map((r) => (
-                <div key={r.id} className="rounded-lg border border-stone-100 p-4">
-                  <div className="mb-2 flex items-start justify-between gap-3">
-                    <div>
-                      <p className="text-sm font-semibold text-stone-800">{r.from}</p>
-                      <p className="mt-0.5 text-xs text-stone-400">
-                        {r.collab} · {r.date}
-                      </p>
+          <SectionCard title={`Reviews received (${artist.reviews.length})`}>
+            {artist.reviews.length === 0 ? (
+              <p className="text-sm italic text-stone-400">No reviews yet.</p>
+            ) : (
+              <div className="flex flex-col gap-4">
+                {artist.reviews.map((r) => (
+                  <div key={r.id} className="rounded-lg border border-stone-100 p-4">
+                    <div className="mb-2 flex items-start justify-between gap-3">
+                      <div>
+                        <p className="text-sm font-semibold text-stone-800">{r.from}</p>
+                        <p className="mt-0.5 text-xs text-stone-400">
+                          {r.collab} · {r.date}
+                        </p>
+                      </div>
+                      <StarRating rating={r.rating} />
                     </div>
-                    <StarRating rating={r.rating} />
+                    {r.comment ? (
+                      <p className="text-sm italic leading-relaxed text-stone-600">
+                        &ldquo;{r.comment}&rdquo;
+                      </p>
+                    ) : null}
                   </div>
-                  {r.comment ? (
-                    <p className="text-sm italic leading-relaxed text-stone-600">&ldquo;{r.comment}&rdquo;</p>
-                  ) : null}
-                </div>
-              ))}
-            </div>
-          )}
-        </SectionCard>
+                ))}
+              </div>
+            )}
+          </SectionCard>
         )}
 
         {artist.links.length > 0 ? (

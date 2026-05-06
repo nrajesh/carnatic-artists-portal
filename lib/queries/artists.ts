@@ -1,13 +1,10 @@
 import { sortAvailabilityEntriesAscending } from "@/lib/availability-calendar";
-import { formatDeploymentDateNumericDay, formatDeploymentMonthYear } from "@/lib/format-deployment-datetime";
 import {
-  type SuspensionMessage,
-  resolveSuspensionMessages,
-} from "@/lib/suspension-thread";
-import {
-  buildArtistKeywordHaystack,
-  stripHtmlForSearch,
-} from "@/lib/artist-directory-search";
+  formatDeploymentDateNumericDay,
+  formatDeploymentMonthYear,
+} from "@/lib/format-deployment-datetime";
+import { type SuspensionMessage, resolveSuspensionMessages } from "@/lib/suspension-thread";
+import { buildArtistKeywordHaystack, stripHtmlForSearch } from "@/lib/artist-directory-search";
 import { profileSocialFromExternalLinks } from "@/lib/artist-profile-links";
 import {
   canRevealContact,
@@ -18,10 +15,7 @@ import {
 import { artistsShareActiveCollab } from "@/lib/collaboration-scope";
 import { getDb } from "@/lib/db";
 import type { PiiVisibility, Speciality } from "@prisma/client";
-import {
-  getLocalCalendarDateForDb,
-  getLocalDayOrdinalForRotation,
-} from "@/lib/local-day";
+import { getLocalCalendarDateForDb, getLocalDayOrdinalForRotation } from "@/lib/local-day";
 
 /** Listing card - matches prior dummy-artists usage in directory UI */
 export type ArtistListing = {
@@ -115,7 +109,7 @@ function toFeaturedArtistListing(
   activeCollabs: { slug: string; name: string }[],
 ): FeaturedArtistListing {
   const bioPlain = a.bioRichText ? stripHtmlForSearch(a.bioRichText).trim() : "";
-  const firstLine = bioPlain ? bioPlain.split('\n')[0].trim() : "";
+  const firstLine = bioPlain ? bioPlain.split("\n")[0].trim() : "";
   const bioPlainPreview = firstLine.length > 100 ? `${firstLine.slice(0, 100)}...` : firstLine;
 
   return {
@@ -123,7 +117,12 @@ function toFeaturedArtistListing(
     profilePhotoUrl: a.profilePhotoUrl,
     activeCollabs,
     bioPlainPreview: bioPlainPreview || undefined,
-    links: a.externalLinks?.filter(l => l.linkType).map(l => ({ type: l.linkType!.charAt(0).toUpperCase() + l.linkType!.slice(1), url: l.url })),
+    links: a.externalLinks
+      ?.filter((l) => l.linkType)
+      .map((l) => ({
+        type: l.linkType!.charAt(0).toUpperCase() + l.linkType!.slice(1),
+        url: l.url,
+      })),
   };
 }
 
@@ -137,7 +136,7 @@ function directoryListingEmail(
 
 export async function listArtistsForDirectory(): Promise<ArtistListing[]> {
   const rows = await getDb().artist.findMany({
-    where: { isSuspended: false },
+    where: { isSuspended: false, isSystemAccount: false },
     include: {
       specialities: {
         orderBy: { displayOrder: "asc" },
@@ -147,16 +146,14 @@ export async function listArtistsForDirectory(): Promise<ArtistListing[]> {
     },
     orderBy: { fullName: "asc" },
   });
-  return rows.map((r) =>
-    toArtistListing(r, directoryListingEmail(r.emailVisibility, r)),
-  );
+  return rows.map((r) => toArtistListing(r, directoryListingEmail(r.emailVisibility, r)));
 }
 
 /** Active artists grouped by province name (must match GeoJSON label, e.g. `properties.naam`). */
 export async function countActiveArtistsByProvince(): Promise<Record<string, number>> {
   const rows = await getDb().artist.groupBy({
     by: ["province"],
-    where: { isSuspended: false },
+    where: { isSuspended: false, isSystemAccount: false },
     _count: { _all: true },
   });
   const out: Record<string, number> = {};
@@ -189,7 +186,7 @@ export async function getDailyFeaturedArtistForHome(): Promise<FeaturedArtistLis
             orderBy: { displayOrder: "asc" },
             include: { speciality: true },
           },
-    externalLinks: { select: { linkType: true, url: true } },
+          externalLinks: { select: { linkType: true, url: true } },
         },
       },
     },
@@ -215,6 +212,7 @@ export async function getDailyFeaturedArtistForHome(): Promise<FeaturedArtistLis
   const vocalists = await db.artist.findMany({
     where: {
       isSuspended: false,
+      isSystemAccount: false,
       specialities: {
         some: {
           speciality: {
@@ -231,7 +229,7 @@ export async function getDailyFeaturedArtistForHome(): Promise<FeaturedArtistLis
     vocalists.length > 0
       ? vocalists
       : await db.artist.findMany({
-          where: { isSuspended: false },
+          where: { isSuspended: false, isSystemAccount: false },
           include: vocalistInclude,
           orderBy: { id: "asc" },
         });
@@ -292,7 +290,7 @@ export async function getArtistBySlug(
   viewer?: { artistId: string; role: "artist" | "admin" } | null,
 ): Promise<ArtistProfileView | null> {
   const artist = await getDb().artist.findFirst({
-    where: { slug, isSuspended: false },
+    where: { slug, isSuspended: false, isSystemAccount: false },
     include: {
       specialities: {
         orderBy: { displayOrder: "asc" },
@@ -387,11 +385,13 @@ export async function getArtistBySlug(
 }
 
 export async function countActiveArtists(): Promise<number> {
-  return getDb().artist.count({ where: { isSuspended: false } });
+  return getDb().artist.count({ where: { isSuspended: false, isSystemAccount: false } });
 }
 
 export async function countOpenToCollabArtists(): Promise<number> {
-  return getDb().artist.count({ where: { isSuspended: false, openToCollab: true } });
+  return getDb().artist.count({
+    where: { isSuspended: false, isSystemAccount: false, openToCollab: true },
+  });
 }
 
 export async function countActiveCollabs(): Promise<number> {
@@ -483,13 +483,16 @@ function formatRelativeTime(from: Date, now: Date): string {
  * Payload is JSON and schema-less per the Notification model, so we
  * defensively pick `text` and `href` fields when present.
  */
-function shapeNotification(n: {
-  id: string;
-  type: string;
-  payload: unknown;
-  isRead: boolean;
-  createdAt: Date;
-}, now: Date): DashboardNotification {
+function shapeNotification(
+  n: {
+    id: string;
+    type: string;
+    payload: unknown;
+    isRead: boolean;
+    createdAt: Date;
+  },
+  now: Date,
+): DashboardNotification {
   const payload =
     n.payload && typeof n.payload === "object" ? (n.payload as Record<string, unknown>) : {};
   const text = typeof payload.text === "string" ? payload.text : `(${n.type})`;
@@ -514,7 +517,9 @@ export async function getArtistFullNameById(artistId: string): Promise<string | 
   return name && name.length > 0 ? name : null;
 }
 
-export async function getArtistDashboardView(artistId: string): Promise<ArtistDashboardView | null> {
+export async function getArtistDashboardView(
+  artistId: string,
+): Promise<ArtistDashboardView | null> {
   const db = getDb();
   const artist = await db.artist.findUnique({
     where: { id: artistId },
@@ -707,7 +712,7 @@ export async function listSpecialities(): Promise<{ name: string; color: string 
 
 export async function getArtistListingBySlug(slug: string): Promise<ArtistListing | null> {
   const row = await getDb().artist.findFirst({
-    where: { slug, isSuspended: false },
+    where: { slug, isSuspended: false, isSystemAccount: false },
     include: {
       specialities: {
         orderBy: { displayOrder: "asc" },

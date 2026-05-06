@@ -1,5 +1,9 @@
 import { sortAvailabilityEntriesAscending } from "@/lib/availability-calendar";
-import { formatDeploymentDate, formatDeploymentDateNumericDay, formatDeploymentMonthYear } from "@/lib/format-deployment-datetime";
+import {
+  formatDeploymentDate,
+  formatDeploymentDateNumericDay,
+  formatDeploymentMonthYear,
+} from "@/lib/format-deployment-datetime";
 import { decryptArtistStoredContact } from "@/lib/artist-pii";
 import { getDb } from "@/lib/db";
 import { type ArtistProfileView, specColor } from "@/lib/queries/artists";
@@ -22,14 +26,16 @@ export type AdminArtistListRow = {
 export async function listArtistsForAdmin(filters?: {
   specialityId?: string;
 }): Promise<AdminArtistListRow[]> {
-  const where =
-    filters?.specialityId !== undefined
+  const where = {
+    isSystemAccount: false,
+    ...(filters?.specialityId !== undefined
       ? {
           specialities: {
             some: { specialityId: filters.specialityId },
           },
         }
-      : undefined;
+      : {}),
+  };
 
   const rows = await getDb().artist.findMany({
     where,
@@ -66,7 +72,10 @@ export type AdminArtistProfileView = ArtistProfileView & {
   createdAt: Date;
 };
 
-function mapCollabRow(artistId: string, c: { id: string; name: string; ownerId: string; status: string; closedAt: Date | null }) {
+function mapCollabRow(
+  artistId: string,
+  c: { id: string; name: string; ownerId: string; status: string; closedAt: Date | null },
+) {
   const isOwner = c.ownerId === artistId;
   return {
     id: c.id,
@@ -86,7 +95,9 @@ function mapCollabRow(artistId: string, c: { id: string; name: string; ownerId: 
 }
 
 /** Admin-only: resolves by UUID or slug; includes suspended artists; merges owned + member collabs. */
-export async function getArtistProfileForAdmin(idOrSlug: string): Promise<AdminArtistProfileView | null> {
+export async function getArtistProfileForAdmin(
+  idOrSlug: string,
+): Promise<AdminArtistProfileView | null> {
   const artist = await getDb().artist.findFirst({
     where: {
       OR: [{ id: idOrSlug }, { slug: idOrSlug }],

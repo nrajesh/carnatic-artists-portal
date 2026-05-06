@@ -53,6 +53,8 @@ model Artist {
   bioRichText        String?
   province           String
   openToCollab       Boolean            @default(true)
+  /** Internal-only account used for admin auth + audit trails; hidden from public artist surfaces. */
+  isSystemAccount    Boolean            @default(false)
   isSuspended        Boolean            @default(false)
   suspensionComment  String?
   /** Admin + artist remarks about suspension; cleared when account is reactivated. */

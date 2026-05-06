@@ -10,9 +10,9 @@
  * Testing framework: Vitest + fast-check (≥100 iterations per property)
  */
 
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { sendResendEmail } from '../resend-email';
-import * as fc from 'fast-check';
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { sendResendEmail } from "../resend-email";
+import * as fc from "fast-check";
 
 // ---------------------------------------------------------------------------
 // Hoisted mock state - must be defined before vi.mock calls
@@ -39,10 +39,18 @@ const mockState = vi.hoisted(() => {
   const state = {
     capturedTokenCreate: null as MockMagicLinkToken | null,
     capturedSessionCreate: null as MockSession | null,
-    capturedUpdateManyArgs: null as { where: Record<string, unknown>; data: Record<string, unknown> } | null,
+    capturedUpdateManyArgs: null as {
+      where: Record<string, unknown>;
+      data: Record<string, unknown>;
+    } | null,
     mockExistingTokens: [] as MockMagicLinkToken[],
     mockArtist: null as { id: string; email: string } | null,
-    mockTokenRecord: null as (MockMagicLinkToken & { artist: { id: string; email: string } }) | null,
+    mockLegacyArtist: null as { id: string; email: string } | null,
+    capturedArtistCreate: null as Record<string, unknown> | null,
+    seedProvince: "Noord-Holland",
+    mockTokenRecord: null as
+      | (MockMagicLinkToken & { artist: { id: string; email: string } })
+      | null,
   };
 
   return state;
@@ -52,24 +60,40 @@ const mockState = vi.hoisted(() => {
 // Mock the DB (hoisted-safe factory)
 // ---------------------------------------------------------------------------
 
-vi.mock('../db', () => {
+vi.mock("../db", () => {
   const mockClient = {
     artist: {
-      findUnique: vi.fn(async () => mockState.mockArtist),
-    },
-    magicLinkToken: {
-      updateMany: vi.fn(async (args: { where: Record<string, unknown>; data: Record<string, unknown> }) => {
-        mockState.capturedUpdateManyArgs = args;
-        // Simulate marking tokens as used
-        for (const token of mockState.mockExistingTokens) {
-          if (token.usedAt === null) {
-            token.usedAt = args.data.usedAt as Date;
-          }
-        }
-        return { count: mockState.mockExistingTokens.length };
+      findUnique: vi.fn(async (args?: { where?: Record<string, unknown> }) => {
+        const where = args?.where ?? {};
+        if ("slug" in where) return null;
+        return mockState.mockArtist;
+      }),
+      findFirst: vi.fn(async (args?: { select?: Record<string, unknown> }) => {
+        if (args?.select?.province) return { province: mockState.seedProvince };
+        return mockState.mockLegacyArtist;
       }),
       create: vi.fn(async (args: { data: Record<string, unknown> }) => {
-        const token = { id: 'new-token-id', ...args.data };
+        const artist = { id: args.data.id ?? "artist-created", ...args.data };
+        mockState.capturedArtistCreate = artist;
+        mockState.mockArtist = artist as typeof mockState.mockArtist;
+        return artist;
+      }),
+    },
+    magicLinkToken: {
+      updateMany: vi.fn(
+        async (args: { where: Record<string, unknown>; data: Record<string, unknown> }) => {
+          mockState.capturedUpdateManyArgs = args;
+          // Simulate marking tokens as used
+          for (const token of mockState.mockExistingTokens) {
+            if (token.usedAt === null) {
+              token.usedAt = args.data.usedAt as Date;
+            }
+          }
+          return { count: mockState.mockExistingTokens.length };
+        },
+      ),
+      create: vi.fn(async (args: { data: Record<string, unknown> }) => {
+        const token = { id: "new-token-id", ...args.data };
         mockState.capturedTokenCreate = token as typeof mockState.capturedTokenCreate;
         return token;
       }),
@@ -78,7 +102,7 @@ vi.mock('../db', () => {
     },
     session: {
       create: vi.fn(async (args: { data: Record<string, unknown> }) => {
-        const session = { id: 'new-session-id', ...args.data };
+        const session = { id: "new-session-id", ...args.data };
         mockState.capturedSessionCreate = session as typeof mockState.capturedSessionCreate;
         return session;
       }),
@@ -90,7 +114,7 @@ vi.mock('../db', () => {
 });
 
 // Mock transactional email helper so no real HTTP calls are made
-vi.mock('../resend-email', () => ({
+vi.mock("../resend-email", () => ({
   sendResendEmail: vi.fn().mockResolvedValue(undefined),
 }));
 
@@ -98,7 +122,7 @@ vi.mock('../resend-email', () => ({
 // Import the module under test AFTER mocks are set up
 // ---------------------------------------------------------------------------
 
-import { issueMagicLink, verifyMagicLink } from '../auth';
+import { issueMagicLink, verifyMagicLink } from "../auth";
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -110,6 +134,9 @@ function resetState() {
   mockState.capturedUpdateManyArgs = null;
   mockState.mockExistingTokens = [];
   mockState.mockArtist = null;
+  mockState.mockLegacyArtist = null;
+  mockState.capturedArtistCreate = null;
+  mockState.seedProvince = "Noord-Holland";
   mockState.mockTokenRecord = null;
 }
 
@@ -122,27 +149,28 @@ const arbDate = fc.integer({ min: 946684800000, max: 4102444800000 }).map((ms) =
 // Validates: Requirements 2.5
 // ---------------------------------------------------------------------------
 
-describe('Property 6: Magic link token expiry invariant', () => {
+describe("Property 6: Magic link token expiry invariant", () => {
   beforeEach(() => {
     resetState();
-    process.env.RESEND_API_KEY = 'test-key';
-    process.env.NEXT_PUBLIC_APP_URL = 'https://example.com';
+    process.env.RESEND_API_KEY = "test-key";
+    process.env.NEXT_PUBLIC_APP_URL = "https://example.com";
     vi.mocked(sendResendEmail).mockResolvedValue(undefined);
   });
 
   afterEach(() => {
+    delete process.env.ADMIN_EMAILS;
     delete process.env.RESEND_API_KEY;
     delete process.env.NEXT_PUBLIC_APP_URL;
   });
 
-  it('expiresAt === issuedAt + 72 hours for every issued token', async () => {
+  it("expiresAt === issuedAt + 72 hours for every issued token", async () => {
     await fc.assert(
       fc.asyncProperty(arbDate, async (issuedAt) => {
         resetState();
-        mockState.mockArtist = { id: 'artist-1', email: 'test@example.com' };
+        mockState.mockArtist = { id: "artist-1", email: "test@example.com" };
 
         // Pass the frozen "now" directly to issueMagicLink
-        const issued = await issueMagicLink('test@example.com', issuedAt);
+        const issued = await issueMagicLink("test@example.com", issuedAt);
         expect(issued).toEqual({ emailSent: true });
 
         expect(mockState.capturedTokenCreate).not.toBeNull();
@@ -155,21 +183,39 @@ describe('Property 6: Magic link token expiry invariant', () => {
     );
   });
 
-  it('returns send_failed when Resend rejects the request (token still created)', async () => {
+  it("returns send_failed when Resend rejects the request (token still created)", async () => {
     resetState();
-    mockState.mockArtist = { id: 'artist-1', email: 'test@example.com' };
-    vi.mocked(sendResendEmail).mockRejectedValueOnce(new Error('Resend HTTP 401'));
-    const out = await issueMagicLink('test@example.com');
-    expect(out).toEqual({ emailSent: false, reason: 'send_failed' });
+    mockState.mockArtist = { id: "artist-1", email: "test@example.com" };
+    vi.mocked(sendResendEmail).mockRejectedValueOnce(new Error("Resend HTTP 401"));
+    const out = await issueMagicLink("test@example.com");
+    expect(out).toEqual({ emailSent: false, reason: "send_failed" });
     expect(mockState.capturedTokenCreate).not.toBeNull();
   });
 
-  it('uses a compact subject for admin_login_only email style', async () => {
+  it("uses a compact subject for admin_login_only email style", async () => {
     resetState();
-    mockState.mockArtist = { id: 'artist-1', email: 'test@example.com' };
-    await issueMagicLink('test@example.com', undefined, { emailStyle: 'admin_login_only' });
+    mockState.mockArtist = { id: "artist-1", email: "test@example.com" };
+    await issueMagicLink("test@example.com", undefined, { emailStyle: "admin_login_only" });
     const last = vi.mocked(sendResendEmail).mock.calls.at(-1);
     expect(last?.[0].subject).toMatch(/^Sign in ·/);
+  });
+
+  it("bootstraps a hidden artist row for admin emails that are not yet in Artist", async () => {
+    resetState();
+    process.env.ADMIN_EMAILS = "admin@example.com";
+
+    const out = await issueMagicLink("admin@example.com");
+
+    expect(out).toEqual({ emailSent: true });
+    expect(mockState.capturedArtistCreate).toMatchObject({
+      fullName: "Admin",
+      province: "Noord-Holland",
+      openToCollab: false,
+      emailVisibility: "PRIVATE",
+      contactVisibility: "PRIVATE",
+      isSystemAccount: true,
+    });
+    expect(mockState.capturedTokenCreate).not.toBeNull();
   });
 });
 
@@ -178,20 +224,21 @@ describe('Property 6: Magic link token expiry invariant', () => {
 // Validates: Requirements 12.2
 // ---------------------------------------------------------------------------
 
-describe('Property 20: Magic link invalidation on re-issue', () => {
+describe("Property 20: Magic link invalidation on re-issue", () => {
   beforeEach(() => {
     resetState();
-    process.env.RESEND_API_KEY = 'test-key';
-    process.env.NEXT_PUBLIC_APP_URL = 'https://example.com';
+    process.env.RESEND_API_KEY = "test-key";
+    process.env.NEXT_PUBLIC_APP_URL = "https://example.com";
     vi.mocked(sendResendEmail).mockResolvedValue(undefined);
   });
 
   afterEach(() => {
+    delete process.env.ADMIN_EMAILS;
     delete process.env.RESEND_API_KEY;
     delete process.env.NEXT_PUBLIC_APP_URL;
   });
 
-  it('all prior unused tokens have usedAt set after issueMagicLink is called', async () => {
+  it("all prior unused tokens have usedAt set after issueMagicLink is called", async () => {
     // Generate a random count of prior tokens (1-5)
     const arbPriorTokenCount = fc.integer({ min: 1, max: 5 });
 
@@ -199,8 +246,8 @@ describe('Property 20: Magic link invalidation on re-issue', () => {
       fc.asyncProperty(arbPriorTokenCount, async (priorCount) => {
         resetState();
 
-        const artistId = 'artist-1';
-        mockState.mockArtist = { id: artistId, email: 'test@example.com' };
+        const artistId = "artist-1";
+        mockState.mockArtist = { id: artistId, email: "test@example.com" };
 
         // Create prior unused tokens with a future expiry
         const now = new Date(1700000000000); // fixed reference point
@@ -213,7 +260,7 @@ describe('Property 20: Magic link invalidation on re-issue', () => {
           usedAt: null,
         }));
 
-        const issued = await issueMagicLink('test@example.com', now);
+        const issued = await issueMagicLink("test@example.com", now);
         expect(issued).toEqual({ emailSent: true });
 
         // invalidatePriorTokens should have been called (via updateMany)
@@ -243,32 +290,32 @@ describe('Property 20: Magic link invalidation on re-issue', () => {
 // Validates: Requirements 12.3
 // ---------------------------------------------------------------------------
 
-describe('Property 21: Session expiry invariant', () => {
+describe("Property 21: Session expiry invariant", () => {
   beforeEach(() => {
     resetState();
   });
 
-  it('expiresAt === createdAt + 30 days for every created session', async () => {
+  it("expiresAt === createdAt + 30 days for every created session", async () => {
     await fc.assert(
       fc.asyncProperty(arbDate, async (createdAt) => {
         resetState();
 
-        const artistId = 'artist-1';
-        const artistEmail = 'test@example.com';
+        const artistId = "artist-1";
+        const artistEmail = "test@example.com";
 
         // Token that is valid (not used, not expired relative to createdAt)
         const tokenExpiresAt = new Date(createdAt.getTime() + 72 * 60 * 60 * 1000);
         mockState.mockTokenRecord = {
-          id: 'token-1',
+          id: "token-1",
           artistId,
-          tokenHash: 'some-hash',
+          tokenHash: "some-hash",
           expiresAt: tokenExpiresAt,
           usedAt: null,
           artist: { id: artistId, email: artistEmail },
         };
 
         // Pass the frozen "now" directly to verifyMagicLink
-        await verifyMagicLink('raw-token-value', createdAt);
+        await verifyMagicLink("raw-token-value", createdAt);
 
         expect(mockState.capturedSessionCreate).not.toBeNull();
         const session = mockState.capturedSessionCreate!;

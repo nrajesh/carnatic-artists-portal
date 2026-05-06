@@ -9,26 +9,27 @@
  *   Artist: GET /api/dev/login?role=artist  → redirects to /dashboard
  */
 
-import { NextRequest, NextResponse } from 'next/server';
-import { signSession } from '@/lib/session-jwt';
-import { getDb } from '@/lib/db';
+import { NextRequest, NextResponse } from "next/server";
+import { signSession } from "@/lib/session-jwt";
+import { getDb } from "@/lib/db";
+import { emailLookupHash, normalizeEmailForLookup } from "@/lib/pii-crypto";
 
 export async function GET(request: NextRequest) {
-  if (process.env.NODE_ENV === 'production') {
-    return NextResponse.json({ error: 'Not available in production.' }, { status: 404 });
+  if (process.env.NODE_ENV === "production") {
+    return NextResponse.json({ error: "Not available in production." }, { status: 404 });
   }
 
-  const role = (request.nextUrl.searchParams.get('role') ?? 'admin') as 'admin' | 'artist';
+  const role = (request.nextUrl.searchParams.get("role") ?? "admin") as "admin" | "artist";
   const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
   let artistId = `dev-${role}-id`;
 
   // For dev-login, prefer a real artist id so pages that rely on DB relations
   // (dashboard/collabs/highlighting) behave like production.
-  if (role === 'artist') {
+  if (role === "artist") {
     try {
       const artist = await getDb().artist.findFirst({
-        where: { isSuspended: false },
-        orderBy: { createdAt: 'asc' },
+        where: { isSuspended: false, isSystemAccount: false },
+        orderBy: { createdAt: "asc" },
         select: { id: true },
       });
       if (artist) {
@@ -38,19 +39,22 @@ export async function GET(request: NextRequest) {
       // Keep fallback synthetic id for DB-less local dev.
     }
   }
-  if (role === 'admin') {
+  if (role === "admin") {
     try {
-      const adminEmails = (process.env.ADMIN_EMAILS ?? '')
-        .split(',')
+      const adminEmails = (process.env.ADMIN_EMAILS ?? "")
+        .split(",")
         .map((e) => e.trim().toLowerCase())
         .filter(Boolean);
+      const adminHashes = adminEmails.map((email) =>
+        emailLookupHash(normalizeEmailForLookup(email)),
+      );
       const adminArtist = adminEmails.length
         ? await getDb().artist.findFirst({
             where: {
               isSuspended: false,
-              email: { in: adminEmails },
+              OR: [{ emailLookupHash: { in: adminHashes } }, { email: { in: adminEmails } }],
             },
-            orderBy: { createdAt: 'asc' },
+            orderBy: { createdAt: "asc" },
             select: { id: true },
           })
         : null;
@@ -71,19 +75,19 @@ export async function GET(request: NextRequest) {
 
   const jwt = await signSession(sessionData);
 
-  const redirectTo = role === 'admin' ? '/admin/dashboard' : '/dashboard';
+  const redirectTo = role === "admin" ? "/admin/dashboard" : "/dashboard";
   const redirectUrl = request.nextUrl.clone();
   redirectUrl.pathname = redirectTo;
-  redirectUrl.searchParams.set('ph_identify', '1');
+  redirectUrl.searchParams.set("ph_identify", "1");
 
   const response = NextResponse.redirect(redirectUrl);
 
-  response.cookies.set('session', jwt, {
+  response.cookies.set("session", jwt, {
     httpOnly: true,
     secure: false,
-    sameSite: 'lax',
+    sameSite: "lax",
     maxAge: 30 * 24 * 60 * 60,
-    path: '/',
+    path: "/",
   });
 
   return response;

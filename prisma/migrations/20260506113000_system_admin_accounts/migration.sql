@@ -1,0 +1,2 @@
+ALTER TABLE "Artist"
+ADD COLUMN "isSystemAccount" BOOLEAN NOT NULL DEFAULT false;
