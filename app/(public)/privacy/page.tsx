@@ -170,13 +170,13 @@ export default async function PrivacyPage({
             <p>
               This portal uses <strong className="text-stone-900">PostHog</strong> to understand how the site is
               used and to improve it for musicians and visitors. The integration records{" "}
-              <strong className="text-stone-900">named events and page views</strong> you trigger while browsing or
+              <strong className="text-stone-900">named events, page views, and pageleave events</strong> you trigger while browsing or
               using logged-in areas (for example: which pages you open, when you save your profile, or when you
               update availability). <strong className="text-stone-900">Automatic “click everything” capture
               (autocapture) is turned off</strong>; only code paths that explicitly call the analytics SDK send data.
             </p>
             <p>
-              Examples of what may be recorded include route changes as page views, artist profile views,
+              Examples of what may be recorded include route changes as page views, browser exits as pageleave events, artist profile views,
               registration submissions, and key actions in the artist or admin dashboards. Event payloads are kept
               minimal and are described at a high level in this policy; the portal operator configures the exact
               PostHog project.
