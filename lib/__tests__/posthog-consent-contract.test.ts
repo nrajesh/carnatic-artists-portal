@@ -36,6 +36,12 @@ describe("PostHog consent contracts (source)", () => {
     expect(src).toMatch(/\[pathname,\s*searchParams\]/);
   });
 
+  it("initPostHog enables PostHog pageleave tracking while keeping manual pageviews", () => {
+    const src = read("lib/analytics-client.ts");
+    expect(src).toContain("capture_pageview: false");
+    expect(src).toContain("capture_pageleave: true");
+  });
+
   it("cookie-based consent components do not use noop useSyncExternalStore for document-driven state", () => {
     const paths = [
       "components/analytics-opt-out-footer-note.tsx",

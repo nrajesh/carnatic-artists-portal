@@ -85,6 +85,9 @@ export const getDb = requestMemo((): PrismaClient => {
   const connectionString = resolveDatabaseUrl();
   // Pass `PoolConfig`, not a `Pool` - the adapter does `new Pool(config)` internally; a Pool
   // instance is invalid config and Neon falls back to localhost (your Worker log error).
-  const adapter = new PrismaNeon({ connectionString, maxUses: 1 });
+  // `maxUses: 1` was too aggressive here: multi-query request flows like the home page could trip
+  // Neon websocket `ErrorEvent` failures after the first couple of statements. A modest reuse limit
+  // keeps connection churn low without letting one socket stick around indefinitely.
+  const adapter = new PrismaNeon({ connectionString, maxUses: 10 });
   return new PrismaClient({ adapter } as ConstructorParameters<typeof PrismaClient>[0]);
 });

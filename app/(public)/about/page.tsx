@@ -597,7 +597,7 @@ export default async function AboutPage() {
             <div className="bg-white rounded-xl border border-stone-200 p-6">
               <p className="font-semibold text-stone-800 mb-3">What is captured</p>
               <ul className="text-sm text-stone-600 leading-relaxed list-disc pl-5 space-y-2">
-                <li>Explicit product events plus <strong>manual</strong> page views (autocapture stays off).</li>
+                <li>Explicit product events plus <strong>manual</strong> page views and PostHog pageleave events (autocapture stays off).</li>
                 <li>Browser traffic in production uses a <strong>same-origin</strong> <code className="text-stone-800">/api/ph</code> proxy so ingest hosts are not embedded in the client bundle.</li>
                 <li>Server routes can emit events with <code className="text-stone-800">artistId</code> as the PostHog distinct id - not email.</li>
                 <li>
@@ -650,7 +650,7 @@ export default async function AboutPage() {
                   ["Rich text",      "Tiptap",                         "ProseMirror-based, Unicode-safe, extensible"],
                   ["Maps",           "D3.js + GeoJSON",                "Configurable, no external map API"],
                   ["i18n",           "next-intl",                      "File-based JSON translations, locale switching"],
-                  ["Analytics",      "PostHog (optional)",             "Explicit events, manual pageviews, /api/ph proxy, Session Replay env-gated"],
+                  ["Analytics",      "PostHog (optional)",             "Explicit events, manual pageviews + pageleave, /api/ph proxy, Session Replay env-gated"],
                   ["Testing",        "Vitest + fast-check",            "Unit + property-based tests (28 correctness properties)"],
                 ].map(([layer, tech, why]) => (
                   <tr key={layer} className="hover:bg-stone-50">
