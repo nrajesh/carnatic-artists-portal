@@ -28,6 +28,13 @@ describe("PostHog consent contracts (source)", () => {
     expect(initIdx).toBeLessThan(syncIdx);
   });
 
+  it("PostHogProvider wraps route-aware analytics components in Suspense", () => {
+    const src = read("components/posthog-provider.tsx");
+    expect(src).toContain("<Suspense fallback={null}>");
+    expect(src).toContain("<PageViewTracker />");
+    expect(src).toContain("<PosthogRoutePrivacySync />");
+  });
+
   it("PosthogRoutePrivacySync re-runs privacy sync when the URL changes", () => {
     const src = read("components/posthog-route-privacy-sync.tsx");
     expect(src).toContain("usePathname");
@@ -36,10 +43,30 @@ describe("PostHog consent contracts (source)", () => {
     expect(src).toMatch(/\[pathname,\s*searchParams\]/);
   });
 
-  it("initPostHog enables PostHog pageleave tracking while keeping manual pageviews", () => {
+  it("initPostHog keeps PostHog automatic page lifecycle tracking off for manual SPA control", () => {
     const src = read("lib/analytics-client.ts");
     expect(src).toContain("capture_pageview: false");
-    expect(src).toContain("capture_pageleave: true");
+    expect(src).toContain("capture_pageleave: false");
+  });
+
+  it("dev-only PostHog privacy-signal bypass is wired for local testing", () => {
+    const src = read("lib/analytics-privacy-signals.ts");
+    expect(src).toContain("NEXT_PUBLIC_POSTHOG_IGNORE_BROWSER_PRIVACY_SIGNALS_IN_DEV");
+    expect(src).toContain('process.env.NODE_ENV === "development"');
+    expect(src).toContain("if (ignoreBrowserPrivacySignalsInDev()) return false;");
+  });
+
+  it("PageViewTracker stores the current URL before the PostHog readiness check and captures manual pageleave events", () => {
+    const src = read("components/page-view-tracker.tsx");
+    expect(src).toContain("previousUrlRef.current = url");
+    expect(src).toContain("if (!isPosthogClientReady())");
+    expect(src.indexOf("previousUrlRef.current = url")).toBeLessThan(src.indexOf("if (!isPosthogClientReady())"));
+    expect(src).toContain("posthog.capture('$pageview'");
+    expect(src).toContain("posthog.capture('$pageleave'");
+    expect(src).toContain("document.addEventListener('visibilitychange'");
+    expect(src).toContain("globalThis.addEventListener('pagehide'");
+    expect(src).toContain("transport: 'sendBeacon'");
+    expect(src).toContain("routeChangeCaptureOptions()");
   });
 
   it("cookie-based consent components do not use noop useSyncExternalStore for document-driven state", () => {

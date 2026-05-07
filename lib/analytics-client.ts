@@ -91,7 +91,7 @@ export function initPostHog(): void {
     api_host: posthogApiHost(),
     ui_host: posthogUiHost(),
     capture_pageview: false,
-    capture_pageleave: true,
+    capture_pageleave: false,
     autocapture: false,
     mask_all_text: true,
     persistence: 'localStorage+cookie',

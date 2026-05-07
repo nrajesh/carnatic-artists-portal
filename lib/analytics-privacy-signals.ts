@@ -1,5 +1,12 @@
 import { hasAnalyticsOptOutCookie } from "@/lib/analytics-opt-out-cookie";
 
+function ignoreBrowserPrivacySignalsInDev(): boolean {
+  return (
+    process.env.NODE_ENV === "development" &&
+    process.env.NEXT_PUBLIC_POSTHOG_IGNORE_BROWSER_PRIVACY_SIGNALS_IN_DEV === "true"
+  );
+}
+
 /**
  * Mirrors PostHog's DNT handling (see `posthog-js` ConsentManager._getDnt / isYesLike):
  * browsers may report "1", "yes", or legacy variants.
@@ -26,6 +33,7 @@ export function hasNavigatorGlobalPrivacyControl(): boolean {
 
 /** Client-only navigator signals that disable analytics even without an opt-out cookie. */
 export function hasNavigatorPrivacySignalOptOut(): boolean {
+  if (ignoreBrowserPrivacySignalsInDev()) return false;
   return hasNavigatorAnalyticsDnt() || hasNavigatorGlobalPrivacyControl();
 }
 
