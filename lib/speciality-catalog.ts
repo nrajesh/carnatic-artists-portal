@@ -1,4 +1,4 @@
-/** Default colours when a speciality is auto-created during registration approval. */
+/** Fallback colours when random auto-created speciality colours cannot be generated. */
 export const DEFAULT_SPECIALITY_PRIMARY = "#92400E";
 export const DEFAULT_SPECIALITY_TEXT = "#FFFFFF";
 

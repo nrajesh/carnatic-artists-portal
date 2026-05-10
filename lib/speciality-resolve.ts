@@ -10,7 +10,7 @@ import {
 } from "@/lib/speciality-random-colors";
 
 /**
- * Find an existing speciality by case-insensitive name, or create one with default theme colours.
+ * Find an existing speciality by case-insensitive name, or create one with random accessible theme colours.
  * Used when approving a registration so custom applicant labels become catalogue rows + artist links.
  */
 export async function resolveSpecialityForApproval(
@@ -32,11 +32,10 @@ export async function resolveSpecialityForApproval(
   const forbidden = new Set(
     occupiedRows.map((r) => specialityColorPairKey(r.primaryColor, r.textColor)),
   );
-  const picked =
-    pickRandomUniqueSpecialityColorPair(forbidden) ?? {
-      primaryColor: DEFAULT_SPECIALITY_PRIMARY,
-      textColor: DEFAULT_SPECIALITY_TEXT,
-    };
+  const picked = pickRandomUniqueSpecialityColorPair(forbidden) ?? {
+    primaryColor: DEFAULT_SPECIALITY_PRIMARY,
+    textColor: DEFAULT_SPECIALITY_TEXT,
+  };
 
   const created = await db.speciality.create({
     data: {

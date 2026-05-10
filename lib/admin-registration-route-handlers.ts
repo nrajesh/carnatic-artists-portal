@@ -43,6 +43,41 @@ export type SendLoginLinkForApprovedResult =
   | { ok: true; magicLinkEmailSent: boolean }
   | { ok: false; error: "NOT_FOUND" | "NOT_APPROVED" | "NO_ARTIST" };
 
+export type UpdateRegistrationSpecialitiesResult =
+  | { ok: true }
+  | { ok: false; error: "NOT_FOUND" | "ALREADY_APPROVED" };
+
+export async function updateRegistrationSpecialitiesRouteStyle(options: {
+  registrationId: string;
+  specialityNames: string[];
+}): Promise<UpdateRegistrationSpecialitiesResult> {
+  const { registrationId, specialityNames } = options;
+  const db = getDb();
+
+  const registration = await db.registrationRequest.findUnique({
+    where: { id: registrationId },
+    select: { id: true, status: true },
+  });
+  if (!registration) return { ok: false, error: "NOT_FOUND" };
+  if (registration.status === "approved") return { ok: false, error: "ALREADY_APPROVED" };
+
+  for (const specialityName of specialityNames) {
+    await resolveSpecialityForApproval(db, specialityName);
+  }
+
+  await db.registrationRequest.update({
+    where: { id: registrationId },
+    data: {
+      specialities: {
+        deleteMany: {},
+        create: specialityNames.map((specialityName) => ({ specialityName })),
+      },
+    },
+  });
+
+  return { ok: true };
+}
+
 /**
  * For **approved** registrations only: emails a simple sign-in link (does not change status or review fields).
  */
@@ -73,10 +108,18 @@ export async function approvePendingRegistrationRouteStyle(options: {
   registrationId: string;
   reviewerId: string | undefined;
   reviewComment: string;
+  specialityNames?: string[];
   analyticsDistinctId: string;
   baseUrl?: string;
 }): Promise<ApproveRouteResult> {
-  const { registrationId, reviewerId, reviewComment, analyticsDistinctId, baseUrl } = options;
+  const {
+    registrationId,
+    reviewerId,
+    reviewComment,
+    specialityNames,
+    analyticsDistinctId,
+    baseUrl,
+  } = options;
   const db = getDb();
 
   const registration = await db.registrationRequest.findUnique({
@@ -95,6 +138,8 @@ export async function approvePendingRegistrationRouteStyle(options: {
   const plain = decryptRegistrationStoredContact(registration);
   const artistId = randomUUID();
   const pii = buildEncryptedArtistPiiPayload(artistId, plain.email, plain.contactNumber);
+  const selectedSpecialityNames =
+    specialityNames ?? registration.specialities.map((spec) => spec.specialityName);
 
   const artist = await db.artist.create({
     data: {
@@ -114,9 +159,9 @@ export async function approvePendingRegistrationRouteStyle(options: {
     },
   });
 
-  for (let i = 0; i < registration.specialities.length; i++) {
-    const spec = registration.specialities[i];
-    const speciality = await resolveSpecialityForApproval(db, spec.specialityName);
+  for (let i = 0; i < selectedSpecialityNames.length; i++) {
+    const specialityName = selectedSpecialityNames[i]!;
+    const speciality = await resolveSpecialityForApproval(db, specialityName);
     if (speciality) {
       await db.artistSpeciality.create({
         data: {
@@ -147,6 +192,14 @@ export async function approvePendingRegistrationRouteStyle(options: {
       reviewedAt: now,
       reviewedBy: reviewerId ?? undefined,
       reviewComment,
+      ...(specialityNames
+        ? {
+            specialities: {
+              deleteMany: {},
+              create: selectedSpecialityNames.map((specialityName) => ({ specialityName })),
+            },
+          }
+        : {}),
     },
   });
 
@@ -180,7 +233,9 @@ export async function approvePendingRegistrationRouteStyle(options: {
   return { ok: true, magicLinkEmailSent: magicLinkResult.emailSent };
 }
 
-export type RejectRouteResult = { ok: true } | { ok: false; error: "NOT_FOUND" | "ALREADY_PROCESSED" };
+export type RejectRouteResult =
+  | { ok: true }
+  | { ok: false; error: "NOT_FOUND" | "ALREADY_PROCESSED" };
 
 /**
  * Rejects one pending registration (same behaviour as POST /api/admin/registrations/[id]/reject).

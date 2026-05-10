@@ -10,28 +10,26 @@ import {
   approvePendingRegistrationRouteStyle,
   revalidateAfterRegistrationMutation,
 } from "@/lib/admin-registration-route-handlers";
-import { parseRegistrationReviewComment } from "@/lib/admin-review-comment";
+import { parseRegistrationApprovalPayload } from "@/lib/admin-review-comment";
 
-export { generateRegistrationArtistSlug as generateSlug } from "@/lib/admin-registration-route-handlers";
-
-export async function POST(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> },
-) {
+export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const reviewerId = request.headers.get("x-artist-id");
   const html = isBrowserDocumentNavigation(request);
 
-  const parsedComment = await parseRegistrationReviewComment(request, "approve");
-  if (!parsedComment.ok) {
-    if (html) return redirectPublicPath(request, `/admin/registrations/${id}?error=invalid_comment`);
-    return NextResponse.json({ error: parsedComment.error }, { status: parsedComment.status });
+  const parsedApproval = await parseRegistrationApprovalPayload(request);
+  if (!parsedApproval.ok) {
+    const errorParam =
+      parsedApproval.error === "INVALID_SPECIALITIES" ? "invalid_specialities" : "invalid_comment";
+    if (html) return redirectPublicPath(request, `/admin/registrations/${id}?error=${errorParam}`);
+    return NextResponse.json({ error: parsedApproval.error }, { status: parsedApproval.status });
   }
 
   const result = await approvePendingRegistrationRouteStyle({
     registrationId: id,
     reviewerId: reviewerId ?? undefined,
-    reviewComment: parsedComment.comment,
+    reviewComment: parsedApproval.comment,
+    specialityNames: parsedApproval.specialities,
     analyticsDistinctId: request.headers.get("x-artist-id") ?? "unknown-admin",
     baseUrl: request.nextUrl.origin,
   });
@@ -39,9 +37,13 @@ export async function POST(
   if (result.ok === false) {
     if (result.error === "NOT_FOUND") {
       if (html) return redirectPublicPath(request, "/admin/registrations?error=not_found");
-      return NextResponse.json({ error: "NOT_FOUND", message: "Registration not found." }, { status: 404 });
+      return NextResponse.json(
+        { error: "NOT_FOUND", message: "Registration not found." },
+        { status: 404 },
+      );
     }
-    if (html) return redirectPublicPath(request, `/admin/registrations/${id}?error=already_processed`);
+    if (html)
+      return redirectPublicPath(request, `/admin/registrations/${id}?error=already_processed`);
     return NextResponse.json(
       { error: "ALREADY_PROCESSED", message: "This registration has already been processed." },
       { status: 404 },

@@ -6,13 +6,35 @@ import { getDb } from "@/lib/db";
 import { PortalSectionHeading } from "@/components/portal-section-heading";
 import { normalizeBioHtmlForDisplay } from "@/lib/bio-html-display";
 import { ArtistPhoneContactInline } from "@/components/artist-visible-phone-contact";
+import { RegistrationSpecialitiesApprovalFields } from "./registration-specialities-approval-fields";
 
-const LINK_LABELS: Record<string, string> = { linkedin: "LinkedIn", instagram: "Instagram", facebook: "Facebook", twitter: "Twitter/X", youtube: "YouTube", website: "Website" };
+const LINK_LABELS: Record<string, string> = {
+  linkedin: "LinkedIn",
+  instagram: "Instagram",
+  facebook: "Facebook",
+  twitter: "Twitter/X",
+  youtube: "YouTube",
+  website: "Website",
+};
 
 function StatusBadge({ status }: { status: string }) {
-  const styles: Record<string, string> = { pending: "bg-amber-100 text-amber-800 border border-amber-300", approved: "bg-green-100 text-green-800 border border-green-300", rejected: "bg-red-100 text-red-800 border border-red-300" };
-  const labels: Record<string, string> = { pending: "Pending", approved: "Approved", rejected: "Rejected" };
-  return <span className={`inline-block rounded-full px-3 py-1 text-sm font-semibold ${styles[status] ?? "bg-stone-100 text-stone-600"}`}>{labels[status] ?? status}</span>;
+  const styles: Record<string, string> = {
+    pending: "bg-amber-100 text-amber-800 border border-amber-300",
+    approved: "bg-green-100 text-green-800 border border-green-300",
+    rejected: "bg-red-100 text-red-800 border border-red-300",
+  };
+  const labels: Record<string, string> = {
+    pending: "Pending",
+    approved: "Approved",
+    rejected: "Rejected",
+  };
+  return (
+    <span
+      className={`inline-block rounded-full px-3 py-1 text-sm font-semibold ${styles[status] ?? "bg-stone-100 text-stone-600"}`}
+    >
+      {labels[status] ?? status}
+    </span>
+  );
 }
 
 export default async function ReviewRegistrationPage({
@@ -25,6 +47,7 @@ export default async function ReviewRegistrationPage({
   const { id } = await params;
   const { done, error: queryError, email_warning: emailWarning } = await searchParams;
   const commentUpdated = done === "comment_updated";
+  const specialitiesUpdated = done === "specialities_updated";
   const emailDeliveryWarning = emailWarning === "1";
   const [reg, catalogueRows] = await Promise.all([
     getDb().registrationRequest.findUnique({
@@ -41,7 +64,10 @@ export default async function ReviewRegistrationPage({
         },
       },
     }),
-    getDb().speciality.findMany({ select: { name: true } }),
+    getDb().speciality.findMany({
+      orderBy: { name: "asc" },
+      select: { name: true, primaryColor: true },
+    }),
   ]);
   if (!reg) notFound();
 
@@ -52,10 +78,16 @@ export default async function ReviewRegistrationPage({
   const canApprove = reg.status === "pending" || reg.status === "rejected";
   const canReject = reg.status === "pending";
   const canSendLoginLink = reg.status === "approved";
+  const approvalFormId = `approve-registration-${reg.id}`;
 
   return (
     <main className="min-h-screen bg-stone-50 px-4 py-8 sm:px-8">
-      <Link href="/admin/registrations" className="mb-6 inline-flex items-center gap-1 text-sm text-amber-700 hover:text-amber-900 font-medium">← Back to registrations</Link>
+      <Link
+        href="/admin/registrations"
+        className="mb-6 inline-flex items-center gap-1 text-sm text-amber-700 hover:text-amber-900 font-medium"
+      >
+        ← Back to registrations
+      </Link>
 
       {done === "approved" ? (
         <div className="mx-auto mb-6 max-w-3xl space-y-3">
@@ -65,9 +97,11 @@ export default async function ReviewRegistrationPage({
           </div>
           {emailDeliveryWarning ? (
             <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950">
-              Resend did not accept the sign-in email (often an invalid <code className="rounded bg-amber-100/80 px-1">RESEND_API_KEY</code> or an unverified{" "}
-              <code className="rounded bg-amber-100/80 px-1">RESEND_FROM_EMAIL</code> domain). A token was still created; after fixing env vars, the artist can use
-              the public login page to request a new magic link.
+              Resend did not accept the sign-in email (often an invalid{" "}
+              <code className="rounded bg-amber-100/80 px-1">RESEND_API_KEY</code> or an unverified{" "}
+              <code className="rounded bg-amber-100/80 px-1">RESEND_FROM_EMAIL</code> domain). A
+              token was still created; after fixing env vars, the artist can use the public login
+              page to request a new magic link.
             </div>
           ) : null}
         </div>
@@ -82,7 +116,8 @@ export default async function ReviewRegistrationPage({
           {emailDeliveryWarning ? (
             <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950">
               Check <code className="rounded bg-amber-100/80 px-1">RESEND_API_KEY</code> and{" "}
-              <code className="rounded bg-amber-100/80 px-1">RESEND_FROM_EMAIL</code>. The artist can also use the public login page to request a link.
+              <code className="rounded bg-amber-100/80 px-1">RESEND_FROM_EMAIL</code>. The artist
+              can also use the public login page to request a link.
             </div>
           ) : null}
         </div>
@@ -95,6 +130,11 @@ export default async function ReviewRegistrationPage({
       {commentUpdated ? (
         <div className="mx-auto mb-6 max-w-3xl rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-950">
           Review note saved.
+        </div>
+      ) : null}
+      {specialitiesUpdated ? (
+        <div className="mx-auto mb-6 max-w-3xl rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-950">
+          Specialities saved. Approval will use the updated list.
         </div>
       ) : null}
       {queryError === "already_processed" ? (
@@ -112,9 +152,20 @@ export default async function ReviewRegistrationPage({
           The review comment could not be saved (too long or invalid). Please try again.
         </div>
       ) : null}
+      {queryError === "invalid_specialities" ? (
+        <div className="mx-auto mb-6 max-w-3xl rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-950">
+          Pick one to three specialities before approving. Custom names must be 2-80 characters.
+        </div>
+      ) : null}
+      {queryError === "specialities_locked" ? (
+        <div className="mx-auto mb-6 max-w-3xl rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950">
+          This registration is already approved. Edit the artist profile instead.
+        </div>
+      ) : null}
       {queryError === "comment_amend_pending" ? (
         <div className="mx-auto mb-6 max-w-3xl rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950">
-          This registration is still pending. Use Approve or Reject below instead of updating the note only.
+          This registration is still pending. Use Approve or Reject below instead of updating the
+          note only.
         </div>
       ) : null}
       {queryError === "send_link_not_approved" ? (
@@ -124,7 +175,8 @@ export default async function ReviewRegistrationPage({
       ) : null}
       {queryError === "send_link_no_artist" ? (
         <div className="mx-auto mb-6 max-w-3xl rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950">
-          No artist account was found for this registration email, so a sign-in link could not be generated.
+          No artist account was found for this registration email, so a sign-in link could not be
+          generated.
         </div>
       ) : null}
 
@@ -141,7 +193,9 @@ export default async function ReviewRegistrationPage({
 
         <div className="mb-6 grid gap-4 sm:grid-cols-2">
           <div className="flex flex-col gap-1">
-            <span className="text-xs font-semibold text-stone-500 uppercase tracking-wide">Profile Photo</span>
+            <span className="text-xs font-semibold text-stone-500 uppercase tracking-wide">
+              Profile Photo
+            </span>
             {reg.profilePhotoUrl ? (
               /* eslint-disable-next-line @next/next/no-img-element */
               <img
@@ -155,7 +209,9 @@ export default async function ReviewRegistrationPage({
           </div>
           {reg.backgroundImageUrl && (
             <div className="flex flex-col gap-1">
-              <span className="text-xs font-semibold text-stone-500 uppercase tracking-wide">Background Image</span>
+              <span className="text-xs font-semibold text-stone-500 uppercase tracking-wide">
+                Background Image
+              </span>
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src={reg.backgroundImageUrl}
@@ -166,8 +222,7 @@ export default async function ReviewRegistrationPage({
           )}
           {reg.reviewedAt && (
             <div className="sm:col-span-2 text-xs text-stone-500">
-              Reviewed{" "}
-              {formatDeploymentRegistrationDate(reg.reviewedAt)}
+              Reviewed {formatDeploymentRegistrationDate(reg.reviewedAt)}
               {reg.reviewer?.fullName ? ` by ${reg.reviewer.fullName}` : ""}
             </div>
           )}
@@ -175,9 +230,16 @@ export default async function ReviewRegistrationPage({
 
         <div className="rounded-xl border border-stone-200 bg-white p-6 shadow-sm mb-6">
           <dl className="grid gap-4 sm:grid-cols-2">
-            <div><dt className="text-xs font-semibold text-stone-500 uppercase tracking-wide mb-1">Email</dt><dd className="text-stone-800">{regContact.email}</dd></div>
             <div>
-              <dt className="text-xs font-semibold text-stone-500 uppercase tracking-wide mb-1">Contact</dt>
+              <dt className="text-xs font-semibold text-stone-500 uppercase tracking-wide mb-1">
+                Email
+              </dt>
+              <dd className="text-stone-800">{regContact.email}</dd>
+            </div>
+            <div>
+              <dt className="text-xs font-semibold text-stone-500 uppercase tracking-wide mb-1">
+                Contact
+              </dt>
               <dd className="text-stone-800">
                 {regContact.contactNumber.trim() ? (
                   <ArtistPhoneContactInline
@@ -190,13 +252,21 @@ export default async function ReviewRegistrationPage({
               </dd>
             </div>
             <div>
-              <dt className="text-xs font-semibold text-stone-500 uppercase tracking-wide mb-1">Location</dt>
+              <dt className="text-xs font-semibold text-stone-500 uppercase tracking-wide mb-1">
+                Location
+              </dt>
               <dd className="text-stone-800">
-                {reg.province.trim() ? reg.province : <span className="text-stone-400">Not provided</span>}
+                {reg.province.trim() ? (
+                  reg.province
+                ) : (
+                  <span className="text-stone-400">Not provided</span>
+                )}
               </dd>
             </div>
             <div className="sm:col-span-2">
-              <dt className="text-xs font-semibold text-stone-500 uppercase tracking-wide mb-1">Specialities</dt>
+              <dt className="text-xs font-semibold text-stone-500 uppercase tracking-wide mb-1">
+                Specialities
+              </dt>
               <dd className="flex flex-wrap gap-2">
                 {reg.specialities.map((spec) => {
                   const known = catalogueLower.has(spec.specialityName.trim().toLowerCase());
@@ -210,16 +280,22 @@ export default async function ReviewRegistrationPage({
                       }`}
                     >
                       {spec.specialityName}
-                      {!known ? <span className="ml-1 text-xs font-normal">(not in catalogue)</span> : null}
+                      {!known ? (
+                        <span className="ml-1 text-xs font-normal">(not in catalogue)</span>
+                      ) : null}
                     </span>
                   );
                 })}
               </dd>
               <p className="mt-3 text-xs text-stone-500">
-                <Link href="/admin/specialities" className="font-medium text-amber-700 underline underline-offset-2 hover:text-amber-900">
-                  Manage specialities
+                Adjust these in the approval panel below. New names entered there are added to the{" "}
+                <Link
+                  href="/admin/specialities"
+                  className="font-medium text-amber-700 underline underline-offset-2 hover:text-amber-900"
+                >
+                  speciality catalogue
                 </Link>{" "}
-                to add missing names and colours before approval. If you approve first, new names are created automatically with default colours and can be edited later.
+                automatically with random accessible colours.
               </p>
             </div>
           </dl>
@@ -253,7 +329,9 @@ export default async function ReviewRegistrationPage({
                     rel="noopener noreferrer"
                     className="break-all text-sm font-medium text-amber-700 underline underline-offset-2 hover:text-amber-900"
                   >
-                    <span className="mr-2 text-xs text-stone-400">{LINK_LABELS[link.linkType] ?? link.linkType}</span>
+                    <span className="mr-2 text-xs text-stone-400">
+                      {LINK_LABELS[link.linkType] ?? link.linkType}
+                    </span>
                     {link.url}
                   </a>
                 </li>
@@ -267,15 +345,36 @@ export default async function ReviewRegistrationPage({
           {canApprove || canReject ? (
             <div className="space-y-8">
               {canApprove ? (
-                <form action={`/api/admin/registrations/${reg.id}/approve`} method="POST" className="rounded-xl border border-green-200 bg-white p-5 shadow-sm">
+                <RegistrationSpecialitiesApprovalFields
+                  initialSpecialities={reg.specialities.map((spec) => spec.specialityName)}
+                  catalog={catalogueRows.map((spec) => ({
+                    name: spec.name,
+                    color: spec.primaryColor,
+                  }))}
+                  saveAction={`/api/admin/registrations/${reg.id}/specialities`}
+                  approvalFormId={approvalFormId}
+                />
+              ) : null}
+              {canApprove ? (
+                <form
+                  id={approvalFormId}
+                  action={`/api/admin/registrations/${reg.id}/approve`}
+                  method="POST"
+                  className="rounded-xl border border-green-200 bg-white p-5 shadow-sm"
+                >
                   <h2 className="mb-3 text-sm font-semibold text-stone-800">Approve</h2>
                   {reg.status === "rejected" ? (
                     <p className="mb-3 text-sm text-stone-600">
-                      This application was previously rejected. Approving will create the artist account and email a login link, same as for a new pending request.
+                      This application was previously rejected. Approving will create the artist
+                      account and email a login link, same as for a new pending request.
                     </p>
                   ) : null}
-                  <label htmlFor="approve-comment" className="mb-1 block text-xs font-semibold uppercase tracking-wide text-stone-500">
-                    Review note <span className="font-normal normal-case text-stone-400">(optional)</span>
+                  <label
+                    htmlFor="approve-comment"
+                    className="mb-1 block text-xs font-semibold uppercase tracking-wide text-stone-500"
+                  >
+                    Review note{" "}
+                    <span className="font-normal normal-case text-stone-400">(optional)</span>
                   </label>
                   <textarea
                     id="approve-comment"
@@ -285,15 +384,25 @@ export default async function ReviewRegistrationPage({
                     placeholder="Leave blank to store as “Approved”, or add a short internal note."
                     className="mb-4 w-full max-w-xl rounded-lg border border-stone-300 px-3 py-2 text-sm text-stone-800 focus:outline-none focus:ring-2 focus:ring-green-500"
                   />
-                  <button type="submit" className="rounded-lg bg-green-600 px-6 py-3 text-sm font-semibold text-white hover:bg-green-700 min-h-[44px]">
+                  <button
+                    type="submit"
+                    className="rounded-lg bg-green-600 px-6 py-3 text-sm font-semibold text-white hover:bg-green-700 min-h-[44px]"
+                  >
                     Approve application
                   </button>
                 </form>
               ) : null}
               {canReject ? (
-                <form action={`/api/admin/registrations/${reg.id}/reject`} method="POST" className="rounded-xl border border-red-200 bg-white p-5 shadow-sm">
+                <form
+                  action={`/api/admin/registrations/${reg.id}/reject`}
+                  method="POST"
+                  className="rounded-xl border border-red-200 bg-white p-5 shadow-sm"
+                >
                   <h2 className="mb-3 text-sm font-semibold text-stone-800">Reject</h2>
-                  <label htmlFor="reject-comment" className="mb-1 block text-xs font-semibold uppercase tracking-wide text-stone-500">
+                  <label
+                    htmlFor="reject-comment"
+                    className="mb-1 block text-xs font-semibold uppercase tracking-wide text-stone-500"
+                  >
                     Reason for rejection <span className="text-red-600">*</span>
                   </label>
                   <textarea
@@ -305,7 +414,10 @@ export default async function ReviewRegistrationPage({
                     placeholder="Explain why this application is being rejected (visible in admin history and notification emails)."
                     className="mb-4 w-full max-w-xl rounded-lg border border-stone-300 px-3 py-2 text-sm text-stone-800 focus:outline-none focus:ring-2 focus:ring-red-500"
                   />
-                  <button type="submit" className="rounded-lg bg-red-600 px-6 py-3 text-sm font-semibold text-white hover:bg-red-700 min-h-[44px]">
+                  <button
+                    type="submit"
+                    className="rounded-lg bg-red-600 px-6 py-3 text-sm font-semibold text-white hover:bg-red-700 min-h-[44px]"
+                  >
                     Reject application
                   </button>
                 </form>
@@ -322,20 +434,28 @@ export default async function ReviewRegistrationPage({
               >
                 <h2 className="mb-2 text-sm font-semibold text-stone-800">Send sign-in link</h2>
                 <p className="mb-4 text-sm text-stone-600">
-                  This is separate from approval: it only emails a short sign-in message with a new link. It does not change status or review history. Previous unused links
-                  stop working when a new one is issued.
+                  This is separate from approval: it only emails a short sign-in message with a new
+                  link. It does not change status or review history. Previous unused links stop
+                  working when a new one is issued.
                 </p>
-                <button type="submit" className="rounded-lg bg-stone-800 px-6 py-3 text-sm font-semibold text-white hover:bg-stone-900 min-h-[44px]">
+                <button
+                  type="submit"
+                  className="rounded-lg bg-stone-800 px-6 py-3 text-sm font-semibold text-white hover:bg-stone-900 min-h-[44px]"
+                >
                   Email sign-in link
                 </button>
               </form>
               <div className="rounded-lg border border-stone-200 bg-stone-50 px-5 py-4 text-stone-600 text-sm space-y-3">
                 <div className="border-b border-stone-200 pb-3">
-                  <p className="text-xs font-semibold uppercase tracking-wide text-stone-500 mb-1">Review comment</p>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-stone-500 mb-1">
+                    Review comment
+                  </p>
                   {reg.reviewComment ? (
                     <p className="text-stone-800 whitespace-pre-wrap">{reg.reviewComment}</p>
                   ) : (
-                    <p className="text-stone-500 italic">No comment was stored for this decision.</p>
+                    <p className="text-stone-500 italic">
+                      No comment was stored for this decision.
+                    </p>
                   )}
                 </div>
               </div>
@@ -346,9 +466,13 @@ export default async function ReviewRegistrationPage({
               >
                 <h2 className="mb-1 text-sm font-semibold text-stone-800">Update review note</h2>
                 <p className="mb-3 text-xs text-stone-500">
-                  Add or edit the internal note shown here. Submit with an empty field to clear the stored comment.
+                  Add or edit the internal note shown here. Submit with an empty field to clear the
+                  stored comment.
                 </p>
-                <label htmlFor="amend-comment" className="mb-1 block text-xs font-semibold uppercase tracking-wide text-stone-500">
+                <label
+                  htmlFor="amend-comment"
+                  className="mb-1 block text-xs font-semibold uppercase tracking-wide text-stone-500"
+                >
                   Review note
                 </label>
                 <textarea
@@ -360,7 +484,10 @@ export default async function ReviewRegistrationPage({
                   placeholder="Optional internal note."
                   className="mb-4 w-full max-w-xl rounded-lg border border-stone-300 px-3 py-2 text-sm text-stone-800 focus:outline-none focus:ring-2 focus:ring-amber-500"
                 />
-                <button type="submit" className="rounded-lg bg-stone-800 px-6 py-3 text-sm font-semibold text-white hover:bg-stone-900 min-h-[44px]">
+                <button
+                  type="submit"
+                  className="rounded-lg bg-stone-800 px-6 py-3 text-sm font-semibold text-white hover:bg-stone-900 min-h-[44px]"
+                >
                   Save review note
                 </button>
               </form>
@@ -371,15 +498,20 @@ export default async function ReviewRegistrationPage({
             <div className="space-y-6">
               <div className="rounded-lg border border-stone-200 bg-stone-50 px-5 py-4 text-stone-600 text-sm space-y-3">
                 <p>
-                  This request has already been <strong className="text-stone-800">{reg.status}</strong>. Approve and
-                  reject are no longer available.
+                  This request has already been{" "}
+                  <strong className="text-stone-800">{reg.status}</strong>. Approve and reject are
+                  no longer available.
                 </p>
                 <div className="border-t border-stone-200 pt-3">
-                  <p className="text-xs font-semibold uppercase tracking-wide text-stone-500 mb-1">Review comment</p>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-stone-500 mb-1">
+                    Review comment
+                  </p>
                   {reg.reviewComment ? (
                     <p className="text-stone-800 whitespace-pre-wrap">{reg.reviewComment}</p>
                   ) : (
-                    <p className="text-stone-500 italic">No comment was stored for this decision.</p>
+                    <p className="text-stone-500 italic">
+                      No comment was stored for this decision.
+                    </p>
                   )}
                 </div>
               </div>
@@ -390,9 +522,13 @@ export default async function ReviewRegistrationPage({
               >
                 <h2 className="mb-1 text-sm font-semibold text-stone-800">Update review note</h2>
                 <p className="mb-3 text-xs text-stone-500">
-                  Add or edit the internal note shown here. Submit with an empty field to clear the stored comment.
+                  Add or edit the internal note shown here. Submit with an empty field to clear the
+                  stored comment.
                 </p>
-                <label htmlFor="amend-comment-legacy" className="mb-1 block text-xs font-semibold uppercase tracking-wide text-stone-500">
+                <label
+                  htmlFor="amend-comment-legacy"
+                  className="mb-1 block text-xs font-semibold uppercase tracking-wide text-stone-500"
+                >
                   Review note
                 </label>
                 <textarea
@@ -408,7 +544,10 @@ export default async function ReviewRegistrationPage({
                   }
                   className="mb-4 w-full max-w-xl rounded-lg border border-stone-300 px-3 py-2 text-sm text-stone-800 focus:outline-none focus:ring-2 focus:ring-amber-500"
                 />
-                <button type="submit" className="rounded-lg bg-stone-800 px-6 py-3 text-sm font-semibold text-white hover:bg-stone-900 min-h-[44px]">
+                <button
+                  type="submit"
+                  className="rounded-lg bg-stone-800 px-6 py-3 text-sm font-semibold text-white hover:bg-stone-900 min-h-[44px]"
+                >
                   Save review note
                 </button>
               </form>
