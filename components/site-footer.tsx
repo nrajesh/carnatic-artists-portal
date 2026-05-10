@@ -61,9 +61,22 @@ export async function SiteFooter() {
           )}
         </nav>
         <AnalyticsOptOutFooterNote />
-        <p className="mt-6 text-center text-xs text-stone-500">
-          {displayConfig.name} - connecting artists across geographies
-        </p>
+        <div className="mt-6 flex flex-col items-center gap-2 text-center text-xs text-stone-500">
+          <p>
+            {displayConfig.name} - connecting artists across geographies
+          </p>
+          <p>
+            Built with ❤️ for artists by{" "}
+            <a
+              href="https://imaginest.nl"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-stone-700 font-medium hover:text-amber-900 hover:underline transition-colors"
+            >
+              Imaginest
+            </a>
+          </p>
+        </div>
       </div>
     </footer>
   );
