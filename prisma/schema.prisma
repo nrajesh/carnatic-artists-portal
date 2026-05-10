@@ -1,9 +1,5 @@
-// Artist Discovery Portal - Prisma Schema
-// Runtime adapter: @neondatabase/serverless (see lib/db.ts)
-// Use pooled DATABASE_URL for serverless functions; set DIRECT_DATABASE_URL for migrations.
-
 generator client {
-  provider = "prisma-client-js"
+  provider   = "prisma-client-js"
   engineType = "client"
 }
 
@@ -12,78 +8,53 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// ---------------------------------------------------------------------------
-// Enums
-// ---------------------------------------------------------------------------
-
-enum ContactType {
-  whatsapp
-  mobile
-}
-
-/** Who may see decrypted email / phone on profiles, directory, and collab tools. */
-enum PiiVisibility {
-  PRIVATE
-  COLLABORATORS_ONLY
-  PUBLIC_PROFILE
-}
-
-// ---------------------------------------------------------------------------
-// Artist
-// ---------------------------------------------------------------------------
-
 model Artist {
-  id                 String             @id @default(uuid())
-  slug               String             @unique
-  fullName           String
-  /** Legacy login column; replaced by encrypted PII + emailLookupHash. Optional during migration. */
-  email              String?            @unique
-  contactNumber      String?
-  /** AES-256-GCM ciphertext (base64); use lib/pii-crypto to decrypt. */
-  emailCipher        String?
-  /** HMAC-SHA256 of normalized email for login and uniqueness; not reversible. */
-  emailLookupHash    String?            @unique
-  contactCipher      String?
-  emailVisibility    PiiVisibility      @default(PRIVATE)
-  contactVisibility  PiiVisibility      @default(COLLABORATORS_ONLY)
-  /** Null when the artist has no phone / WhatsApp on file. */
-  contactType        ContactType?
-  profilePhotoUrl    String?
-  backgroundImageUrl String?
-  bioRichText        String?
-  province           String
-  openToCollab       Boolean            @default(true)
-  /** Grants access to /admin routes and admin notifications. */
-  isAdmin            Boolean            @default(false)
-  /** Internal-only account used for admin auth + audit trails; hidden from public artist surfaces. */
-  isSystemAccount    Boolean            @default(false)
-  isSuspended        Boolean            @default(false)
-  suspensionComment  String?
-  /** Admin + artist remarks about suspension; cleared when account is reactivated. */
-  suspensionThread   Json?
-  createdAt          DateTime           @default(now())
-  updatedAt          DateTime           @updatedAt
-
-  specialities        ArtistSpeciality[]
-  externalLinks       ExternalLink[]
-  availabilityEntries AvailabilityEntry[]
-  ownedCollabs        Collab[]            @relation("CollabOwner")
-  collabMemberships   CollabMember[]
-  sentMessages        CollabMessage[]
-  givenFeedback       Feedback[]          @relation("Reviewer")
-  receivedFeedback    Feedback[]          @relation("Reviewee")
-  notifications       Notification[]
+  id                     String                  @id @default(uuid())
+  slug                   String                  @unique
+  fullName               String
+  /// * Legacy login column; replaced by encrypted PII + emailLookupHash. Optional during migration.
+  email                  String?                 @unique
+  contactNumber          String?
+  /// * Null when the artist has no phone / WhatsApp on file.
+  contactType            ContactType?
+  profilePhotoUrl        String?
+  backgroundImageUrl     String?
+  bioRichText            String?
+  province               String
+  isSuspended            Boolean                 @default(false)
+  createdAt              DateTime                @default(now())
+  updatedAt              DateTime                @updatedAt
+  openToCollab           Boolean                 @default(true)
+  suspensionComment      String?
+  /// * AES-256-GCM ciphertext (base64); use lib/pii-crypto to decrypt.
+  emailCipher            String?
+  /// * HMAC-SHA256 of normalized email for login and uniqueness; not reversible.
+  emailLookupHash        String?                 @unique
+  contactCipher          String?
+  emailVisibility        PiiVisibility           @default(PRIVATE)
+  contactVisibility      PiiVisibility           @default(COLLABORATORS_ONLY)
+  /// * Admin + artist remarks about suspension; cleared when account is reactivated.
+  suspensionThread       Json?
+  /// * Internal-only account used for admin auth + audit trails; hidden from public artist surfaces.
+  isSystemAccount        Boolean                 @default(false)
+  /// * Grants access to /admin routes and admin notifications.
+  isAdmin                Boolean                 @default(false)
+  specialities           ArtistSpeciality[]
+  availabilityEntries    AvailabilityEntry[]
+  ownedCollabs           Collab[]                @relation("CollabOwner")
+  collabMemberships      CollabMember[]
+  sentMessages           CollabMessage[]
+  dailyFeatures          DailyFeatured[]
+  externalLinks          ExternalLink[]
+  receivedFeedback       Feedback[]              @relation("Reviewee")
+  givenFeedback          Feedback[]              @relation("Reviewer")
+  magicLinkTokens        MagicLinkToken[]
+  notifications          Notification[]
   notificationPreference NotificationPreference?
-  pushSubscriptions   PushSubscription[]
-  magicLinkTokens     MagicLinkToken[]
-  sessions            Session[]
-  dailyFeatures       DailyFeatured[]
-  reviewedRegistrations RegistrationRequest[] @relation("ReviewedBy")
+  pushSubscriptions      PushSubscription[]
+  reviewedRegistrations  RegistrationRequest[]   @relation("ReviewedBy")
+  sessions               Session[]
 }
-
-// ---------------------------------------------------------------------------
-// Speciality
-// ---------------------------------------------------------------------------
 
 model Speciality {
   id           String             @id @default(uuid())
@@ -93,94 +64,64 @@ model Speciality {
   artists      ArtistSpeciality[]
 }
 
-// ---------------------------------------------------------------------------
-// ArtistSpeciality (join table)
-// 1-3 per artist enforced at the application layer.
-// ---------------------------------------------------------------------------
-
 model ArtistSpeciality {
   artistId     String
   specialityId String
   displayOrder Int
-
-  artist     Artist     @relation(fields: [artistId], references: [id], onDelete: Cascade)
-  speciality Speciality @relation(fields: [specialityId], references: [id], onDelete: Cascade)
+  artist       Artist     @relation(fields: [artistId], references: [id], onDelete: Cascade)
+  speciality   Speciality @relation(fields: [specialityId], references: [id], onDelete: Cascade)
 
   @@id([artistId, specialityId])
 }
 
-// ---------------------------------------------------------------------------
-// ExternalLink
-// ---------------------------------------------------------------------------
-
 model ExternalLink {
   id       String @id @default(uuid())
   artistId String
-  linkType String // "linkedin" | "instagram" | "facebook" | "twitter" | "youtube" | "website"
+  linkType String
   url      String
-
-  artist Artist @relation(fields: [artistId], references: [id], onDelete: Cascade)
+  artist   Artist @relation(fields: [artistId], references: [id], onDelete: Cascade)
 }
 
-// ---------------------------------------------------------------------------
-// RegistrationRequest
-// ---------------------------------------------------------------------------
-
 model RegistrationRequest {
-  id                 String    @id @default(uuid())
+  id                 String                   @id @default(uuid())
   fullName           String
-  province           String    @default("")
-  /** Deprecated: use ciphertext fields; nullable during migration from plaintext. */
+  /// * Deprecated: use ciphertext fields; nullable during migration from plaintext.
   email              String?
   contactNumber      String?
-  emailCipher        String?
-  emailLookupHash    String?
-  contactCipher      String?
-  /** Null when no contact number was provided on registration. */
+  /// * Null when no contact number was provided on registration.
   contactType        ContactType?
   profilePhotoUrl    String?
   backgroundImageUrl String?
   bioRichText        String?
-  status             String    @default("pending") // "pending" | "approved" | "rejected"
-  reviewComment      String?
-  submittedAt        DateTime  @default(now())
+  status             String                   @default("pending")
+  submittedAt        DateTime                 @default(now())
   reviewedAt         DateTime?
   reviewedBy         String?
-
-  reviewer    Artist?                  @relation("ReviewedBy", fields: [reviewedBy], references: [id])
-  specialities RegistrationSpeciality[]
-  links        RegistrationLink[]
+  reviewComment      String?
+  emailCipher        String?
+  emailLookupHash    String?
+  contactCipher      String?
+  province           String                   @default("")
+  links              RegistrationLink[]
+  reviewer           Artist?                  @relation("ReviewedBy", fields: [reviewedBy], references: [id])
+  specialities       RegistrationSpeciality[]
 }
-
-// ---------------------------------------------------------------------------
-// RegistrationSpeciality (join table for registration)
-// ---------------------------------------------------------------------------
 
 model RegistrationSpeciality {
   registrationId String
   specialityName String
-
-  registration RegistrationRequest @relation(fields: [registrationId], references: [id], onDelete: Cascade)
+  registration   RegistrationRequest @relation(fields: [registrationId], references: [id], onDelete: Cascade)
 
   @@id([registrationId, specialityName])
 }
 
-// ---------------------------------------------------------------------------
-// RegistrationLink
-// ---------------------------------------------------------------------------
-
 model RegistrationLink {
-  id             String @id @default(uuid())
+  id             String              @id @default(uuid())
   registrationId String
   linkType       String
   url            String
-
-  registration RegistrationRequest @relation(fields: [registrationId], references: [id], onDelete: Cascade)
+  registration   RegistrationRequest @relation(fields: [registrationId], references: [id], onDelete: Cascade)
 }
-
-// ---------------------------------------------------------------------------
-// MagicLinkToken
-// ---------------------------------------------------------------------------
 
 model MagicLinkToken {
   id        String    @id @default(uuid())
@@ -188,28 +129,18 @@ model MagicLinkToken {
   tokenHash String    @unique
   expiresAt DateTime
   usedAt    DateTime?
-
-  artist Artist @relation(fields: [artistId], references: [id], onDelete: Cascade)
+  artist    Artist    @relation(fields: [artistId], references: [id], onDelete: Cascade)
 }
-
-// ---------------------------------------------------------------------------
-// Session
-// ---------------------------------------------------------------------------
 
 model Session {
   id               String   @id @default(uuid())
   artistId         String
   sessionTokenHash String   @unique
-  role             String   @default("artist") // "artist" | "admin"
+  role             String   @default("artist")
   expiresAt        DateTime
   lastActiveAt     DateTime
-
-  artist Artist @relation(fields: [artistId], references: [id], onDelete: Cascade)
+  artist           Artist   @relation(fields: [artistId], references: [id], onDelete: Cascade)
 }
-
-// ---------------------------------------------------------------------------
-// AvailabilityEntry
-// ---------------------------------------------------------------------------
 
 model AvailabilityEntry {
   id        String   @id @default(uuid())
@@ -217,49 +148,34 @@ model AvailabilityEntry {
   startDate DateTime @db.Date
   endDate   DateTime @db.Date
   createdAt DateTime @default(now())
-
-  artist Artist @relation(fields: [artistId], references: [id], onDelete: Cascade)
+  artist    Artist   @relation(fields: [artistId], references: [id], onDelete: Cascade)
 }
 
-// ---------------------------------------------------------------------------
-// Collab
-// ---------------------------------------------------------------------------
-
 model Collab {
-  id              String    @id @default(uuid())
+  id              String          @id @default(uuid())
   name            String
   description     String?
   ownerId         String
-  status          String    @default("active") // "active" | "completed" | "completed_other" | "incomplete"
+  status          String          @default("active")
   outcomeMediaUrl String?
-  createdAt       DateTime  @default(now())
+  createdAt       DateTime        @default(now())
   closedAt        DateTime?
-
-  owner    Artist         @relation("CollabOwner", fields: [ownerId], references: [id])
-  members  CollabMember[]
-  messages CollabMessage[]
-  feedback Feedback[]
+  owner           Artist          @relation("CollabOwner", fields: [ownerId], references: [id])
+  members         CollabMember[]
+  messages        CollabMessage[]
+  feedback        Feedback[]
 }
-
-// ---------------------------------------------------------------------------
-// CollabMember (join table)
-// ---------------------------------------------------------------------------
 
 model CollabMember {
   collabId String
   artistId String
   joinedAt DateTime  @default(now())
   leftAt   DateTime?
-
-  collab Collab @relation(fields: [collabId], references: [id], onDelete: Cascade)
-  artist Artist @relation(fields: [artistId], references: [id], onDelete: Cascade)
+  artist   Artist    @relation(fields: [artistId], references: [id], onDelete: Cascade)
+  collab   Collab    @relation(fields: [collabId], references: [id], onDelete: Cascade)
 
   @@id([collabId, artistId])
 }
-
-// ---------------------------------------------------------------------------
-// CollabMessage
-// ---------------------------------------------------------------------------
 
 model CollabMessage {
   id        String   @id @default(uuid())
@@ -268,35 +184,25 @@ model CollabMessage {
   content   String
   isDeleted Boolean  @default(false)
   sentAt    DateTime @default(now())
-
-  collab  Collab @relation(fields: [collabId], references: [id], onDelete: Cascade)
-  sender  Artist @relation(fields: [senderId], references: [id])
+  collab    Collab   @relation(fields: [collabId], references: [id], onDelete: Cascade)
+  sender    Artist   @relation(fields: [senderId], references: [id])
 }
-
-// ---------------------------------------------------------------------------
-// Feedback
-// ---------------------------------------------------------------------------
 
 model Feedback {
   id          String    @id @default(uuid())
   collabId    String
   reviewerId  String
   revieweeId  String
-  starRating  Int       // mandatory, NOT NULL, range 1-5 enforced at app layer
+  starRating  Int
   comment     String?
   submittedAt DateTime  @default(now())
   editedAt    DateTime?
-
-  collab   Collab @relation(fields: [collabId], references: [id])
-  reviewer Artist @relation("Reviewer", fields: [reviewerId], references: [id])
-  reviewee Artist @relation("Reviewee", fields: [revieweeId], references: [id])
+  collab      Collab    @relation(fields: [collabId], references: [id])
+  reviewee    Artist    @relation("Reviewee", fields: [revieweeId], references: [id])
+  reviewer    Artist    @relation("Reviewer", fields: [reviewerId], references: [id])
 
   @@unique([reviewerId, revieweeId, collabId])
 }
-
-// ---------------------------------------------------------------------------
-// Notification
-// ---------------------------------------------------------------------------
 
 model Notification {
   id        String   @id @default(uuid())
@@ -305,24 +211,22 @@ model Notification {
   payload   Json
   isRead    Boolean  @default(false)
   createdAt DateTime @default(now())
-
-  artist Artist @relation(fields: [artistId], references: [id], onDelete: Cascade)
+  artist    Artist   @relation(fields: [artistId], references: [id], onDelete: Cascade)
 }
 
 model NotificationPreference {
-  artistId             String  @id
-  inAppEnabled         Boolean @default(true)
-  emailEnabled         Boolean @default(true)
-  webPushEnabled       Boolean @default(false)
-  reviewAddedEnabled   Boolean @default(true)
-  reviewUpdatedEnabled Boolean @default(true)
-  reviewDeletedEnabled Boolean @default(true)
-  newRegistrationEnabled Boolean @default(true)
-  registrationApprovedEnabled Boolean @default(true)
-  registrationRejectedEnabled Boolean @default(true)
-  updatedAt            DateTime @updatedAt
-
-  artist Artist @relation(fields: [artistId], references: [id], onDelete: Cascade)
+  artistId                    String   @id
+  inAppEnabled                Boolean  @default(true)
+  emailEnabled                Boolean  @default(true)
+  webPushEnabled              Boolean  @default(false)
+  reviewAddedEnabled          Boolean  @default(true)
+  reviewUpdatedEnabled        Boolean  @default(true)
+  reviewDeletedEnabled        Boolean  @default(true)
+  updatedAt                   DateTime @updatedAt
+  newRegistrationEnabled      Boolean  @default(true)
+  registrationApprovedEnabled Boolean  @default(true)
+  registrationRejectedEnabled Boolean  @default(true)
+  artist                      Artist   @relation(fields: [artistId], references: [id], onDelete: Cascade)
 }
 
 model PushSubscription {
@@ -334,20 +238,26 @@ model PushSubscription {
   userAgent String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-
-  artist Artist @relation(fields: [artistId], references: [id], onDelete: Cascade)
+  artist    Artist   @relation(fields: [artistId], references: [id], onDelete: Cascade)
 }
-
-// ---------------------------------------------------------------------------
-// DailyFeatured
-// ---------------------------------------------------------------------------
 
 model DailyFeatured {
   featureDate DateTime @db.Date
-  featureType String   // "instrumentalist" | "singer"
+  featureType String
   artistId    String
-
-  artist Artist @relation(fields: [artistId], references: [id])
+  artist      Artist   @relation(fields: [artistId], references: [id])
 
   @@id([featureDate, featureType])
+}
+
+enum ContactType {
+  whatsapp
+  mobile
+}
+
+/// * Who may see decrypted email / phone on profiles, directory, and collab tools.
+enum PiiVisibility {
+  PRIVATE
+  COLLABORATORS_ONLY
+  PUBLIC_PROFILE
 }

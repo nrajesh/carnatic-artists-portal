@@ -171,8 +171,8 @@ function openPopupForClusterKey(
     .bindPopup(popupHtml(cluster, singularLower, pluralLower), {
       className: "artist-location-popup",
       closeButton: true,
-      autoClose: false,
-      closeOnClick: false,
+      autoClose: true,
+      closeOnClick: true,
       offset: [0, -10],
     })
     .openPopup();
@@ -246,6 +246,7 @@ export function ArtistsLocationExplorer({
           const marker = leaflet.marker(cluster.center as LatLngExpression, { icon });
 
           marker.on("click", () => {
+            map.closePopup();
             activePopupClusterKeyRef.current = cluster.key;
             if (cluster.points.length > 1) {
               const bounds = leaflet.latLngBounds(
