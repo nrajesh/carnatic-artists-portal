@@ -103,7 +103,7 @@ export default function SpecialityPicker({
 
   return (
     <div>
-      <div className="mb-2 flex min-h-[36px] flex-wrap gap-2">
+      <div className={`${selected.length > 0 ? "mb-2 min-h-[36px]" : ""} flex flex-wrap gap-2`}>
         {selected.map((name) => {
           const c = chipColor(name);
           return (
