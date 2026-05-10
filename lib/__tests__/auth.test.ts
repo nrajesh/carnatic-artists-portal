@@ -44,8 +44,8 @@ const mockState = vi.hoisted(() => {
       data: Record<string, unknown>;
     } | null,
     mockExistingTokens: [] as MockMagicLinkToken[],
-    mockArtist: null as { id: string; email: string } | null,
-    mockLegacyArtist: null as { id: string; email: string } | null,
+    mockArtist: null as { id: string; email: string; isAdmin?: boolean } | null,
+    mockLegacyArtist: null as { id: string; email: string; isAdmin?: boolean } | null,
     capturedArtistCreate: null as Record<string, unknown> | null,
     seedProvince: "Noord-Holland",
     mockTokenRecord: null as
@@ -200,22 +200,14 @@ describe("Property 6: Magic link token expiry invariant", () => {
     expect(last?.[0].subject).toMatch(/^Sign in ·/);
   });
 
-  it("bootstraps a hidden artist row for admin emails that are not yet in Artist", async () => {
+  it("returns artist_not_found when the email is not registered", async () => {
     resetState();
-    process.env.ADMIN_EMAILS = "admin@example.com";
 
     const out = await issueMagicLink("admin@example.com");
 
-    expect(out).toEqual({ emailSent: true });
-    expect(mockState.capturedArtistCreate).toMatchObject({
-      fullName: "Admin",
-      province: "Noord-Holland",
-      openToCollab: false,
-      emailVisibility: "PRIVATE",
-      contactVisibility: "PRIVATE",
-      isSystemAccount: true,
-    });
-    expect(mockState.capturedTokenCreate).not.toBeNull();
+    expect(out).toEqual({ emailSent: false, reason: "artist_not_found" });
+    expect(mockState.capturedArtistCreate).toBeNull();
+    expect(mockState.capturedTokenCreate).toBeNull();
   });
 });
 
@@ -311,7 +303,7 @@ describe("Property 21: Session expiry invariant", () => {
           tokenHash: "some-hash",
           expiresAt: tokenExpiresAt,
           usedAt: null,
-          artist: { id: artistId, email: artistEmail },
+          artist: { id: artistId, email: artistEmail, isAdmin: false },
         };
 
         // Pass the frozen "now" directly to verifyMagicLink

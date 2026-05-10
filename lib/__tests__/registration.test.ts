@@ -104,6 +104,7 @@ function validPayload(overrides: Partial<Record<MandatoryField | string, unknown
   return {
     fullName: 'Ravi Shankar',
     email: 'ravi@example.com',
+    province: 'Hilversum',
     contactNumber: '+31612345678',
     contactType: 'whatsapp' as const,
     specialities: ['Vocal'],
@@ -150,6 +151,7 @@ const arbContactNumber = fc.stringMatching(/^\+?\d{7,15}$/);
 const arbValidPayload = fc.record({
   fullName: arbNonEmptyString,
   email: arbEmail,
+  province: arbNonEmptyString,
   contactNumber: arbContactNumber,
   contactType: arbContactType,
   profilePhotoUrl: fc.option(arbProfilePhotoUrl, { nil: undefined }),

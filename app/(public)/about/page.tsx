@@ -354,8 +354,8 @@ export default async function AboutPage() {
             and the browser submits a <strong>POST</strong> to consume the token so mail previews and prefetch cannot burn the link. Links
             expire after 72 hours. Successful sign-in sets a 30-day <strong>session cookie</strong> backed by an <strong>HS256 JWT</strong>;
             Edge middleware validates it without a database round-trip on every request. Logout uses{" "}
-            <code className="text-amber-950">POST /api/auth/logout</code>. Admin access matches the signed-in email against the{" "}
-            <code className="text-amber-950">ADMIN_EMAILS</code> environment list. While signed in, a line <strong>above the
+            <code className="text-amber-950">POST /api/auth/logout</code>. Admin access comes from the{" "}
+            <code className="text-amber-950">Artist.isAdmin</code> database flag. While signed in, a line <strong>above the
             site footer</strong> can show your <strong>profile display name</strong>, session expiry, and for admins{" "}
             <code className="text-amber-950">(admin)</code> after the name.
           </div>
@@ -570,7 +570,7 @@ export default async function AboutPage() {
           </div>
           <div className="bg-amber-50 border border-amber-200 rounded-xl p-5 text-sm text-amber-800">
             <strong>Access:</strong> Admin routes (<code>/admin/*</code>) are protected by Edge middleware.
-            Admin role is granted by listing the artist&apos;s email in the <code>ADMIN_EMAILS</code> env var (comma-separated).
+            Admin role is stored on the artist row via the <code>isAdmin</code> database flag.
             <span className="ml-1">
               In dev, use
               {" "}

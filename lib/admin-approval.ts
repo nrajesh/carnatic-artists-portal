@@ -110,7 +110,7 @@ export async function approveRegistration(
       profilePhotoUrl: registration.profilePhotoUrl ?? '',
       backgroundImageUrl: registration.backgroundImageUrl ?? undefined,
       bioRichText: registration.bioRichText ?? undefined,
-      province: '',
+      province: registration.province.trim(),
     },
   });
 

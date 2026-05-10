@@ -24,7 +24,9 @@ export async function POST(request: NextRequest) {
   }
 
   // Silently issue magic link - issueMagicLink returns without error if email not found
-  await issueMagicLink(email.trim().toLowerCase());
+  await issueMagicLink(email.trim().toLowerCase(), undefined, {
+    baseUrl: request.nextUrl.origin,
+  });
 
   // Always return success to avoid revealing whether the email exists
   return NextResponse.json({ success: true });

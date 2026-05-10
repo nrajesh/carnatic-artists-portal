@@ -12,7 +12,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { signSession } from "@/lib/session-jwt";
 import { getDb } from "@/lib/db";
-import { emailLookupHash, normalizeEmailForLookup } from "@/lib/pii-crypto";
 
 export async function GET(request: NextRequest) {
   if (process.env.NODE_ENV === "production") {
@@ -41,23 +40,14 @@ export async function GET(request: NextRequest) {
   }
   if (role === "admin") {
     try {
-      const adminEmails = (process.env.ADMIN_EMAILS ?? "")
-        .split(",")
-        .map((e) => e.trim().toLowerCase())
-        .filter(Boolean);
-      const adminHashes = adminEmails.map((email) =>
-        emailLookupHash(normalizeEmailForLookup(email)),
-      );
-      const adminArtist = adminEmails.length
-        ? await getDb().artist.findFirst({
-            where: {
-              isSuspended: false,
-              OR: [{ emailLookupHash: { in: adminHashes } }, { email: { in: adminEmails } }],
-            },
-            orderBy: { createdAt: "asc" },
-            select: { id: true },
-          })
-        : null;
+      const adminArtist = await getDb().artist.findFirst({
+        where: {
+          isAdmin: true,
+          isSuspended: false,
+        },
+        orderBy: { createdAt: "asc" },
+        select: { id: true },
+      });
       if (adminArtist) {
         artistId = adminArtist.id;
       }

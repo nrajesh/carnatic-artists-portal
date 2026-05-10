@@ -27,7 +27,7 @@ Every artist profile is visually themed by their **stored** speciality colours (
 Artists can write their bio, chat messages, and reviews in Tamil, Kannada, Telugu, Malayalam, Hindi/Devanagari, or any combination - including mixed-script paragraphs. The Tiptap rich-text editor accepts direct Unicode input. Google Fonts Noto family provides full glyph coverage with `font-display: swap` so rendering is beautiful without hurting performance.
 
 ### 🔒 Magic-link authentication
-No passwords. Artists request a link at `/auth/login`; the email points to `/auth/verify?token=…`, where a **confirm** step (POST) consumes the token so mail-client previews and prefetch GETs cannot invalidate it. Links remain valid 72 hours. Sessions are 30-day signed JWTs validated by Edge middleware - no database round-trip on every request. **Logout** is `POST /api/auth/logout` (CSRF-safe form POST from the header/footer/dashboard). Admin role is granted by listing an email in `ADMIN_EMAILS`.
+No passwords. Artists request a link at `/auth/login`; the email points to `/auth/verify?token=…`, where a **confirm** step (POST) consumes the token so mail-client previews and prefetch GETs cannot invalidate it. Links remain valid 72 hours. Sessions are 30-day signed JWTs validated by Edge middleware - no database round-trip on every request. **Logout** is `POST /api/auth/logout` (CSRF-safe form POST from the header/footer/dashboard). Admin role is stored on the artist record via the `isAdmin` database flag.
 
 ### ✨ Home spotlight
 
@@ -115,9 +115,6 @@ DEPLOYMENT_BRANDING_LOGO_URL=/assets/logo.svg
 # Session signing secret - any random string ≥32 chars
 SESSION_SECRET=change-me-to-a-random-32-char-string-in-production
 
-# Admin emails - comma-separated list of emails that get admin role
-ADMIN_EMAILS=your@email.com
-
 # App URL (used in magic link emails)
 NEXT_PUBLIC_APP_URL=http://localhost:3000
 
@@ -170,6 +167,12 @@ Seed the specialities table (12 instrument specialities with WCAG-compliant colo
 
 ```bash
 npx prisma db seed
+```
+
+Promote an existing artist account to admin:
+
+```bash
+npm run db:set-admin -- artist@example.com
 ```
 
 ### 4. Start the dev server

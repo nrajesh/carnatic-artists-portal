@@ -5,8 +5,8 @@ const mockState = vi.hoisted(() => ({
     id: string;
     email: string | null;
     fullName: string;
+    isAdmin: boolean;
     isSuspended: boolean;
-    emailLookupHash?: string | null;
     notificationPreference?: null;
     pushSubscriptions?: Array<{ endpoint: string; p256dh: string; auth: string }>;
   }>,
@@ -27,21 +27,14 @@ vi.mock("../db", () => {
       findMany: vi.fn(async (args: Record<string, unknown>) => {
         mockState.capturedArtistFindManyArgs = args;
         const where = (args.where ?? {}) as {
+          isAdmin?: boolean;
           isSuspended?: boolean;
-          OR?: Array<{ email?: { in?: string[] }; emailLookupHash?: { in?: string[] } }>;
         };
-        const allowedEmails = new Set(
-          (where.OR ?? []).flatMap((clause) => clause.email?.in ?? []),
-        );
-        const allowedHashes = new Set(
-          (where.OR ?? []).flatMap((clause) => clause.emailLookupHash?.in ?? []),
-        );
 
         return mockState.admins.filter((admin) => {
+          if (where.isAdmin === true && !admin.isAdmin) return false;
           if (where.isSuspended === false && admin.isSuspended) return false;
-          if (allowedEmails.has((admin.email ?? "").toLowerCase())) return true;
-          if (admin.emailLookupHash && allowedHashes.has(admin.emailLookupHash)) return true;
-          return false;
+          return true;
         });
       }),
     },
@@ -62,12 +55,6 @@ vi.mock("@/lib/artist-pii", () => ({
   })),
 }));
 
-vi.mock("@/lib/pii-crypto", () => ({
-  emailLookupHash: vi.fn((email: string) => `hash:${email}`),
-  isPiiCryptoConfigured: vi.fn(() => false),
-  normalizeEmailForLookup: vi.fn((email: string) => email.trim().toLowerCase()),
-}));
-
 vi.mock("@/lib/email-templates", () => ({
   getPortalNameForEmail: vi.fn(() => "Portal"),
   transactionalEmailHtml: vi.fn(() => "<p>Email</p>"),
@@ -85,18 +72,17 @@ describe("notifyAdminRegistrationEvent", () => {
     mockState.admins = [];
     mockState.capturedArtistFindManyArgs = null;
     mockState.capturedNotificationCreateManyArgs = null;
-    process.env.ADMIN_EMAILS = "";
     delete process.env.RESEND_API_KEY;
     delete process.env.RESEND_FROM_EMAIL;
   });
 
   it("skips suspended admins when notifying about a new registration", async () => {
-    process.env.ADMIN_EMAILS = "active@example.com,suspended@example.com";
     mockState.admins = [
       {
         id: "admin-active",
         email: "active@example.com",
         fullName: "Active Admin",
+        isAdmin: true,
         isSuspended: false,
         notificationPreference: null,
         pushSubscriptions: [],
@@ -105,6 +91,7 @@ describe("notifyAdminRegistrationEvent", () => {
         id: "admin-suspended",
         email: "suspended@example.com",
         fullName: "Suspended Admin",
+        isAdmin: true,
         isSuspended: true,
         notificationPreference: null,
         pushSubscriptions: [],
@@ -120,6 +107,7 @@ describe("notifyAdminRegistrationEvent", () => {
 
     expect(mockState.capturedArtistFindManyArgs).toMatchObject({
       where: {
+        isAdmin: true,
         isSuspended: false,
       },
     });
@@ -133,12 +121,12 @@ describe("notifyAdminRegistrationEvent", () => {
   });
 
   it("creates no notifications when every matching admin is suspended", async () => {
-    process.env.ADMIN_EMAILS = "suspended@example.com";
     mockState.admins = [
       {
         id: "admin-suspended",
         email: "suspended@example.com",
         fullName: "Suspended Admin",
+        isAdmin: true,
         isSuspended: true,
         notificationPreference: null,
         pushSubscriptions: [],

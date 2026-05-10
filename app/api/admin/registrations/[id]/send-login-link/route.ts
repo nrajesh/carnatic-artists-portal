@@ -25,7 +25,7 @@ export async function POST(
     return NextResponse.json({ error: "FORBIDDEN" }, { status: 403 });
   }
 
-  const result = await sendLoginLinkForApprovedRegistration(id);
+  const result = await sendLoginLinkForApprovedRegistration(id, request.nextUrl.origin);
 
   if (!result.ok) {
     if (result.error === "NOT_FOUND") {
