@@ -46,7 +46,7 @@ export const registrationServerSchema = z
   .object({
   fullName: z.string().min(1, 'Full name is required'),
   email: z.string().email('Valid email address is required'),
-  province: z.string().trim().max(120).optional(),
+  province: z.string().trim().min(1, 'Location is required').max(120),
   contactNumber: z.preprocess(
     (v: unknown) => (typeof v === 'string' ? sanitizeContactNumberInput(v) : ''),
     z.string(),
@@ -122,7 +122,7 @@ export async function POST(request: NextRequest) {
   const rawData = {
     fullName: formData.get('fullName') as string | null,
     email: formData.get('email') as string | null,
-    province: (formData.get('province') as string | null) ?? undefined,
+    province: (formData.get('province') as string | null) ?? '',
     contactNumber: formData.get('contactNumber') as string | null,
     contactType: formData.get('contactType') as string | null,
     profilePhotoUrl: formData.get('profilePhotoUrl') as string | null,
@@ -213,7 +213,7 @@ export async function POST(request: NextRequest) {
       data: {
         id: registrationId,
         fullName: validated.fullName,
-        province: validated.province?.trim() || "",
+        province: validated.province.trim(),
         email: null,
         contactNumber: null,
         emailCipher: encryptPiiField(normalizedEmail),
@@ -239,6 +239,7 @@ export async function POST(request: NextRequest) {
       registrationId,
       applicantName: validated.fullName,
       applicantEmail: validated.email,
+      baseUrl: request.nextUrl.origin,
     });
 
     return NextResponse.json({ success: true });

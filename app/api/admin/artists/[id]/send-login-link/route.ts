@@ -21,7 +21,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     return NextResponse.json({ error: "FORBIDDEN" }, { status: 403 });
   }
 
-  const result = await sendLoginLinkToArtist(id);
+  const result = await sendLoginLinkToArtist(id, request.nextUrl.origin);
 
   if (!result.ok) {
     if (result.error === "NOT_FOUND") {

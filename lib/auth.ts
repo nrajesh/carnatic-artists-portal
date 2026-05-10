@@ -12,7 +12,7 @@
 import crypto from "crypto";
 import { getDb } from "./db";
 import { sendResendEmail } from "@/lib/resend-email";
-import { buildEncryptedArtistPiiPayload, decryptArtistStoredContact } from "@/lib/artist-pii";
+import { decryptArtistStoredContact } from "@/lib/artist-pii";
 import {
   getPortalNameForEmail,
   transactionalEmailHtml,
@@ -63,14 +63,6 @@ function randomHex(bytes: number): string {
   return crypto.randomBytes(bytes).toString("hex");
 }
 
-function isAdminEmail(email: string): boolean {
-  const adminEmails = (process.env.ADMIN_EMAILS ?? "")
-    .split(",")
-    .map((e) => e.trim().toLowerCase())
-    .filter(Boolean);
-  return adminEmails.includes(email.toLowerCase());
-}
-
 async function findArtistByLoginEmail(email: string) {
   const normalized = normalizeEmailForLookup(email);
   const lookup = emailLookupHash(normalized);
@@ -86,86 +78,10 @@ async function findArtistByLoginEmail(email: string) {
   );
 }
 
-function slugifyArtistName(input: string): string {
-  const slug = input
-    .toLowerCase()
-    .trim()
-    .replace(/[^a-z0-9\s-]/g, "")
-    .replace(/\s+/g, "-")
-    .replace(/-+/g, "-")
-    .replace(/^-|-$/g, "");
-  return slug || "artist";
-}
-
-async function generateArtistSlug(fullName: string): Promise<string> {
-  const base = slugifyArtistName(fullName);
-  const db = getDb();
-  const existing = await db.artist.findUnique({ where: { slug: base } });
-  if (!existing) return base;
-
-  for (let i = 1; i <= 999; i++) {
-    const candidate = `${base}-${i}`;
-    const conflict = await db.artist.findUnique({ where: { slug: candidate } });
-    if (!conflict) return candidate;
-  }
-
-  return `${base}-${Date.now()}`;
-}
-
-function deriveSystemAdminDisplayName(email: string): string {
-  const local = email.split("@")[0] ?? "";
-  const humanized = local.replace(/[^a-z0-9]+/gi, " ").trim();
-  if (!humanized || humanized.replace(/\s+/g, "").toLowerCase() === "noreply") {
-    return "Portal Admin";
-  }
-  return humanized
-    .split(/\s+/)
-    .filter(Boolean)
-    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
-    .join(" ");
-}
-
-async function inferSystemAdminProvince(): Promise<string> {
-  const seed = await getDb().artist.findFirst({
-    where: { isSystemAccount: false },
-    orderBy: { createdAt: "asc" },
-    select: { province: true },
-  });
-  return seed?.province?.trim() || "System";
-}
-
-async function ensureAdminArtistForEmail(email: string) {
-  const normalized = normalizeEmailForLookup(email);
-  const existing = await findArtistByLoginEmail(normalized);
-  if (existing) return existing;
-
-  const artistId = crypto.randomUUID();
-  const fullName = deriveSystemAdminDisplayName(normalized);
-  const slug = await generateArtistSlug(`admin ${fullName}`);
-  const pii = buildEncryptedArtistPiiPayload(artistId, normalized, "");
-  const province = await inferSystemAdminProvince();
-
-  try {
-    return await getDb().artist.create({
-      data: {
-        id: artistId,
-        slug,
-        fullName,
-        email: pii.emailPlaceholder,
-        contactNumber: null,
-        emailCipher: pii.emailCipher,
-        emailLookupHash: pii.emailLookupHash,
-        contactCipher: null,
-        province,
-        openToCollab: false,
-        emailVisibility: "PRIVATE",
-        contactVisibility: "PRIVATE",
-        isSystemAccount: true,
-      },
-    });
-  } catch {
-    return findArtistByLoginEmail(normalized);
-  }
+function normalizeBaseUrl(baseUrl?: string): string {
+  const explicit = baseUrl?.trim().replace(/\/+$/, "");
+  if (explicit) return explicit;
+  return (process.env.NEXT_PUBLIC_APP_URL ?? "").replace(/\/+$/, "");
 }
 
 // ---------------------------------------------------------------------------
@@ -208,6 +124,7 @@ export type IssueMagicLinkResult =
 /** `admin_login_only`: shorter copy when an admin emails a link for an already-onboarded artist (not framed as a new approval). */
 export type IssueMagicLinkOptions = {
   emailStyle?: "default" | "admin_login_only";
+  baseUrl?: string;
 };
 
 export async function issueMagicLink(
@@ -216,10 +133,7 @@ export async function issueMagicLink(
   options?: IssueMagicLinkOptions,
 ): Promise<IssueMagicLinkResult> {
   const normalized = normalizeEmailForLookup(email);
-  let artist = await findArtistByLoginEmail(normalized);
-  if (!artist && isAdminEmail(normalized)) {
-    artist = await ensureAdminArtistForEmail(normalized);
-  }
+  const artist = await findArtistByLoginEmail(normalized);
   if (!artist) return { emailSent: false, reason: "artist_not_found" };
 
   const now = _now ?? new Date();
@@ -244,7 +158,7 @@ export async function issueMagicLink(
 
   const resendApiKey = process.env.RESEND_API_KEY;
   const fromEmail = process.env.RESEND_FROM_EMAIL ?? "noreply@artist-discovery.example";
-  const appUrl = (process.env.NEXT_PUBLIC_APP_URL ?? "").replace(/\/+$/, "");
+  const appUrl = normalizeBaseUrl(options?.baseUrl);
   const magicLinkUrl = `${appUrl}/auth/verify?token=${rawToken}`;
 
   const deliverTo = decryptArtistStoredContact(artist).email || normalized;
@@ -375,8 +289,7 @@ export async function verifyMagicLink(rawToken: string, _now?: Date): Promise<Se
   });
 
   const artist = tokenRecord.artist;
-  const loginEmail = decryptArtistStoredContact(artist).email;
-  const role: "artist" | "admin" = isAdminEmail(loginEmail) ? "admin" : "artist";
+  const role: "artist" | "admin" = artist.isAdmin ? "admin" : "artist";
 
   // Generate a cryptographically random session token
   const rawSessionToken = randomHex(32);

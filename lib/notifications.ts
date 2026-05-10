@@ -1,8 +1,6 @@
 import webpush from "web-push";
-import type { Prisma } from "@prisma/client";
 import { decryptArtistStoredContact } from "@/lib/artist-pii";
 import { maskEmailForDisplay } from "@/lib/pii-display";
-import { emailLookupHash, isPiiCryptoConfigured, normalizeEmailForLookup } from "@/lib/pii-crypto";
 import { getDb } from "@/lib/db";
 import {
   getPortalNameForEmail,
@@ -76,13 +74,6 @@ function ensureWebPushConfigured(): boolean {
   if (!publicKey || !privateKey || !subject) return false;
   webpush.setVapidDetails(subject, publicKey, privateKey);
   return true;
-}
-
-function getAdminEmails(): string[] {
-  return (process.env.ADMIN_EMAILS ?? "")
-    .split(",")
-    .map((email) => email.trim().toLowerCase())
-    .filter(Boolean);
 }
 
 function defaultNotificationPreferences(): NotificationPreferenceSnapshot {
@@ -271,29 +262,17 @@ export async function notifyAdminRegistrationEvent(input: {
   registrationId: string;
   applicantName: string;
   applicantEmail: string;
+  baseUrl?: string;
   reviewedByName?: string;
   /** Stored admin review text (reject: required; approve: optional, may be default “Approved”). */
   reviewComment?: string;
 }): Promise<void> {
-  const adminEmails = getAdminEmails();
-  if (adminEmails.length === 0) return;
-
-  const adminHashes = (() => {
-    if (!isPiiCryptoConfigured()) return [] as string[];
-    return adminEmails.map((e) => emailLookupHash(normalizeEmailForLookup(e)));
-  })();
-
-  const adminWhere: Prisma.ArtistWhereInput = {
-    isSuspended: false,
-    OR: [
-      { email: { in: adminEmails } },
-      ...(adminHashes.length > 0 ? [{ emailLookupHash: { in: adminHashes } }] : []),
-    ],
-  };
-
   const db = getDb();
   const admins = await db.artist.findMany({
-    where: adminWhere,
+    where: {
+      isAdmin: true,
+      isSuspended: false,
+    },
     select: {
       id: true,
       email: true,
@@ -325,7 +304,7 @@ export async function notifyAdminRegistrationEvent(input: {
   });
   if (admins.length === 0) return;
 
-  const appUrl = normalizeAppUrl();
+  const appUrl = (input.baseUrl?.trim() || normalizeAppUrl()).replace(/\/+$/, "");
   const href = `/admin/registrations/${input.registrationId}`;
   const fullHref = appUrl ? `${appUrl}${href}` : href;
   const rendered = buildAdminRegistrationMessage(input);

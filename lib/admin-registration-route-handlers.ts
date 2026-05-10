@@ -46,13 +46,19 @@ export type SendLoginLinkForApprovedResult =
 /**
  * For **approved** registrations only: emails a simple sign-in link (does not change status or review fields).
  */
-export async function sendLoginLinkForApprovedRegistration(registrationId: string): Promise<SendLoginLinkForApprovedResult> {
+export async function sendLoginLinkForApprovedRegistration(
+  registrationId: string,
+  baseUrl?: string,
+): Promise<SendLoginLinkForApprovedResult> {
   const db = getDb();
   const registration = await db.registrationRequest.findUnique({ where: { id: registrationId } });
   if (!registration) return { ok: false, error: "NOT_FOUND" };
   if (registration.status !== "approved") return { ok: false, error: "NOT_APPROVED" };
   const plain = decryptRegistrationStoredContact(registration);
-  const magicLinkResult = await issueMagicLink(plain.email, undefined, { emailStyle: "admin_login_only" });
+  const magicLinkResult = await issueMagicLink(plain.email, undefined, {
+    emailStyle: "admin_login_only",
+    baseUrl,
+  });
   if (!magicLinkResult.emailSent && magicLinkResult.reason === "artist_not_found") {
     return { ok: false, error: "NO_ARTIST" };
   }
@@ -68,8 +74,9 @@ export async function approvePendingRegistrationRouteStyle(options: {
   reviewerId: string | undefined;
   reviewComment: string;
   analyticsDistinctId: string;
+  baseUrl?: string;
 }): Promise<ApproveRouteResult> {
-  const { registrationId, reviewerId, reviewComment, analyticsDistinctId } = options;
+  const { registrationId, reviewerId, reviewComment, analyticsDistinctId, baseUrl } = options;
   const db = getDb();
 
   const registration = await db.registrationRequest.findUnique({
@@ -131,7 +138,7 @@ export async function approvePendingRegistrationRouteStyle(options: {
     });
   }
 
-  const magicLinkResult = await issueMagicLink(plain.email);
+  const magicLinkResult = await issueMagicLink(plain.email, undefined, { baseUrl });
 
   await db.registrationRequest.update({
     where: { id: registrationId },
@@ -155,6 +162,7 @@ export async function approvePendingRegistrationRouteStyle(options: {
     registrationId,
     applicantName: registration.fullName,
     applicantEmail: plain.email,
+    baseUrl,
     reviewedByName: reviewer?.fullName,
     reviewComment,
   });
@@ -183,8 +191,9 @@ export async function rejectPendingRegistrationRouteStyle(options: {
   reviewerId: string | undefined;
   reviewComment: string;
   analyticsDistinctId: string;
+  baseUrl?: string;
 }): Promise<RejectRouteResult> {
-  const { registrationId, reviewerId, reviewComment, analyticsDistinctId } = options;
+  const { registrationId, reviewerId, reviewComment, analyticsDistinctId, baseUrl } = options;
   const db = getDb();
 
   const registration = await db.registrationRequest.findUnique({
@@ -220,6 +229,7 @@ export async function rejectPendingRegistrationRouteStyle(options: {
     registrationId,
     applicantName: registration.fullName,
     applicantEmail: plainContact.email,
+    baseUrl,
     reviewedByName: reviewer?.fullName,
     reviewComment,
   });

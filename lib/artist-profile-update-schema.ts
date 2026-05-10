@@ -58,8 +58,7 @@ export const artistProfileEditSchema = z
   contactType: z.enum(["whatsapp", "mobile"]).optional(),
   emailVisibility: piiVisibilitySchema,
   contactVisibility: piiVisibilitySchema,
-  /** Empty string means the artist chose not to list a province (allowed in DB). */
-  province: z.string().trim().max(120),
+  province: z.string().trim().min(1, "Location is required").max(120),
   specialities: z
     .array(z.string().trim().min(1))
     .min(1, "At least one speciality is required")

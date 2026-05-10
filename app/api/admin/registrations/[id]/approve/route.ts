@@ -33,6 +33,7 @@ export async function POST(
     reviewerId: reviewerId ?? undefined,
     reviewComment: parsedComment.comment,
     analyticsDistinctId: request.headers.get("x-artist-id") ?? "unknown-admin",
+    baseUrl: request.nextUrl.origin,
   });
 
   if (result.ok === false) {

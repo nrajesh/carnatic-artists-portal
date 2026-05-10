@@ -11,6 +11,7 @@ export type SendLoginLinkToArtistResult =
  */
 export async function sendLoginLinkToArtist(
   artistIdOrSlug: string,
+  baseUrl?: string,
 ): Promise<SendLoginLinkToArtistResult> {
   const artist = await getDb().artist.findFirst({
     where: {
@@ -31,6 +32,7 @@ export async function sendLoginLinkToArtist(
 
   const magicLinkResult = await issueMagicLink(email, undefined, {
     emailStyle: "admin_login_only",
+    baseUrl,
   });
   return { ok: true, magicLinkEmailSent: magicLinkResult.emailSent };
 }

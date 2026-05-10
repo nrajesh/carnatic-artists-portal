@@ -88,7 +88,7 @@ export const registrationSchema = z
   .object({
     fullName: z.string().min(1, "Full name is required"),
     email: z.string().email("Valid email address is required"),
-    province: z.string().trim().max(120).optional(),
+    province: z.string().trim().min(1, "Location is required").max(120),
     contactNumber: z.preprocess(
       (v) => (typeof v === "string" ? sanitizeContactNumberInput(v) : ""),
       z.string(),
@@ -149,6 +149,13 @@ function capitalizeFirst(value: string) {
   if (!trimmed) return value;
   return trimmed[0].toUpperCase() + trimmed.slice(1);
 }
+
+const finalRequiredFieldLabels = {
+  fullName: "Full name",
+  email: "Email address",
+  province: "Location",
+  specialities: "Specialities",
+} as const;
 
 // ---------------------------------------------------------------------------
 // ---------------------------------------------------------------------------
@@ -255,6 +262,7 @@ export default function RegisterPage() {
   const activeStep = registrationSteps[currentStep];
   const isFirstStep = currentStep === 0;
   const isFinalStep = currentStep === registrationSteps.length - 1;
+  const submitBlockedBySession = sessionState.authenticated && !registeringSomeoneElse;
 
   const {
     register,
@@ -282,6 +290,11 @@ export default function RegisterPage() {
       youtubeUrl: "",
     },
   });
+  const finalRequiredFieldErrors = (
+    Object.entries(finalRequiredFieldLabels) as Array<
+      [keyof typeof finalRequiredFieldLabels, string]
+    >
+  ).filter(([field]) => Boolean(errors[field]));
 
   const goToNextStep = async () => {
     const stepFields: Array<Array<keyof RegistrationFormData>> = [
@@ -668,11 +681,10 @@ export default function RegisterPage() {
 
                 <div>
                   <label className="block text-sm font-semibold text-amber-900 mb-1">
-                    {locationAreaLabel}{" "}
-                    <span className="font-normal text-amber-600">(optional)</span>
+                    {locationAreaLabel} <span className="text-red-600">*</span>
                   </label>
                   <p className="mb-2 text-xs text-amber-700">
-                    Enter any city, province, district, state, or area. Suggestions are there to
+                    Enter your city, province, district, state, or area. Suggestions are there to
                     help, not to limit you.
                   </p>
                   <input
@@ -733,8 +745,8 @@ export default function RegisterPage() {
                     <span className="font-normal text-amber-600">(1-3)</span>
                   </label>
                   <p className="mb-2 text-xs text-amber-700">
-                    Pick from the list or add your own if it&apos;s missing - an admin can add it to
-                    the catalogue when reviewing your request.
+                    Pick from the list or <strong>add your own</strong>{" "}if it&apos;s missing - an
+                    admin can add it to the catalogue when reviewing your request.
                   </p>
                   <Controller
                     name="specialities"
@@ -951,7 +963,7 @@ export default function RegisterPage() {
             {isFinalStep ? (
               <button
                 type="submit"
-                disabled={isSubmitting || (sessionState.authenticated && !registeringSomeoneElse)}
+                disabled={isSubmitting || submitBlockedBySession}
                 className="min-h-[48px] rounded-full bg-orange-700 px-6 py-3 text-sm font-bold text-white shadow-lg shadow-orange-900/15 transition-colors hover:bg-orange-800 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 sm:min-w-64"
               >
                 {isSubmitting ? "Submitting…" : "Submit Registration Request"}
@@ -967,6 +979,18 @@ export default function RegisterPage() {
               </button>
             )}
           </div>
+          {isFinalStep && submitBlockedBySession ? (
+            <FormFieldNotice tone="error" className="mt-3">
+              You&apos;re currently signed in as {sessionState.role}. To submit this form, scroll up
+              and check &ldquo;I am registering someone else.&rdquo;
+            </FormFieldNotice>
+          ) : null}
+          {isFinalStep && finalRequiredFieldErrors.length > 0 ? (
+            <FormFieldNotice tone="error" className="mt-3">
+              Missing required fields:{" "}
+              {finalRequiredFieldErrors.map(([, label]) => label).join(", ")}.
+            </FormFieldNotice>
+          ) : null}
         </form>
       </div>
     </main>
