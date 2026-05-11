@@ -19,6 +19,7 @@ import SpecialityPicker, { type SpecialityCatalogItem } from "@/components/speci
 import { RegistrationPrefixedUrlInput } from "@/components/registration-prefixed-url-input";
 import { FormFieldNotice } from "@/components/form-field-notice";
 import { SiteBrandMark } from "@/components/site-brand-mark";
+import { CityAutocomplete } from "@/components/city-autocomplete";
 import { useTimedFieldNotice } from "@/hooks/use-timed-field-notice";
 import {
   contactNumberRestrictedHandlers,
@@ -88,7 +89,7 @@ export const registrationSchema = z
   .object({
     fullName: z.string().min(1, "Full name is required"),
     email: z.string().email("Valid email address is required"),
-    province: z.string().trim().min(1, "Location is required").max(120),
+    province: z.string().trim().min(1, "City is required").max(120),
     contactNumber: z.preprocess(
       (v) => (typeof v === "string" ? sanitizeContactNumberInput(v) : ""),
       z.string(),
@@ -144,16 +145,10 @@ const registrationSteps = [
   },
 ] as const;
 
-function capitalizeFirst(value: string) {
-  const trimmed = value.trim();
-  if (!trimmed) return value;
-  return trimmed[0].toUpperCase() + trimmed.slice(1);
-}
-
 const finalRequiredFieldLabels = {
   fullName: "Full name",
   email: "Email address",
-  province: "Location",
+  province: "City",
   specialities: "Specialities",
 } as const;
 
@@ -257,8 +252,7 @@ export default function RegisterPage() {
 
   const formatNote = useTimedFieldNotice();
   const locationConfig = getPublicDeploymentLocationInputConfig();
-  const locationAreaLabel = capitalizeFirst(locationConfig.areaLabelSingular);
-  const locationSuggestionsId = "registration-location-suggestions";
+  const locationAreaLabel = "City";
   const activeStep = registrationSteps[currentStep];
   const isFirstStep = currentStep === 0;
   const isFinalStep = currentStep === registrationSteps.length - 1;
@@ -269,6 +263,7 @@ export default function RegisterPage() {
     handleSubmit,
     control,
     setValue,
+    setError,
     trigger,
     formState: { errors, isSubmitting },
   } = useForm<RegistrationFormData>({
@@ -436,8 +431,18 @@ export default function RegisterPage() {
         });
         setSubmitted(true);
       } else {
+        if (json.fields && typeof json.fields === "object") {
+          const fieldErrors = json.fields as Partial<Record<keyof RegistrationFormData, string>>;
+          for (const [field, message] of Object.entries(fieldErrors)) {
+            if (message && field in finalRequiredFieldLabels) {
+              setError(field as keyof RegistrationFormData, { type: "server", message });
+            }
+          }
+          if (fieldErrors.province) setCurrentStep(0);
+        }
         setSubmitError(
           (typeof json.message === "string" && json.message) ||
+            (json.fields ? "Please fix the highlighted fields." : undefined) ||
             (typeof json.error === "string" && json.error) ||
             "Submission failed. Please try again.",
         );
@@ -684,23 +689,22 @@ export default function RegisterPage() {
                     {locationAreaLabel} <span className="text-red-600">*</span>
                   </label>
                   <p className="mb-2 text-xs text-amber-700">
-                    Enter your city, province, district, state, or area. Suggestions are there to
-                    help, not to limit you.
+                    Examples: Hilversum or Chennai, India.
                   </p>
-                  <input
-                    type="text"
-                    list={locationConfig.areaOptions.length > 0 ? locationSuggestionsId : undefined}
-                    {...register("province")}
-                    className="ph-no-capture w-full rounded-lg border border-amber-300 px-3 py-2 text-amber-900 placeholder-amber-400 focus:outline-none focus:ring-2 focus:ring-amber-500 min-h-[44px]"
-                    placeholder={`Type a ${locationConfig.areaLabelSingular.toLowerCase()}, city, district, or area`}
+                  <Controller
+                    name="province"
+                    control={control}
+                    render={({ field }) => (
+                      <CityAutocomplete
+                        value={field.value ?? ""}
+                        onChange={field.onChange}
+                        onBlur={field.onBlur}
+                        localOptions={locationConfig.areaOptions}
+                        placeholder="Type a city"
+                        className="ph-no-capture w-full rounded-lg border border-amber-300 px-3 py-2 text-amber-900 placeholder-amber-400 focus:outline-none focus:ring-2 focus:ring-amber-500 min-h-[44px]"
+                      />
+                    )}
                   />
-                  {locationConfig.areaOptions.length > 0 ? (
-                    <datalist id={locationSuggestionsId}>
-                      {locationConfig.areaOptions.map((option) => (
-                        <option key={option} value={option} />
-                      ))}
-                    </datalist>
-                  ) : null}
                   {errors.province && (
                     <p className="mt-1 text-sm text-red-600" role="alert">
                       {errors.province.message}
@@ -745,7 +749,7 @@ export default function RegisterPage() {
                     <span className="font-normal text-amber-600">(1-3)</span>
                   </label>
                   <p className="mb-2 text-xs text-amber-700">
-                    Pick from the list or <strong>add your own</strong>{" "}if it&apos;s missing - an
+                    Pick from the list or <strong>add your own</strong> if it&apos;s missing - an
                     admin can add it to the catalogue when reviewing your request.
                   </p>
                   <Controller

@@ -77,7 +77,7 @@ export function AdminArtistsTable({ rows }: { rows: AdminArtistListRow[] }) {
       },
       {
         key: "province",
-        label: "Province",
+        label: "City",
         render: (a) => <span className="text-stone-600">{a.province}</span>,
       },
       {

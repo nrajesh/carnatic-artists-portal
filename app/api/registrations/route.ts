@@ -46,7 +46,7 @@ export const registrationServerSchema = z
   .object({
   fullName: z.string().min(1, 'Full name is required'),
   email: z.string().email('Valid email address is required'),
-  province: z.string().trim().min(1, 'Location is required').max(120),
+  province: z.string().trim().min(1, 'City is required').max(120),
   contactNumber: z.preprocess(
     (v: unknown) => (typeof v === 'string' ? sanitizeContactNumberInput(v) : ''),
     z.string(),

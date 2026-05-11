@@ -34,13 +34,13 @@ No passwords. Artists request a link at `/auth/login`; the email points to `/aut
 The landing page showcases **one vocalist per local calendar day** (timezone follows `DEPLOYMENT_REGION` / optional `DEPLOYMENT_TIMEZONE`). The card uses their **R2 profile photo** (letter fallback if the URL fails), links to their profile, and lists **active collabs** they own or join - up to four titles - with a short message when they have none. Optional `DailyFeatured` rows can override the automatic pick for a given day.
 
 ### 🔍 Transparent search (no LLM)
-Artist search uses a typeahead speciality picker + province dropdown + optional date range - all server-side SQL, no external API calls. Deliberately avoids LLM-based NLP to preserve user trust and keep the platform self-contained.
+Artist search uses a typeahead speciality picker + city dropdown + optional date range - all server-side SQL, no external API calls. Deliberately avoids LLM-based NLP to preserve user trust and keep the platform self-contained.
 
 ### 🌍 Multi-region extensibility
-Deploy for any country by updating env vars and, optionally, pointing to a deployment-specific GeoJSON file. No code changes needed. The home page location explorer (`components/artists-location-explorer.tsx`), language switcher, and date formats all update automatically. When no map is configured, the explorer falls back to text-only location summaries and filtering.
+Deploy for any country by updating env vars and, optionally, pointing to deployment-specific city suggestions. No code changes needed. The home page city explorer (`components/artists-location-explorer.tsx`), language switcher, and date formats all update automatically.
 
 ### 🏠 Home marketing bundle
-Homepage aggregates (totals, featured artist, province map inputs, preview grid) are loaded in **`lib/cache/home-marketing.ts`**. On **Cloudflare Workers** (OpenNext), `unstable_cache` is not used: it can break when incremental cache is not fully bound, so the module runs the DB bundle per request and uses **`revalidatePath("/")`** from **`revalidateHomeMarketing()`** after mutations (approvals, profile saves, collabs) to refresh the next view.
+Homepage aggregates (totals, featured artist, city map inputs, preview grid) are loaded in **`lib/cache/home-marketing.ts`**. On **Cloudflare Workers** (OpenNext), `unstable_cache` is not used: it can break when incremental cache is not fully bound, so the module runs the DB bundle per request and uses **`revalidatePath("/")`** from **`revalidateHomeMarketing()`** after mutations (approvals, profile saves, collabs) to refresh the next view.
 
 ### 📱 PWA-ready
 Designed for Lighthouse PWA ≥90, Performance ≥85, Accessibility ≥90 on mobile. All touch targets ≥44×44px. Service Worker, Web App Manifest, and push notifications (VAPID) are in the implementation plan.
@@ -202,8 +202,8 @@ Since magic-link email requires Resend to be configured, use these shortcuts for
 
 | Path | Description |
 |---|---|
-| `/` | Home - stats, daily featured vocalist (photo + gradient fallback + active collab teasers), NL province map, preview grid |
-| `/artists` | Artist directory with search (name, speciality, province) |
+| `/` | Home - stats, daily featured vocalist (photo + gradient fallback + active collab teasers), city map, preview grid |
+| `/artists` | Artist directory with search (name, speciality, city) |
 | `/artists/[slug]` | Artist profile - bio, collab stats, reviews, availability |
 | `/register` | Artist registration  -  required name, email, contact, specialities; optional HTTPS profile/banner image URLs |
 | `/auth/login` | Request magic link |
@@ -271,7 +271,7 @@ lib/
 └── analytics-server.ts  # PostHog Node capture for API routes
 
 components/
-├── artists-location-explorer.tsx  # Deployment-aware location explorer with optional map
+├── artists-location-explorer.tsx  # Deployment-aware city map explorer
 ├── artist-mini-card.tsx       # Compact cards (multi-speciality chips + theme)
 ├── featured-artist-photo.tsx  # Spotlight photo + gradient initial fallback
 ├── speciality-picker.tsx      # Typeahead speciality selector

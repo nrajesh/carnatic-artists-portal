@@ -253,7 +253,7 @@ export default async function ReviewRegistrationPage({
             </div>
             <div>
               <dt className="text-xs font-semibold text-stone-500 uppercase tracking-wide mb-1">
-                Location
+                City
               </dt>
               <dd className="text-stone-800">
                 {reg.province.trim() ? (

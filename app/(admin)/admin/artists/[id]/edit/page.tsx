@@ -36,7 +36,8 @@ export default async function EditArtistPage({ params }: { params: Promise<{ id:
       <div className="mx-auto max-w-2xl">
         <h1 className="mb-2 text-2xl font-bold text-stone-800">Edit: {artist.fullName}</h1>
         <p className="mb-6 text-sm text-stone-500">
-          Same fields as the artist profile editor. Changes apply to their public profile immediately.
+          Same fields as the artist profile editor. Changes apply to their public profile
+          immediately.
         </p>
 
         <div className="mb-8 space-y-6">
@@ -57,8 +58,8 @@ export default async function EditArtistPage({ params }: { params: Promise<{ id:
                 </span>
               </div>
               <p className="mt-2 text-xs text-stone-500">
-                Use <span className="font-medium text-stone-700">Open to collaborations</span> in the form
-                below to change whether they appear in collaboration discovery.
+                Use <span className="font-medium text-stone-700">Open to collaborations</span> in
+                the form below to change whether they appear in collaboration discovery.
               </p>
             </div>
           )}
@@ -68,7 +69,7 @@ export default async function EditArtistPage({ params }: { params: Promise<{ id:
             variant="admin"
             initial={artist}
             allSpecialities={allSpecialities}
-            locationAreaLabel={locationConfig.areaLabelSingular}
+            locationAreaLabel="City"
             locationOptions={locationConfig.areaOptions}
             targetArtistId={artist.id}
             collabsRatingsEnabled={collabsRatingsEnabled}

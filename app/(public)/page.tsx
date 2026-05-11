@@ -6,7 +6,6 @@ import { getCachedHomeMarketingData } from "@/lib/cache/home-marketing";
 import { ArtistsLocationExplorer } from "@/components/artists-location-explorer";
 import { FeaturedArtistPhoto } from "@/components/featured-artist-photo";
 import { getDeploymentDisplayConfig } from "@/lib/deployment-display";
-import { getDeploymentLocationConfig } from "@/lib/deployment-location";
 import { buildLocationMapPoints } from "@/lib/location-map-data";
 import { DEFAULT_ARTIST_ACCENT_COLOR, getThemeFromArtistSpecialities } from "@/lib/speciality-theme";
 import { verifySession } from "@/lib/session-jwt";
@@ -35,11 +34,13 @@ export default async function HomePage({
     previewArtists,
   } = await getCachedHomeMarketingData();
   const displayConfig = getDeploymentDisplayConfig();
-  const locationConfig = await getDeploymentLocationConfig();
-  const locationPoints = await buildLocationMapPoints(previewArtists, displayConfig.countryName);
+  const locationPoints = await buildLocationMapPoints(
+    previewArtists,
+    displayConfig.countryName,
+    displayConfig.countryCode,
+  );
   const locationsWithArtists = locationPoints.filter((point) => point.count > 0).length;
-  const areaPluralTitle =
-    locationConfig.areaLabelPlural[0]?.toUpperCase() + locationConfig.areaLabelPlural.slice(1);
+  const areaPluralTitle = "Locations";
   /** Full artist directory - must match `app/(public)/artists/page.tsx` route (not `/register`). */
   const artistsDirectoryHref = "/artists";
   const featuredTheme = featuredArtist
@@ -57,7 +58,7 @@ export default async function HomePage({
 
   let discoveryContent = (
     <p className="text-xs leading-relaxed text-stone-500">
-      Browse the directory and location explorer to find artists by speciality and area.
+      Browse the directory and map to find artists by speciality and place.
     </p>
   );
 
@@ -145,7 +146,7 @@ export default async function HomePage({
             <a
               href="#home-location-explorer"
               className="block rounded-2xl border border-amber-200 bg-white p-4 shadow-sm transition-colors hover:border-amber-400 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:ring-offset-2 focus-visible:ring-offset-amber-50 sm:p-6"
-              aria-label={`${seekingCollab} open to collaborate - jump to location explorer`}
+              aria-label={`${seekingCollab} open to collaborate - jump to map`}
             >
               <div className="text-3xl font-bold text-amber-800">{seekingCollab}</div>
               <div className="text-xs sm:text-sm text-amber-600 mt-1">Open to collaborate</div>
@@ -159,7 +160,7 @@ export default async function HomePage({
           <a
             href="#home-location-explorer"
             className="block rounded-2xl border border-amber-200 bg-white p-4 shadow-sm transition-colors hover:border-amber-400 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:ring-offset-2 focus-visible:ring-offset-amber-50 sm:p-6"
-            aria-label={`${locationsWithArtists} ${locationConfig.areaLabelPlural.toLowerCase()} represented - jump to location explorer`}
+            aria-label={`${locationsWithArtists} locations represented - jump to map`}
           >
             <div className="text-3xl font-bold text-amber-800">{locationsWithArtists}</div>
             <div className="text-xs sm:text-sm text-amber-600 mt-1">{areaPluralTitle} represented</div>
@@ -246,14 +247,14 @@ export default async function HomePage({
           Find artists near you
         </h2>
         <p className="mt-1 max-w-xl text-sm text-stone-600">
-          {`Zoom into the map until nearby ${locationConfig.areaLabelPlural.toLowerCase()} separate into individual counts.`}
+          Zoom into the map until nearby locations separate into individual counts.
         </p>
         <div className="mt-5">
           <ArtistsLocationExplorer
             key={locationPoints.map((point) => `${point.locationValue}:${point.count}`).join("|")}
             locationPoints={locationPoints}
-            areaLabelSingular={locationConfig.areaLabelSingular}
-            areaLabelPlural={locationConfig.areaLabelPlural}
+            areaLabelSingular="location"
+            areaLabelPlural="locations"
           />
         </div>
       </section>
