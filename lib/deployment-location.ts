@@ -56,7 +56,9 @@ function parseStringMapEnv(key: string): Record<string, string> {
       }
     }
 
-    return Object.fromEntries(entries.map(([mapKey, mapValue]) => [mapKey.trim(), mapValue.trim()]));
+    return Object.fromEntries(
+      entries.map(([mapKey, mapValue]) => [mapKey.trim(), mapValue.trim()]),
+    );
   } catch (error) {
     throw new Error(
       `${key} must be a valid JSON object, e.g. {"Fryslân":"Friesland"}. ${
@@ -64,6 +66,10 @@ function parseStringMapEnv(key: string): Record<string, string> {
       }`.trim(),
     );
   }
+}
+
+function defaultPluralForLocationLabel(singular: string): string {
+  return singular.trim().toLowerCase() === "city" ? "cities" : `${singular}s`;
 }
 
 function extractGeoJsonLabel(
@@ -107,15 +113,16 @@ async function deriveAreaOptionsFromGeoJson(
 export const getDeploymentLocationConfig = cache(async (): Promise<DeploymentLocationConfig> => {
   const deployment = getDeploymentConfig();
   const display = getDeploymentDisplayConfig();
-  const areaLabelSingular = process.env.DEPLOYMENT_LOCATION_LABEL_SINGULAR?.trim() || "location";
+  const areaLabelSingular = process.env.DEPLOYMENT_LOCATION_LABEL_SINGULAR?.trim() || "city";
   const areaLabelPlural =
-    process.env.DEPLOYMENT_LOCATION_LABEL_PLURAL?.trim() || `${areaLabelSingular}s`;
+    process.env.DEPLOYMENT_LOCATION_LABEL_PLURAL?.trim() ||
+    defaultPluralForLocationLabel(areaLabelSingular);
   const mapGeoJsonUrl = deployment.mapGeoJsonUrl?.trim() || null;
   const mapGeoJsonLabelKeys = parseStringArrayEnv("DEPLOYMENT_MAP_GEOJSON_LABEL_KEYS") ?? ["name"];
   const geoLabelAliases = parseStringMapEnv("DEPLOYMENT_LOCATION_ALIASES");
 
   let areaOptions = parseStringArrayEnv("DEPLOYMENT_LOCATION_OPTIONS") ?? [];
-  if (areaOptions.length === 0 && mapGeoJsonUrl) {
+  if (areaOptions.length === 0 && mapGeoJsonUrl && areaLabelSingular.toLowerCase() !== "city") {
     areaOptions = await deriveAreaOptionsFromGeoJson(
       mapGeoJsonUrl,
       mapGeoJsonLabelKeys,

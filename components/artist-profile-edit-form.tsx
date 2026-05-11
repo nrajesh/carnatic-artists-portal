@@ -7,6 +7,7 @@ import { usePostHog } from "posthog-js/react";
 import SpecialityPicker from "@/components/speciality-picker";
 import { RegistrationPrefixedUrlInput } from "@/components/registration-prefixed-url-input";
 import { FormFieldNotice } from "@/components/form-field-notice";
+import { CityAutocomplete } from "@/components/city-autocomplete";
 import { useTimedFieldNotice } from "@/hooks/use-timed-field-notice";
 import {
   contactNumberRestrictedHandlers,
@@ -145,7 +146,9 @@ function snapshotFromEditView(initial: ArtistEditView): FormFieldsSnapshot {
     backgroundImageUrl: initial.backgroundImageUrl,
     bioRichText: initial.bioRichText,
     websiteUrls:
-      initial.websiteUrls.length > 0 ? initial.websiteUrls.map((w) => ({ url: w.url })) : [{ url: "" }],
+      initial.websiteUrls.length > 0
+        ? initial.websiteUrls.map((w) => ({ url: w.url }))
+        : [{ url: "" }],
     linkedinUrl: initial.linkedinUrl,
     instagramUrl: initial.instagramUrl,
     facebookUrl: initial.facebookUrl,
@@ -181,7 +184,9 @@ export function ArtistProfileEditForm({
   const [fullName, setFullName] = useState(initial.fullName);
   const [email, setEmail] = useState(initial.email);
   const [contactNumber, setContactNumber] = useState(initial.contactNumber);
-  const [contactType, setContactType] = useState<"whatsapp" | "mobile">(initial.contactType ?? "mobile");
+  const [contactType, setContactType] = useState<"whatsapp" | "mobile">(
+    initial.contactType ?? "mobile",
+  );
   const [emailVisibility, setEmailVisibility] = useState(initial.emailVisibility);
   const [contactVisibility, setContactVisibility] = useState(initial.contactVisibility);
   const [province, setProvince] = useState(initial.province);
@@ -205,8 +210,6 @@ export function ArtistProfileEditForm({
   const [isPending, startTransition] = useTransition();
   const formatNote = useTimedFieldNotice();
   const locationAreaLabelLower = locationAreaLabel.toLowerCase();
-  const locationSuggestionsId = `location-suggestions-${variant}${targetArtistId ? `-${targetArtistId}` : ""}`;
-
   const baselineFingerprint = useMemo(
     () =>
       fingerprintArtistProfileInput(
@@ -425,18 +428,23 @@ export function ArtistProfileEditForm({
               })}
             </div>
             <p className="mt-1 text-xs text-stone-400">
-              {province.trim() ? `📍 ${province}` : `No ${locationAreaLabelLower} listed on your public profile`}
+              {province.trim()
+                ? `📍 ${province}`
+                : `No ${locationAreaLabelLower} listed on your public profile`}
             </p>
           </div>
         </div>
 
         <div>
-          <label htmlFor="artist-profile-slug" className="mb-1 block text-sm font-semibold text-stone-700">
+          <label
+            htmlFor="artist-profile-slug"
+            className="mb-1 block text-sm font-semibold text-stone-700"
+          >
             Public profile URL <span className="text-red-500">*</span>
           </label>
           <p className="mb-2 text-xs text-stone-500">
-            Lowercase letters, numbers, and hyphens. Spaces become hyphens; other symbols are removed when you
-            save.
+            Lowercase letters, numbers, and hyphens. Spaces become hyphens; other symbols are
+            removed when you save.
           </p>
           <div
             className={`flex w-full min-w-0 max-w-full flex-col rounded-lg border border-stone-200 bg-white focus-within:ring-2 sm:flex-row sm:items-stretch sm:overflow-hidden ${ring}`}
@@ -526,16 +534,21 @@ export function ArtistProfileEditForm({
               </label>
             </div>
           </div>
-          {errors.contactNumber && <p className="mt-1 text-xs text-red-500">{errors.contactNumber}</p>}
+          {errors.contactNumber && (
+            <p className="mt-1 text-xs text-red-500">{errors.contactNumber}</p>
+          )}
         </div>
 
         <div className="rounded-xl border border-amber-100 bg-amber-50/80 px-4 py-4 space-y-4">
           <p className="text-sm font-semibold text-stone-800">Who can see your email & phone</p>
           <p className="text-xs text-stone-600 leading-relaxed">
-            Login always uses your email privately. These settings only control what other artists and visitors can see.
+            Login always uses your email privately. These settings only control what other artists
+            and visitors can see.
           </p>
           <div>
-            <label className="mb-1 block text-xs font-semibold text-stone-600">Email visibility</label>
+            <label className="mb-1 block text-xs font-semibold text-stone-600">
+              Email visibility
+            </label>
             <select
               value={emailVisibility}
               onChange={(e) =>
@@ -552,7 +565,9 @@ export function ArtistProfileEditForm({
             )}
           </div>
           <div>
-            <label className="mb-1 block text-xs font-semibold text-stone-600">Phone / WhatsApp visibility</label>
+            <label className="mb-1 block text-xs font-semibold text-stone-600">
+              Phone / WhatsApp visibility
+            </label>
             <select
               value={contactVisibility}
               onChange={(e) =>
@@ -572,26 +587,15 @@ export function ArtistProfileEditForm({
 
         <div>
           <label className="mb-1 block text-sm font-semibold text-stone-700">
-            {locationAreaLabel} <span className="font-normal text-stone-400">(optional)</span>
+            {locationAreaLabel}
           </label>
-          <input
-            type="text"
+          <CityAutocomplete
             value={province}
-            onChange={(e) => setProvince(e.target.value)}
-            list={locationOptions.length > 0 ? locationSuggestionsId : undefined}
-            placeholder={`Type a ${locationAreaLabelLower}, city, district, or area`}
+            onChange={setProvince}
+            localOptions={locationOptions}
+            placeholder={`Type a ${locationAreaLabelLower}`}
             className={`min-h-[44px] w-full rounded-lg border border-stone-200 bg-white px-3 py-2.5 text-stone-800 focus:outline-none focus:ring-2 ${ring}`}
           />
-          {locationOptions.length > 0 ? (
-            <datalist id={locationSuggestionsId}>
-              {locationOptions.map((option) => (
-                <option key={option} value={option} />
-              ))}
-            </datalist>
-          ) : null}
-          <p className="mt-1 text-xs text-stone-500">
-            Enter any place name. Suggestions are optional and won&apos;t limit what you can save.
-          </p>
           {errors.province && <p className="mt-1 text-xs text-red-500">{errors.province}</p>}
         </div>
 
@@ -621,12 +625,14 @@ export function ArtistProfileEditForm({
               <span>
                 <span className="text-sm font-semibold text-stone-800">Open to collaborations</span>
                 <span className="mt-0.5 block text-xs text-stone-500">
-                  When enabled, you appear in “open to collaborate” counts and can be discovered for new
-                  projects.
+                  When enabled, you appear in “open to collaborate” counts and can be discovered for
+                  new projects.
                 </span>
               </span>
             </label>
-            {errors.openToCollab && <p className="mt-2 text-xs text-red-500">{errors.openToCollab}</p>}
+            {errors.openToCollab && (
+              <p className="mt-2 text-xs text-red-500">{errors.openToCollab}</p>
+            )}
           </div>
         )}
 
@@ -669,8 +675,14 @@ export function ArtistProfileEditForm({
         </div>
 
         <div id="profile-bio" className="scroll-mt-28">
-          <label className="mb-1 block text-sm font-semibold text-stone-700">Bio / Musical journey</label>
-          <BioRichTextEditor initialHtml={initial.bioRichText} onHtmlChange={setBioHtml} disabled={isPending} />
+          <label className="mb-1 block text-sm font-semibold text-stone-700">
+            Bio / Musical journey
+          </label>
+          <BioRichTextEditor
+            initialHtml={initial.bioRichText}
+            onHtmlChange={setBioHtml}
+            disabled={isPending}
+          />
           {errors.bioRichText && <p className="mt-1 text-xs text-red-500">{errors.bioRichText}</p>}
         </div>
 
@@ -723,7 +735,9 @@ export function ArtistProfileEditForm({
           </div>
           {errors.websiteUrls && (
             <p className="mt-1 text-xs text-red-500" role="alert">
-              {String((errors.websiteUrls as { message?: string }).message ?? "Check website URLs.")}
+              {String(
+                (errors.websiteUrls as { message?: string }).message ?? "Check website URLs.",
+              )}
             </p>
           )}
         </div>

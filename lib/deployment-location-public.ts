@@ -18,11 +18,16 @@ function parseStringArrayValue(raw: string | undefined): string[] {
   }
 }
 
+function defaultPluralForLocationLabel(singular: string): string {
+  return singular.trim().toLowerCase() === "city" ? "cities" : `${singular}s`;
+}
+
 export function getPublicDeploymentLocationInputConfig() {
   const areaLabelSingular =
-    process.env.NEXT_PUBLIC_DEPLOYMENT_LOCATION_LABEL_SINGULAR?.trim() || "location";
+    process.env.NEXT_PUBLIC_DEPLOYMENT_LOCATION_LABEL_SINGULAR?.trim() || "city";
   const areaLabelPlural =
-    process.env.NEXT_PUBLIC_DEPLOYMENT_LOCATION_LABEL_PLURAL?.trim() || `${areaLabelSingular}s`;
+    process.env.NEXT_PUBLIC_DEPLOYMENT_LOCATION_LABEL_PLURAL?.trim() ||
+    defaultPluralForLocationLabel(areaLabelSingular);
   const areaOptions = parseStringArrayValue(process.env.NEXT_PUBLIC_DEPLOYMENT_LOCATION_OPTIONS);
 
   return {

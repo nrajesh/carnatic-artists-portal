@@ -354,7 +354,7 @@ export function ArtistsLocationExplorer({
         </div>
         <div className="mt-3 flex flex-wrap items-center justify-between gap-3 px-3 pb-2 sm:px-4 text-xs text-stone-500">
           <p>
-            Markers reflect artists who entered a location.
+            Markers reflect artists whose current profile location could be mapped.
           </p>
           <Link
             href="/artists"

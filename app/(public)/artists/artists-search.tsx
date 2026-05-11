@@ -7,7 +7,7 @@ import SearchTypeahead, { SearchOption } from "@/components/search-typeahead";
 export default function ArtistsSearch({
   specialities = [],
   locationOptions = [],
-  locationAreaLabelPlural = "Regions",
+  locationAreaLabelPlural = "Cities",
   nameSearchDisabled = false,
 }: {
   specialities?: SearchOption[];

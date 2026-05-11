@@ -283,7 +283,7 @@ export default async function AboutPage() {
                 All specialities ▾
               </div>
               <div className="sm:w-44 px-3 py-2.5 rounded-lg border border-stone-200 text-stone-400 text-sm bg-stone-50 min-h-[44px] flex items-center">
-                All locations ▾
+                All cities ▾
               </div>
             </div>
             <p className="text-xs text-stone-400 italic">
@@ -480,8 +480,8 @@ export default async function AboutPage() {
               ["DEPLOYMENT_NAME",            "Artist Discovery Portal"],
               ["DEPLOYMENT_LOCALE_PRIMARY",  "en"],
               ["DEPLOYMENT_LOCALE_SECONDARY",""],
-              ["DEPLOYMENT_LOCATION_LABEL_SINGULAR", "state"],
-              ["DEPLOYMENT_LOCATION_LABEL_PLURAL", "states"],
+              ["DEPLOYMENT_LOCATION_LABEL_SINGULAR", "city"],
+              ["DEPLOYMENT_LOCATION_LABEL_PLURAL", "cities"],
               ["DEPLOYMENT_MAP_GEOJSON_URL", "/geo/deployment-areas.geojson"],
               ["DEPLOYMENT_BRANDING_LOGO_URL","/assets/logo.svg"],
             ].map(([key, val]) => (
@@ -493,8 +493,8 @@ export default async function AboutPage() {
             ))}
           </div>
           <div className="bg-blue-50 border border-blue-200 rounded-xl p-5 text-sm text-blue-800">
-            Set the deployment&apos;s country code, display name, locale, optional subdivision labels, and optional GeoJSON path in environment variables.
-            When a map is not configured, the home page automatically falls back to text-only location summaries and filtering.
+            Set the deployment&apos;s country code, display name, locale, optional city labels, and optional city suggestions in environment variables.
+            The home page maps artists whose saved city can be resolved to a real place.
           </div>
         </Section>
 

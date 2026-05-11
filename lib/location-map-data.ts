@@ -1,4 +1,5 @@
 import { cache } from "react";
+import { normalizeLocationLabel } from "@/lib/location-display";
 import type { ArtistListing } from "@/lib/queries/artists";
 
 export type LocationMapArtist = {
@@ -16,7 +17,7 @@ export type LocationMapPoint = {
   longitude: number;
   count: number;
   artists: LocationMapArtist[];
-  source: "geocoded" | "country-fallback";
+  source: "geocoded";
   geocodeLabel: string;
 };
 
@@ -24,18 +25,11 @@ type GeocodeResult = {
   latitude: number;
   longitude: number;
   displayName: string;
+  city: string | null;
 };
 
 function normalizeLocationValue(value: string): string {
   return value.trim();
-}
-
-function stableUnitOffset(seed: string, salt: number): number {
-  let hash = salt;
-  for (let index = 0; index < seed.length; index += 1) {
-    hash = (hash * 33 + seed.charCodeAt(index)) >>> 0;
-  }
-  return (hash % 2001) / 1000 - 1;
 }
 
 async function geocodeQuery(query: string): Promise<GeocodeResult | null> {
@@ -46,6 +40,7 @@ async function geocodeQuery(query: string): Promise<GeocodeResult | null> {
     q: trimmed,
     format: "jsonv2",
     limit: "1",
+    addressdetails: "1",
   });
 
   try {
@@ -63,6 +58,12 @@ async function geocodeQuery(query: string): Promise<GeocodeResult | null> {
       lat?: string;
       lon?: string;
       display_name?: string;
+      address?: {
+        city?: string;
+        town?: string;
+        village?: string;
+        municipality?: string;
+      };
     }>;
     const first = data[0];
     if (!first?.lat || !first?.lon) return null;
@@ -75,6 +76,12 @@ async function geocodeQuery(query: string): Promise<GeocodeResult | null> {
       latitude,
       longitude,
       displayName: first.display_name?.trim() || trimmed,
+      city:
+        first.address?.city?.trim() ||
+        first.address?.town?.trim() ||
+        first.address?.village?.trim() ||
+        first.address?.municipality?.trim() ||
+        null,
     };
   } catch {
     return null;
@@ -93,43 +100,30 @@ async function geocodeLocation(value: string, countryName: string): Promise<Geoc
   return null;
 }
 
-const geocodeCountryCached = cache(async (countryName: string) => geocodeQuery(countryName));
-
 export async function buildLocationMapPoints(
   artists: ArtistListing[],
   countryName: string,
+  _countryCode?: string,
 ): Promise<LocationMapPoint[]> {
   const grouped = new Map<string, ArtistListing[]>();
   for (const artist of artists) {
     const normalized = normalizeLocationValue(artist.province);
     if (!normalized) continue;
 
-    const key = normalized;
-    const bucket = grouped.get(key);
+    const bucket = grouped.get(normalized);
     if (bucket) {
       bucket.push(artist);
     } else {
-      grouped.set(key, [artist]);
+      grouped.set(normalized, [artist]);
     }
   }
 
-  const countryFallback = await geocodeCountryCached(countryName);
   const points = await Promise.all(
     Array.from(grouped.entries()).map(async ([locationValue, locationArtists]) => {
       const geocoded = await geocodeLocation(locationValue, countryName);
-      const baseLatitude = geocoded?.latitude ?? countryFallback?.latitude;
-      const baseLongitude = geocoded?.longitude ?? countryFallback?.longitude;
-      if (!Number.isFinite(baseLatitude) || !Number.isFinite(baseLongitude)) return null;
+      if (!geocoded) return null;
 
-      let latitude = baseLatitude;
-      let longitude = baseLongitude;
-
-      let source: "geocoded" | "country-fallback" = "geocoded";
-      if (!geocoded) {
-        source = "country-fallback";
-        latitude += stableUnitOffset(locationValue, 17) * 0.45;
-        longitude += stableUnitOffset(locationValue, 53) * 0.7;
-      }
+      const groupedLabel = geocoded.city ? normalizeLocationLabel(geocoded.city) : normalizeLocationLabel(locationValue);
 
       const artistsForPoint: LocationMapArtist[] = [...locationArtists]
         .sort((left, right) => left.name.localeCompare(right.name, undefined, { sensitivity: "base" }))
@@ -142,19 +136,42 @@ export async function buildLocationMapPoints(
         }));
 
       return {
-        locationValue,
-        label: locationValue,
-        latitude,
-        longitude,
+        locationValue: groupedLabel,
+        label: groupedLabel,
+        latitude: geocoded.latitude,
+        longitude: geocoded.longitude,
         count: artistsForPoint.length,
         artists: artistsForPoint,
-        source,
-        geocodeLabel: geocoded?.displayName ?? countryFallback?.displayName ?? countryName,
+        source: "geocoded",
+        geocodeLabel: geocoded.displayName,
       } satisfies LocationMapPoint;
     }),
   );
 
-  return points
-    .filter((point): point is LocationMapPoint => Boolean(point))
+  const groupedPoints = new Map<string, LocationMapPoint>();
+  for (const point of points) {
+    if (!point) continue;
+
+    const key = point.locationValue.toLocaleLowerCase();
+    const existing = groupedPoints.get(key);
+    if (existing) {
+      existing.count += point.count;
+      existing.artists.push(...point.artists);
+      continue;
+    }
+
+    groupedPoints.set(key, {
+      ...point,
+      artists: [...point.artists],
+    });
+  }
+
+  return Array.from(groupedPoints.values())
+    .map((point) => ({
+      ...point,
+      artists: point.artists.sort((left, right) =>
+        left.name.localeCompare(right.name, undefined, { sensitivity: "base" }),
+      ),
+    }))
     .sort((left, right) => right.count - left.count || left.label.localeCompare(right.label));
 }

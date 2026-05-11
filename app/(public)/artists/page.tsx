@@ -6,8 +6,8 @@ import ArtistsSearch from "./artists-search";
 import { ArtistListingTracker } from "./artist-listing-tracker";
 import { FeaturedArtistPhoto } from "@/components/featured-artist-photo";
 import { artistMatchesDirectoryQuery } from "@/lib/artist-directory-search";
-import { getDeploymentDisplayConfig } from "@/lib/deployment-display";
 import { getDeploymentLocationConfig } from "@/lib/deployment-location";
+import { normalizeLocationLabel } from "@/lib/location-display";
 import { listArtistsForDirectory } from "@/lib/queries/artists";
 import { getThemeFromArtistSpecialities } from "@/lib/speciality-theme";
 import { isArtistCollabsRatingsEnabledServer } from "@/lib/feature-flags-server";
@@ -24,14 +24,14 @@ export default async function ArtistsPage({ searchParams }: PageProps) {
   const session = sessionCookie ? await verifySession(sessionCookie) : null;
   const isLoggedIn = !!session;
   const selectedLocation = location || province;
-  const [allArtists, collabsRatingsEnabled, displayConfig, locationConfig] = await Promise.all([
+  const [allArtists, collabsRatingsEnabled, locationConfig] = await Promise.all([
     listArtistsForDirectory(),
     isArtistCollabsRatingsEnabledServer(),
-    Promise.resolve(getDeploymentDisplayConfig()),
     getDeploymentLocationConfig(),
   ]);
+  const normalizedSelectedLocation = normalizeLocationLabel(selectedLocation).toLocaleLowerCase();
   const locationOptions = Array.from(
-    new Set(allArtists.map((artist) => artist.province.trim()).filter(Boolean)),
+    new Set(allArtists.map((artist) => normalizeLocationLabel(artist.province)).filter(Boolean)),
   ).sort((a, b) => a.localeCompare(b));
   const uniqueSpecialitiesMap = new Map<string, string>();
   allArtists.forEach(a => a.specialities.forEach(s => uniqueSpecialitiesMap.set(s.name, s.color)));
@@ -44,7 +44,9 @@ export default async function ArtistsPage({ searchParams }: PageProps) {
   const filtered = allArtists.filter((a) => {
     const matchesText = !q || artistMatchesDirectoryQuery(a.keywordHaystack, q);
     const matchesSpeciality = !speciality || a.specialities.some((s) => s.name === speciality);
-    const matchesLocation = !selectedLocation || a.province === selectedLocation;
+    const matchesLocation =
+      !normalizedSelectedLocation ||
+      normalizeLocationLabel(a.province).toLocaleLowerCase() === normalizedSelectedLocation;
     return matchesText && matchesSpeciality && matchesLocation;
   });
 

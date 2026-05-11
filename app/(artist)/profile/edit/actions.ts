@@ -28,7 +28,7 @@ export type UpdateProfileResult =
 const profileEditShapeKeys = new Set(Object.keys(artistProfileEditSchema.shape));
 
 function fieldErrorsFromZod(
-  issues: { path: (string | number)[]; message: string }[],
+  issues: { path: PropertyKey[]; message: string }[],
 ): Partial<Record<keyof ArtistProfileEditInput, string>> {
   const fieldErrors: Partial<Record<keyof ArtistProfileEditInput, string>> = {};
   for (const issue of issues) {
