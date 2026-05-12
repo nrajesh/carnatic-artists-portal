@@ -9,51 +9,57 @@ datasource db {
 }
 
 model Artist {
-  id                     String                  @id @default(uuid())
-  slug                   String                  @unique
-  fullName               String
+  id                            String                  @id @default(uuid())
+  slug                          String                  @unique
+  fullName                      String
   /// * Legacy login column; replaced by encrypted PII + emailLookupHash. Optional during migration.
-  email                  String?                 @unique
-  contactNumber          String?
+  email                         String?                 @unique
+  contactNumber                 String?
   /// * Null when the artist has no phone / WhatsApp on file.
-  contactType            ContactType?
-  profilePhotoUrl        String?
-  backgroundImageUrl     String?
-  bioRichText            String?
-  province               String
-  isSuspended            Boolean                 @default(false)
-  createdAt              DateTime                @default(now())
-  updatedAt              DateTime                @updatedAt
-  openToCollab           Boolean                 @default(true)
-  suspensionComment      String?
+  contactType                   ContactType?
+  profilePhotoUrl               String?
+  /// * Original remote URL entered by the user/admin before we copied a derivative into R2.
+  profilePhotoSourceUrl         String?
+  /// * R2 object key for managed, consented profile photos. Null for legacy external URLs.
+  profilePhotoObjectKey         String?
+  /// * When the applicant confirmed they have rights to use the managed profile photo.
+  profilePhotoRightsConfirmedAt DateTime?
+  backgroundImageUrl            String?
+  bioRichText                   String?
+  province                      String
+  isSuspended                   Boolean                 @default(false)
+  createdAt                     DateTime                @default(now())
+  updatedAt                     DateTime                @updatedAt
+  openToCollab                  Boolean                 @default(true)
+  suspensionComment             String?
   /// * AES-256-GCM ciphertext (base64); use lib/pii-crypto to decrypt.
-  emailCipher            String?
+  emailCipher                   String?
   /// * HMAC-SHA256 of normalized email for login and uniqueness; not reversible.
-  emailLookupHash        String?                 @unique
-  contactCipher          String?
-  emailVisibility        PiiVisibility           @default(PRIVATE)
-  contactVisibility      PiiVisibility           @default(COLLABORATORS_ONLY)
+  emailLookupHash               String?                 @unique
+  contactCipher                 String?
+  emailVisibility               PiiVisibility           @default(PRIVATE)
+  contactVisibility             PiiVisibility           @default(COLLABORATORS_ONLY)
   /// * Admin + artist remarks about suspension; cleared when account is reactivated.
-  suspensionThread       Json?
+  suspensionThread              Json?
   /// * Internal-only account used for admin auth + audit trails; hidden from public artist surfaces.
-  isSystemAccount        Boolean                 @default(false)
+  isSystemAccount               Boolean                 @default(false)
   /// * Grants access to /admin routes and admin notifications.
-  isAdmin                Boolean                 @default(false)
-  specialities           ArtistSpeciality[]
-  availabilityEntries    AvailabilityEntry[]
-  ownedCollabs           Collab[]                @relation("CollabOwner")
-  collabMemberships      CollabMember[]
-  sentMessages           CollabMessage[]
-  dailyFeatures          DailyFeatured[]
-  externalLinks          ExternalLink[]
-  receivedFeedback       Feedback[]              @relation("Reviewee")
-  givenFeedback          Feedback[]              @relation("Reviewer")
-  magicLinkTokens        MagicLinkToken[]
-  notifications          Notification[]
-  notificationPreference NotificationPreference?
-  pushSubscriptions      PushSubscription[]
-  reviewedRegistrations  RegistrationRequest[]   @relation("ReviewedBy")
-  sessions               Session[]
+  isAdmin                       Boolean                 @default(false)
+  specialities                  ArtistSpeciality[]
+  availabilityEntries           AvailabilityEntry[]
+  ownedCollabs                  Collab[]                @relation("CollabOwner")
+  collabMemberships             CollabMember[]
+  sentMessages                  CollabMessage[]
+  dailyFeatures                 DailyFeatured[]
+  externalLinks                 ExternalLink[]
+  receivedFeedback              Feedback[]              @relation("Reviewee")
+  givenFeedback                 Feedback[]              @relation("Reviewer")
+  magicLinkTokens               MagicLinkToken[]
+  notifications                 Notification[]
+  notificationPreference        NotificationPreference?
+  pushSubscriptions             PushSubscription[]
+  reviewedRegistrations         RegistrationRequest[]   @relation("ReviewedBy")
+  sessions                      Session[]
 }
 
 model Speciality {
@@ -83,28 +89,34 @@ model ExternalLink {
 }
 
 model RegistrationRequest {
-  id                 String                   @id @default(uuid())
-  fullName           String
+  id                            String                   @id @default(uuid())
+  fullName                      String
   /// * Deprecated: use ciphertext fields; nullable during migration from plaintext.
-  email              String?
-  contactNumber      String?
+  email                         String?
+  contactNumber                 String?
   /// * Null when no contact number was provided on registration.
-  contactType        ContactType?
-  profilePhotoUrl    String?
-  backgroundImageUrl String?
-  bioRichText        String?
-  status             String                   @default("pending")
-  submittedAt        DateTime                 @default(now())
-  reviewedAt         DateTime?
-  reviewedBy         String?
-  reviewComment      String?
-  emailCipher        String?
-  emailLookupHash    String?
-  contactCipher      String?
-  province           String                   @default("")
-  links              RegistrationLink[]
-  reviewer           Artist?                  @relation("ReviewedBy", fields: [reviewedBy], references: [id])
-  specialities       RegistrationSpeciality[]
+  contactType                   ContactType?
+  profilePhotoUrl               String?
+  /// * Original remote URL entered before a managed derivative was copied into R2.
+  profilePhotoSourceUrl         String?
+  /// * R2 object key for managed, consented profile photos pending approval.
+  profilePhotoObjectKey         String?
+  /// * When the applicant confirmed they have rights to use the managed profile photo.
+  profilePhotoRightsConfirmedAt DateTime?
+  backgroundImageUrl            String?
+  bioRichText                   String?
+  status                        String                   @default("pending")
+  submittedAt                   DateTime                 @default(now())
+  reviewedAt                    DateTime?
+  reviewedBy                    String?
+  reviewComment                 String?
+  emailCipher                   String?
+  emailLookupHash               String?
+  contactCipher                 String?
+  province                      String                   @default("")
+  links                         RegistrationLink[]
+  reviewer                      Artist?                  @relation("ReviewedBy", fields: [reviewedBy], references: [id])
+  specialities                  RegistrationSpeciality[]
 }
 
 model RegistrationSpeciality {

@@ -6,14 +6,11 @@
  */
 
 import { useState, useEffect, useRef } from "react";
-import { useForm, useFieldArray, Controller, useWatch } from "react-hook-form";
+import { useForm, useFieldArray, Controller, useWatch, type Resolver } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { useEditor, EditorContent } from "@tiptap/react";
-import StarterKit from "@tiptap/starter-kit";
-import TiptapImage from "@tiptap/extension-image";
-import TiptapLink from "@tiptap/extension-link";
 import NextLink from "next/link";
+import dynamic from "next/dynamic";
 import { usePostHog } from "posthog-js/react";
 import SpecialityPicker, { type SpecialityCatalogItem } from "@/components/speciality-picker";
 import { RegistrationPrefixedUrlInput } from "@/components/registration-prefixed-url-input";
@@ -51,6 +48,18 @@ import {
 } from "@/lib/registration-input-normalize";
 import { getPublicDeploymentLocationInputConfig } from "@/lib/deployment-location-public";
 
+const BioRichTextEditor = dynamic(
+  () => import("@/components/bio-rich-text-editor").then((mod) => mod.BioRichTextEditor),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="rounded-md border border-amber-300 bg-white px-4 py-5 text-sm text-amber-900">
+        Loading editor...
+      </div>
+    ),
+  },
+);
+
 // ---------------------------------------------------------------------------
 // Zod schema
 // ---------------------------------------------------------------------------
@@ -85,7 +94,7 @@ const websiteRowUrlSchema = z.preprocess(
   z.union([z.literal(""), z.string().url("Must be a valid URL")]),
 );
 
-export const registrationSchema = z
+const registrationSchema = z
   .object({
     fullName: z.string().min(1, "Full name is required"),
     email: z.string().email("Valid email address is required"),
@@ -125,7 +134,10 @@ export const registrationSchema = z
     }
   });
 
-export type RegistrationFormData = z.infer<typeof registrationSchema>;
+type RegistrationFormData = z.infer<typeof registrationSchema>;
+const registrationResolver = zodResolver(
+  registrationSchema,
+) as unknown as Resolver<RegistrationFormData>;
 
 const registrationSteps = [
   {
@@ -152,83 +164,68 @@ const finalRequiredFieldLabels = {
   specialities: "Specialities",
 } as const;
 
-// ---------------------------------------------------------------------------
-// ---------------------------------------------------------------------------
-// Tiptap toolbar
-// ---------------------------------------------------------------------------
+const PROFILE_PHOTO_INPUT_MAX_BYTES = 5 * 1024 * 1024;
+const PROFILE_PHOTO_OUTPUT_SIZE = 320;
+const PROFILE_PHOTO_ALLOWED_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
 
-function EditorToolbar({ editor }: { editor: ReturnType<typeof useEditor> }) {
-  if (!editor) return null;
+async function loadImageForCanvas(file: File): Promise<ImageBitmap | HTMLImageElement> {
+  if ("createImageBitmap" in window) {
+    return createImageBitmap(file, { imageOrientation: "from-image" } as ImageBitmapOptions);
+  }
 
-  const addImage = () => {
-    const url = window.prompt("Enter image URL");
-    if (url) editor.chain().focus().setImage({ src: url }).run();
-  };
-
-  const setLink = () => {
-    const url = window.prompt("Enter URL");
-    if (url) {
-      editor.chain().focus().extendMarkRange("link").setLink({ href: url }).run();
-    } else {
-      editor.chain().focus().unsetLink().run();
-    }
-  };
-
-  return (
-    <div className="flex flex-wrap gap-1 border border-amber-300 border-b-0 rounded-t-md bg-amber-50 p-2">
-      <button
-        type="button"
-        onMouseDown={(e) => e.preventDefault()}
-        onClick={() => editor.chain().focus().toggleBold().run()}
-        className={`px-2 py-1 text-sm rounded font-bold min-w-[44px] min-h-[44px] ${
-          editor.isActive("bold")
-            ? "bg-amber-700 text-white"
-            : "bg-white text-amber-900 border border-amber-300"
-        }`}
-        aria-label="Bold"
-      >
-        B
-      </button>
-      <button
-        type="button"
-        onMouseDown={(e) => e.preventDefault()}
-        onClick={() => editor.chain().focus().toggleItalic().run()}
-        className={`px-2 py-1 text-sm rounded italic min-w-[44px] min-h-[44px] ${
-          editor.isActive("italic")
-            ? "bg-amber-700 text-white"
-            : "bg-white text-amber-900 border border-amber-300"
-        }`}
-        aria-label="Italic"
-      >
-        I
-      </button>
-      <button
-        type="button"
-        onMouseDown={(e) => e.preventDefault()}
-        onClick={setLink}
-        className={`px-2 py-1 text-sm rounded min-w-[44px] min-h-[44px] ${
-          editor.isActive("link")
-            ? "bg-amber-700 text-white"
-            : "bg-white text-amber-900 border border-amber-300"
-        }`}
-        aria-label="Link"
-      >
-        🔗
-      </button>
-      <button
-        type="button"
-        onMouseDown={(e) => e.preventDefault()}
-        onClick={addImage}
-        className="px-2 py-1 text-sm rounded bg-white text-amber-900 border border-amber-300 min-w-[44px] min-h-[44px]"
-        aria-label="Insert image"
-      >
-        🖼
-      </button>
-    </div>
-  );
+  const image = new Image();
+  image.decoding = "async";
+  image.src = URL.createObjectURL(file);
+  try {
+    await image.decode();
+    return image;
+  } finally {
+    URL.revokeObjectURL(image.src);
+  }
 }
 
-// ---------------------------------------------------------------------------
+async function processProfilePhotoFile(file: File): Promise<File> {
+  if (!PROFILE_PHOTO_ALLOWED_TYPES.has(file.type)) {
+    throw new Error("Choose a JPEG, PNG, or WebP image.");
+  }
+  if (file.size > PROFILE_PHOTO_INPUT_MAX_BYTES) {
+    throw new Error("Choose an image smaller than 5 MB.");
+  }
+
+  const source = await loadImageForCanvas(file);
+  const sourceWidth = source instanceof HTMLImageElement ? source.naturalWidth : source.width;
+  const sourceHeight = source instanceof HTMLImageElement ? source.naturalHeight : source.height;
+  const side = Math.min(sourceWidth, sourceHeight);
+  const sourceX = Math.max(0, (sourceWidth - side) / 2);
+  const sourceY = Math.max(0, (sourceHeight - side) / 2);
+  const canvas = document.createElement("canvas");
+  canvas.width = PROFILE_PHOTO_OUTPUT_SIZE;
+  canvas.height = PROFILE_PHOTO_OUTPUT_SIZE;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) throw new Error("Could not prepare the image.");
+
+  ctx.fillStyle = "#FFFFFF";
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  ctx.drawImage(
+    source,
+    sourceX,
+    sourceY,
+    side,
+    side,
+    0,
+    0,
+    PROFILE_PHOTO_OUTPUT_SIZE,
+    PROFILE_PHOTO_OUTPUT_SIZE,
+  );
+  if ("close" in source && typeof source.close === "function") source.close();
+
+  const blob = await new Promise<Blob | null>((resolve) =>
+    canvas.toBlob(resolve, "image/jpeg", 0.86),
+  );
+  if (!blob) throw new Error("Could not prepare the image.");
+  return new File([blob], "profile-photo.jpg", { type: "image/jpeg", lastModified: Date.now() });
+}
+
 // Main component
 // ---------------------------------------------------------------------------
 
@@ -247,8 +244,12 @@ export default function RegisterPage() {
   });
   const [registeringSomeoneElse, setRegisteringSomeoneElse] = useState(false);
   const [specialityCatalog, setSpecialityCatalog] = useState<SpecialityCatalogItem[]>([]);
+  const [profilePhotoFile, setProfilePhotoFile] = useState<File | null>(null);
+  const [profilePhotoPreviewUrl, setProfilePhotoPreviewUrl] = useState<string | null>(null);
+  const [profilePhotoRightsConfirmed, setProfilePhotoRightsConfirmed] = useState(false);
+  const [profilePhotoError, setProfilePhotoError] = useState<string | null>(null);
+  const [profilePhotoProcessing, setProfilePhotoProcessing] = useState(false);
   const posthog = usePostHog();
-  const bioRichTextDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const formatNote = useTimedFieldNotice();
   const locationConfig = getPublicDeploymentLocationInputConfig();
@@ -267,7 +268,7 @@ export default function RegisterPage() {
     trigger,
     formState: { errors, isSubmitting },
   } = useForm<RegistrationFormData>({
-    resolver: zodResolver(registrationSchema),
+    resolver: registrationResolver,
     defaultValues: {
       fullName: "",
       email: "",
@@ -294,9 +295,19 @@ export default function RegisterPage() {
   const goToNextStep = async () => {
     const stepFields: Array<Array<keyof RegistrationFormData>> = [
       ["fullName", "email", "contactNumber", "contactType", "province"],
-      ["profilePhotoUrl", "specialities", "backgroundImageUrl", "bioRichText"],
+      ["specialities", "backgroundImageUrl", "bioRichText"],
       [],
     ];
+    if (currentStep === 1) {
+      if (profilePhotoProcessing) {
+        setProfilePhotoError("Please wait until the profile photo is ready.");
+        return;
+      }
+      if (profilePhotoFile && !profilePhotoRightsConfirmed) {
+        setProfilePhotoError("Confirm that you have rights to use the profile photo.");
+        return;
+      }
+    }
     const fieldsToValidate = stepFields[currentStep] ?? [];
     const canContinue = fieldsToValidate.length === 0 || (await trigger(fieldsToValidate));
     if (!canContinue) return;
@@ -364,31 +375,33 @@ export default function RegisterPage() {
     };
   }, []);
 
-  // Tiptap editor - immediatelyRender: false prevents SSR hydration mismatch
-  const editor = useEditor({
-    immediatelyRender: false,
-    extensions: [StarterKit, TiptapImage, TiptapLink.configure({ openOnClick: false })],
-    content: "",
-    editorProps: {
-      attributes: {
-        class:
-          "prose prose-sm prose-stone max-w-measure min-h-[12rem] cursor-text px-4 py-4 text-left font-sans leading-relaxed text-amber-950 outline-none focus:outline-none sm:prose-base",
-      },
-    },
-    onUpdate: ({ editor: ed }) => {
-      if (bioRichTextDebounceRef.current) clearTimeout(bioRichTextDebounceRef.current);
-      bioRichTextDebounceRef.current = setTimeout(() => {
-        bioRichTextDebounceRef.current = null;
-        setValue("bioRichText", ed.getHTML(), { shouldDirty: true, shouldValidate: false });
-      }, 300);
-    },
-  });
-
   useEffect(() => {
     return () => {
-      if (bioRichTextDebounceRef.current) clearTimeout(bioRichTextDebounceRef.current);
+      if (profilePhotoPreviewUrl) URL.revokeObjectURL(profilePhotoPreviewUrl);
     };
-  }, []);
+  }, [profilePhotoPreviewUrl]);
+
+  async function handleProfilePhotoChange(file: File | null) {
+    setProfilePhotoError(null);
+    setProfilePhotoRightsConfirmed(false);
+    setProfilePhotoFile(null);
+    setProfilePhotoPreviewUrl((previous) => {
+      if (previous) URL.revokeObjectURL(previous);
+      return null;
+    });
+
+    if (!file) return;
+    setProfilePhotoProcessing(true);
+    try {
+      const processed = await processProfilePhotoFile(file);
+      setProfilePhotoFile(processed);
+      setProfilePhotoPreviewUrl(URL.createObjectURL(processed));
+    } catch (err) {
+      setProfilePhotoError(err instanceof Error ? err.message : "Could not prepare the image.");
+    } finally {
+      setProfilePhotoProcessing(false);
+    }
+  }
 
   const onSubmit = async (data: RegistrationFormData) => {
     setSubmitError(null);
@@ -396,6 +409,17 @@ export default function RegisterPage() {
       setSubmitError(
         'You are already signed in. Check "I am registering someone else" to continue.',
       );
+      return;
+    }
+    if (profilePhotoProcessing) {
+      setCurrentStep(1);
+      setSubmitError("Please wait until the profile photo is ready.");
+      return;
+    }
+    if (profilePhotoFile && !profilePhotoRightsConfirmed) {
+      setCurrentStep(1);
+      setProfilePhotoError("Confirm that you have rights to use the profile photo.");
+      setSubmitError("Confirm that you have rights to use the profile photo.");
       return;
     }
     try {
@@ -407,11 +431,14 @@ export default function RegisterPage() {
       if (data.contactNumber.trim()) {
         formData.append("contactType", data.contactType);
       }
-      if (data.profilePhotoUrl) formData.append("profilePhotoUrl", data.profilePhotoUrl);
+      if (profilePhotoFile) {
+        formData.append("profilePhotoFile", profilePhotoFile);
+        formData.append("profilePhotoRightsConfirmed", "true");
+      }
       data.specialities.forEach((s) => formData.append("specialities", s));
 
       if (data.backgroundImageUrl) formData.append("backgroundImageUrl", data.backgroundImageUrl);
-      const bioRichText = editor?.getHTML() ?? data.bioRichText ?? "";
+      const bioRichText = data.bioRichText ?? "";
       if (bioRichText) formData.append("bioRichText", bioRichText);
       if (data.linkedinUrl) formData.append("linkedinUrl", data.linkedinUrl);
       if (data.instagramUrl) formData.append("instagramUrl", data.instagramUrl);
@@ -432,13 +459,21 @@ export default function RegisterPage() {
         setSubmitted(true);
       } else {
         if (json.fields && typeof json.fields === "object") {
-          const fieldErrors = json.fields as Partial<Record<keyof RegistrationFormData, string>>;
+          const fieldErrors = json.fields as Partial<Record<string, string>>;
           for (const [field, message] of Object.entries(fieldErrors)) {
             if (message && field in finalRequiredFieldLabels) {
               setError(field as keyof RegistrationFormData, { type: "server", message });
             }
           }
           if (fieldErrors.province) setCurrentStep(0);
+          if (fieldErrors.profilePhotoFile || fieldErrors.profilePhotoRightsConfirmed) {
+            setCurrentStep(1);
+            setProfilePhotoError(
+              fieldErrors.profilePhotoFile ??
+                fieldErrors.profilePhotoRightsConfirmed ??
+                "Check the profile photo.",
+            );
+          }
         }
         setSubmitError(
           (typeof json.message === "string" && json.message) ||
@@ -716,31 +751,77 @@ export default function RegisterPage() {
 
             {currentStep === 1 ? (
               <>
-                {/* ── Profile photo URL (optional) ── */}
-                <Controller
-                  name="profilePhotoUrl"
-                  control={control}
-                  render={({ field }) => (
-                    <RegistrationPrefixedUrlInput
-                      id="profilePhotoUrl"
-                      label="Profile photo URL"
-                      helperText={
-                        <span>
-                          <span className="font-normal text-amber-600">(optional)</span> Path after{" "}
-                          <strong>https://</strong> to an image you already host. Leave blank for
-                          the initial letter on your public profile.
-                        </span>
-                      }
-                      prefix={REGISTRATION_HTTPS_PREFIX}
-                      suffixPlaceholder="cdn.example.com/photos/me.jpg"
-                      suffixFromStored={websitePathSuffixFromStored}
-                      merge={mergeWebsitePath}
-                      field={field}
-                      error={errors.profilePhotoUrl?.message as string | undefined}
-                      onFormatNote={formatNote.show}
-                    />
-                  )}
-                />
+                <div>
+                  <label
+                    htmlFor="profilePhotoFile"
+                    className="block text-sm font-semibold text-amber-900 mb-1"
+                  >
+                    Profile photo <span className="font-normal text-amber-600">(optional)</span>
+                  </label>
+                  <p className="mb-2 text-xs leading-relaxed text-amber-700">
+                    Upload a JPEG, PNG, or WebP image. It will be cropped to a small square avatar
+                    before submission.
+                  </p>
+                  <div className="flex flex-col gap-3 rounded-xl border border-amber-200 bg-amber-50/60 p-4 sm:flex-row sm:items-center">
+                    {profilePhotoPreviewUrl ? (
+                      /* eslint-disable-next-line @next/next/no-img-element */
+                      <img
+                        src={profilePhotoPreviewUrl}
+                        alt="Profile photo preview"
+                        className="h-20 w-20 rounded-xl border border-amber-200 object-cover"
+                      />
+                    ) : (
+                      <div className="flex h-20 w-20 shrink-0 items-center justify-center rounded-xl border border-dashed border-amber-300 bg-white text-xs font-semibold text-amber-700">
+                        Photo
+                      </div>
+                    )}
+                    <div className="min-w-0 flex-1">
+                      <input
+                        id="profilePhotoFile"
+                        type="file"
+                        accept="image/jpeg,image/png,image/webp"
+                        onChange={(e) =>
+                          void handleProfilePhotoChange(e.currentTarget.files?.[0] ?? null)
+                        }
+                        className="block w-full text-sm text-amber-900 file:mr-3 file:min-h-[40px] file:rounded-lg file:border-0 file:bg-amber-700 file:px-4 file:py-2 file:text-sm file:font-semibold file:text-white hover:file:bg-amber-800"
+                      />
+                      {profilePhotoProcessing ? (
+                        <p className="mt-2 text-xs text-amber-700">Preparing image…</p>
+                      ) : null}
+                      {profilePhotoFile ? (
+                        <label className="mt-3 flex cursor-pointer items-start gap-2 text-xs leading-relaxed text-amber-900">
+                          <input
+                            type="checkbox"
+                            checked={profilePhotoRightsConfirmed}
+                            onChange={(e) => {
+                              setProfilePhotoRightsConfirmed(e.target.checked);
+                              if (e.target.checked) setProfilePhotoError(null);
+                            }}
+                            className="mt-0.5 accent-amber-700"
+                          />
+                          <span>
+                            I confirm I have the right to use this image on my public artist
+                            profile.
+                          </span>
+                        </label>
+                      ) : null}
+                      {profilePhotoFile ? (
+                        <button
+                          type="button"
+                          onClick={() => void handleProfilePhotoChange(null)}
+                          className="mt-2 min-h-[36px] text-xs font-semibold text-amber-700 underline underline-offset-2 hover:text-amber-900"
+                        >
+                          Remove selected photo
+                        </button>
+                      ) : null}
+                    </div>
+                  </div>
+                  {profilePhotoError ? (
+                    <p className="mt-1 text-sm text-red-600" role="alert">
+                      {profilePhotoError}
+                    </p>
+                  ) : null}
+                </div>
 
                 {/* ── Specialities ── */}
                 <div>
@@ -802,10 +883,11 @@ export default function RegisterPage() {
                     <label className="block text-sm font-semibold text-amber-900 mb-1">
                       Bio / Artistic Journey
                     </label>
-                    <EditorToolbar editor={editor} />
-                    <EditorContent
-                      editor={editor}
-                      className="rounded-b-md border border-t-0 border-amber-300 bg-white focus-within:ring-2 focus-within:ring-amber-500"
+                    <BioRichTextEditor
+                      initialHtml=""
+                      onHtmlChange={(html) =>
+                        setValue("bioRichText", html, { shouldDirty: true, shouldValidate: false })
+                      }
                     />
                   </div>
                 </div>

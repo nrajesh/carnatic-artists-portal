@@ -5,7 +5,10 @@ import { revalidatePath } from "next/cache";
 import { revalidateHomeMarketing } from "@/lib/cache/home-marketing";
 import { getDb } from "@/lib/db";
 import { verifySession } from "@/lib/session-jwt";
-import { artistProfileEditSchema, type ArtistProfileEditInput } from "@/lib/artist-profile-update-schema";
+import {
+  artistProfileEditSchema,
+  type ArtistProfileEditInput,
+} from "@/lib/artist-profile-update-schema";
 import { buildExternalLinkRows } from "@/lib/artist-profile-links";
 import { isArtistCollabsRatingsEnabledServer } from "@/lib/feature-flags-server";
 import { buildEncryptedArtistPiiPayload } from "@/lib/artist-pii";
@@ -47,14 +50,20 @@ function fieldErrorsFromZod(
 /**
  * Update the logged-in artist's profile (same fields as registration + open-to-collab).
  */
-export async function updateArtistProfile(input: ArtistProfileEditInput): Promise<UpdateProfileResult> {
+export async function updateArtistProfile(
+  input: ArtistProfileEditInput,
+): Promise<UpdateProfileResult> {
   const sessionCookie = (await cookies()).get("session")?.value ?? null;
   const session = sessionCookie ? await verifySession(sessionCookie) : null;
   if (!session) {
     return { ok: false, error: "Not signed in." };
   }
 
-  const parsed = artistProfileEditSchema.safeParse(input);
+  const parsed = artistProfileEditSchema.safeParse({
+    ...input,
+    // Artists cannot swap approved profile photos by submitting arbitrary remote URLs.
+    profilePhotoUrl: undefined,
+  });
   if (!parsed.success) {
     return {
       ok: false,
@@ -146,7 +155,6 @@ export async function updateArtistProfile(input: ArtistProfileEditInput): Promis
           contactType: data.contactNumber.trim() ? (data.contactType ?? null) : null,
           province: data.province,
           openToCollab,
-          profilePhotoUrl: data.profilePhotoUrl ?? null,
           backgroundImageUrl: data.backgroundImageUrl ?? null,
           bioRichText,
         },

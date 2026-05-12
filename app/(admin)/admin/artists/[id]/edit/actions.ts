@@ -4,8 +4,12 @@ import { cookies } from "next/headers";
 import { revalidatePath } from "next/cache";
 import { revalidateHomeMarketing } from "@/lib/cache/home-marketing";
 import { getDb } from "@/lib/db";
+import { deleteManagedProfilePhotoBestEffort } from "@/lib/profile-photo-storage";
 import { verifySession } from "@/lib/session-jwt";
-import { artistProfileEditSchema, type ArtistProfileEditInput } from "@/lib/artist-profile-update-schema";
+import {
+  artistProfileEditSchema,
+  type ArtistProfileEditInput,
+} from "@/lib/artist-profile-update-schema";
 import { buildExternalLinkRows } from "@/lib/artist-profile-links";
 import { isArtistCollabsRatingsEnabledServer } from "@/lib/feature-flags-server";
 import { buildEncryptedArtistPiiPayload } from "@/lib/artist-pii";
@@ -24,6 +28,38 @@ export type AdminUpdateProfileResult =
       error: string;
       fieldErrors?: Partial<Record<keyof ArtistProfileEditInput, string>>;
     };
+
+export async function removeAdminArtistProfilePhoto(targetArtistId: string): Promise<void> {
+  const sessionCookie = (await cookies()).get("session")?.value ?? null;
+  const session = sessionCookie ? await verifySession(sessionCookie) : null;
+  if (!session || session.role !== "admin") {
+    throw new Error("Not authorized.");
+  }
+
+  const db = getDb();
+  const artist = await db.artist.findUnique({
+    where: { id: targetArtistId },
+    select: { id: true, slug: true, profilePhotoObjectKey: true },
+  });
+  if (!artist) return;
+
+  await db.artist.update({
+    where: { id: targetArtistId },
+    data: {
+      profilePhotoUrl: null,
+      profilePhotoSourceUrl: null,
+      profilePhotoObjectKey: null,
+      profilePhotoRightsConfirmedAt: null,
+    },
+  });
+  await deleteManagedProfilePhotoBestEffort(artist.profilePhotoObjectKey);
+
+  revalidatePath("/admin/artists");
+  revalidatePath(`/admin/artists/${artist.id}`);
+  revalidatePath(`/admin/artists/${artist.id}/edit`);
+  revalidatePath(`/artists/${artist.slug}`);
+  revalidateHomeMarketing();
+}
 
 const profileEditShapeKeys = new Set(Object.keys(artistProfileEditSchema.shape));
 
@@ -80,7 +116,7 @@ export async function updateAdminArtistProfile(
 
   const target = await db.artist.findUnique({
     where: { id: targetArtistId },
-    select: { id: true, slug: true },
+    select: { id: true, slug: true, profilePhotoUrl: true, profilePhotoObjectKey: true },
   });
   if (!target) {
     return { ok: false, error: "Artist not found." };
@@ -129,6 +165,8 @@ export async function updateAdminArtistProfile(
   const bioRichText = bioTrim.length > 0 ? data.bioRichText! : null;
 
   const pii = buildEncryptedArtistPiiPayload(targetArtistId, data.email, data.contactNumber);
+  const nextProfilePhotoUrl = data.profilePhotoUrl ?? null;
+  const profilePhotoChanged = nextProfilePhotoUrl !== (target.profilePhotoUrl ?? null);
 
   try {
     await db.$transaction(async (tx) => {
@@ -147,7 +185,14 @@ export async function updateAdminArtistProfile(
           contactType: data.contactNumber.trim() ? (data.contactType ?? null) : null,
           province: data.province,
           openToCollab,
-          profilePhotoUrl: data.profilePhotoUrl ?? null,
+          profilePhotoUrl: nextProfilePhotoUrl,
+          ...(profilePhotoChanged
+            ? {
+                profilePhotoSourceUrl: nextProfilePhotoUrl,
+                profilePhotoObjectKey: null,
+                profilePhotoRightsConfirmedAt: null,
+              }
+            : {}),
           backgroundImageUrl: data.backgroundImageUrl ?? null,
           bioRichText,
         },
@@ -184,6 +229,10 @@ export async function updateAdminArtistProfile(
       };
     }
     throw e;
+  }
+
+  if (profilePhotoChanged) {
+    await deleteManagedProfilePhotoBestEffort(target.profilePhotoObjectKey);
   }
 
   revalidatePath("/admin/artists");

@@ -6,6 +6,7 @@ import { getArtistForEdit, listSpecialities } from "@/lib/queries/artists";
 import { getDeploymentLocationConfig } from "@/lib/deployment-location";
 import { ArtistProfileEditForm } from "@/components/artist-profile-edit-form";
 import { AdminModerationPanel } from "./admin-moderation-panel";
+import { removeAdminArtistProfilePhoto } from "./actions";
 import { isArtistCollabsRatingsEnabledServer } from "@/lib/feature-flags-server";
 
 export default async function EditArtistPage({ params }: { params: Promise<{ id: string }> }) {
@@ -63,6 +64,37 @@ export default async function EditArtistPage({ params }: { params: Promise<{ id:
               </p>
             </div>
           )}
+
+          {artist.profilePhotoUrl ? (
+            <form
+              action={removeAdminArtistProfilePhoto.bind(null, artist.id)}
+              className="rounded-xl border border-red-200 bg-white px-5 py-4 text-sm shadow-sm"
+            >
+              <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex min-w-0 items-center gap-3">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={artist.profilePhotoUrl}
+                    alt={`${artist.fullName} profile`}
+                    className="h-14 w-14 shrink-0 rounded-lg border border-stone-200 object-cover"
+                  />
+                  <div className="min-w-0">
+                    <p className="font-semibold text-stone-800">Profile photo moderation</p>
+                    <p className="mt-0.5 text-xs leading-relaxed text-stone-500">
+                      Removes the public profile photo immediately and deletes the managed R2 object
+                      when available.
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="submit"
+                  className="min-h-[44px] rounded-lg border border-red-200 px-4 py-2 text-sm font-semibold text-red-700 hover:bg-red-50"
+                >
+                  Remove photo
+                </button>
+              </div>
+            </form>
+          ) : null}
 
           <ArtistProfileEditForm
             key={artist.profileRevision}

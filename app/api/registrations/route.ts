@@ -4,102 +4,24 @@
  * Requirements: 1.6, 1.7, 1.9
  */
 
-import { NextRequest, NextResponse } from 'next/server';
-import { z } from 'zod';
-import { getDb } from '@/lib/db';
-import { encryptPiiField, emailLookupHash, isPiiCryptoConfigured, normalizeEmailForLookup } from '@/lib/pii-crypto';
-import { notifyAdminRegistrationEvent } from '@/lib/notifications';
-import { normalizeSpecialityList } from '@/lib/speciality-catalog';
-import { logSafeError } from '@/lib/safe-log';
+import { NextRequest, NextResponse } from "next/server";
+import { getDb } from "@/lib/db";
 import {
-  mergeFacebookUrl,
-  mergeInstagramUrl,
-  mergeLinkedinUrl,
-  mergeTwitterUrl,
-  mergeWebsitePath,
-  mergeYoutubeUrl,
-  isPlausibleContactNumber,
-  sanitizeContactNumberInput,
-} from '@/lib/registration-input-normalize';
-
-/** Empty / missing → undefined. When set, must be a valid HTTPS image URL (path merged with https://). */
-const optionalHttpsPhotoUrl = z.preprocess((val: unknown) => {
-  if (val === undefined || val === null) return undefined;
-  if (typeof val !== 'string') return undefined;
-  const t = val.trim();
-  if (t === '') return undefined;
-  return mergeWebsitePath(t);
-}, z.union([z.undefined(), z.string().url('Must be a valid URL').refine((u) => /^https:\/\//i.test(u), 'Must use HTTPS')]));
-
-function optionalMergedSocial(merge: (s: string) => string) {
-  return z.preprocess(
-    (val: unknown) => (typeof val === 'string' ? merge(val.trim()) : ''),
-    z.union([z.literal(''), z.string().url('Must be a valid URL')]),
-  );
-}
-
-// ---------------------------------------------------------------------------
-// Server-side Zod validation schema
-// ---------------------------------------------------------------------------
-
-export const registrationServerSchema = z
-  .object({
-  fullName: z.string().min(1, 'Full name is required'),
-  email: z.string().email('Valid email address is required'),
-  province: z.string().trim().min(1, 'City is required').max(120),
-  contactNumber: z.preprocess(
-    (v: unknown) => (typeof v === 'string' ? sanitizeContactNumberInput(v) : ''),
-    z.string(),
-  ),
-  contactType: z.preprocess((v: unknown) => {
-    if (v === null || v === undefined) return '';
-    if (typeof v !== 'string') return '';
-    return v.trim();
-  }, z.union([z.literal(''), z.enum(['whatsapp', 'mobile'])])),
-  profilePhotoUrl: optionalHttpsPhotoUrl,
-  backgroundImageUrl: optionalHttpsPhotoUrl,
-  specialities: z
-    .array(z.string().min(2).max(80))
-    .min(1, 'At least one speciality is required')
-    .max(3, 'Maximum 3 specialities allowed'),
-  bioRichText: z.string().optional(),
-  linkedinUrl: optionalMergedSocial(mergeLinkedinUrl),
-  instagramUrl: optionalMergedSocial(mergeInstagramUrl),
-  facebookUrl: optionalMergedSocial(mergeFacebookUrl),
-  twitterUrl: optionalMergedSocial(mergeTwitterUrl),
-  youtubeUrl: optionalMergedSocial(mergeYoutubeUrl),
-  websiteUrls: z.preprocess(
-    (val: unknown) => {
-      if (!Array.isArray(val)) return [];
-      return val
-        .filter((x): x is string => typeof x === 'string')
-        .map((s) => mergeWebsitePath(s.trim()))
-        .filter((u) => u !== '');
-    },
-    z.array(z.string().url('Must be a valid URL')).optional(),
-  ),
-})
-  .superRefine((data, ctx) => {
-    const phone = data.contactNumber.trim();
-    if (!phone) return;
-    if (!isPlausibleContactNumber(phone)) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message:
-          'Use 7-15 digits. Optional + only at the start.',
-        path: ['contactNumber'],
-      });
-    }
-    if (data.contactType !== 'whatsapp' && data.contactType !== 'mobile') {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: 'Select WhatsApp or mobile for your contact number.',
-        path: ['contactType'],
-      });
-    }
-  });
-
-export type RegistrationServerData = z.infer<typeof registrationServerSchema>;
+  encryptPiiField,
+  emailLookupHash,
+  isPiiCryptoConfigured,
+  normalizeEmailForLookup,
+} from "@/lib/pii-crypto";
+import { notifyAdminRegistrationEvent } from "@/lib/notifications";
+import {
+  deleteManagedProfilePhotoBestEffort,
+  isUploadedProfilePhotoFile,
+  uploadRegistrationProfilePhoto,
+} from "@/lib/profile-photo-storage";
+import { normalizeSpecialityList } from "@/lib/speciality-catalog";
+import { logSafeError } from "@/lib/safe-log";
+import { StorageError } from "@/lib/storage";
+import { registrationServerSchema } from "@/lib/registration-server-schema";
 
 // ---------------------------------------------------------------------------
 // POST handler
@@ -111,30 +33,32 @@ export async function POST(request: NextRequest) {
     formData = await request.formData();
   } catch {
     return NextResponse.json(
-      { error: 'INVALID_REQUEST', message: 'Could not parse form data' },
+      { error: "INVALID_REQUEST", message: "Could not parse form data" },
       { status: 400 },
     );
   }
 
   // Extract text fields
-  const specialitiesNormalized = normalizeSpecialityList(formData.getAll('specialities') as string[]);
+  const specialitiesNormalized = normalizeSpecialityList(
+    formData.getAll("specialities") as string[],
+  );
 
   const rawData = {
-    fullName: formData.get('fullName') as string | null,
-    email: formData.get('email') as string | null,
-    province: (formData.get('province') as string | null) ?? '',
-    contactNumber: formData.get('contactNumber') as string | null,
-    contactType: formData.get('contactType') as string | null,
-    profilePhotoUrl: formData.get('profilePhotoUrl') as string | null,
-    backgroundImageUrl: formData.get('backgroundImageUrl') as string | null,
+    fullName: formData.get("fullName") as string | null,
+    email: formData.get("email") as string | null,
+    province: (formData.get("province") as string | null) ?? "",
+    contactNumber: formData.get("contactNumber") as string | null,
+    contactType: formData.get("contactType") as string | null,
+    profilePhotoUrl: formData.get("profilePhotoUrl") as string | null,
+    backgroundImageUrl: formData.get("backgroundImageUrl") as string | null,
     specialities: specialitiesNormalized,
-    bioRichText: (formData.get('bioRichText') as string | null) ?? undefined,
-    linkedinUrl: (formData.get('linkedinUrl') as string | null) ?? undefined,
-    instagramUrl: (formData.get('instagramUrl') as string | null) ?? undefined,
-    facebookUrl: (formData.get('facebookUrl') as string | null) ?? undefined,
-    twitterUrl: (formData.get('twitterUrl') as string | null) ?? undefined,
-    youtubeUrl: (formData.get('youtubeUrl') as string | null) ?? undefined,
-    websiteUrls: formData.getAll('websiteUrls') as string[],
+    bioRichText: (formData.get("bioRichText") as string | null) ?? undefined,
+    linkedinUrl: (formData.get("linkedinUrl") as string | null) ?? undefined,
+    instagramUrl: (formData.get("instagramUrl") as string | null) ?? undefined,
+    facebookUrl: (formData.get("facebookUrl") as string | null) ?? undefined,
+    twitterUrl: (formData.get("twitterUrl") as string | null) ?? undefined,
+    youtubeUrl: (formData.get("youtubeUrl") as string | null) ?? undefined,
+    websiteUrls: formData.getAll("websiteUrls") as string[],
   };
 
   // Server-side validation
@@ -142,20 +66,17 @@ export async function POST(request: NextRequest) {
   if (!parseResult.success) {
     const fields: Record<string, string> = {};
     for (const issue of parseResult.error.issues) {
-      const key = issue.path.join('.');
+      const key = issue.path.join(".");
       if (!fields[key]) fields[key] = issue.message;
     }
-    return NextResponse.json(
-      { error: 'VALIDATION_ERROR', fields },
-      { status: 400 },
-    );
+    return NextResponse.json({ error: "VALIDATION_ERROR", fields }, { status: 400 });
   }
 
   const validated = parseResult.data;
 
   if (!isPiiCryptoConfigured()) {
     return NextResponse.json(
-      { error: 'SERVER_ERROR', message: 'Registration is temporarily unavailable.' },
+      { error: "SERVER_ERROR", message: "Registration is temporarily unavailable." },
       { status: 503 },
     );
   }
@@ -171,39 +92,86 @@ export async function POST(request: NextRequest) {
   });
   if (existingArtist) {
     return NextResponse.json(
-      { error: 'DUPLICATE_EMAIL', message: 'An artist account already uses this email.' },
+      { error: "DUPLICATE_EMAIL", message: "An artist account already uses this email." },
       { status: 409 },
     );
   }
   const pendingRegistration = await db.registrationRequest.findFirst({
     where: {
-      status: 'pending',
+      status: "pending",
       OR: [{ emailLookupHash: emailHash }, { email: normalizedEmail }],
     },
     select: { id: true },
   });
   if (pendingRegistration) {
     return NextResponse.json(
-      { error: 'DUPLICATE_REGISTRATION', message: 'A pending registration already exists for this email.' },
+      {
+        error: "DUPLICATE_REGISTRATION",
+        message: "A pending registration already exists for this email.",
+      },
       { status: 409 },
     );
   }
 
   const registrationId = crypto.randomUUID();
-  const profilePhotoUrl = validated.profilePhotoUrl;
   const backgroundImageUrl = validated.backgroundImageUrl;
+  const profilePhotoFileEntry = formData.get("profilePhotoFile");
+  const hasProfilePhotoFile = isUploadedProfilePhotoFile(profilePhotoFileEntry);
+  const profilePhotoRightsConfirmed = formData.get("profilePhotoRightsConfirmed") === "true";
+  let uploadedProfilePhoto: { url: string; objectKey: string; rightsConfirmedAt: Date } | null =
+    null;
+
+  if (hasProfilePhotoFile) {
+    if (!profilePhotoRightsConfirmed) {
+      return NextResponse.json(
+        {
+          error: "VALIDATION_ERROR",
+          message: "Confirm that you have rights to use the profile photo.",
+          fields: {
+            profilePhotoRightsConfirmed: "Confirm that you have rights to use the profile photo.",
+          },
+        },
+        { status: 400 },
+      );
+    }
+
+    try {
+      const upload = await uploadRegistrationProfilePhoto({
+        registrationId,
+        file: profilePhotoFileEntry,
+      });
+      uploadedProfilePhoto = {
+        ...upload,
+        rightsConfirmedAt: new Date(),
+      };
+    } catch (err) {
+      const message =
+        err instanceof StorageError && err.code !== "STORAGE_UNAVAILABLE"
+          ? err.message
+          : "Profile photo upload is temporarily unavailable.";
+      return NextResponse.json(
+        {
+          error: "PROFILE_PHOTO_UPLOAD_FAILED",
+          message,
+          fields: { profilePhotoFile: message },
+        },
+        { status: err instanceof StorageError && err.code !== "STORAGE_UNAVAILABLE" ? 400 : 503 },
+      );
+    }
+  }
 
   // Persist to DB
+  let registrationCreated = false;
   try {
     // Build external links
     const links: Array<{ linkType: string; url: string }> = [];
-    if (validated.linkedinUrl) links.push({ linkType: 'linkedin', url: validated.linkedinUrl });
-    if (validated.instagramUrl) links.push({ linkType: 'instagram', url: validated.instagramUrl });
-    if (validated.facebookUrl) links.push({ linkType: 'facebook', url: validated.facebookUrl });
-    if (validated.twitterUrl) links.push({ linkType: 'twitter', url: validated.twitterUrl });
-    if (validated.youtubeUrl) links.push({ linkType: 'youtube', url: validated.youtubeUrl });
+    if (validated.linkedinUrl) links.push({ linkType: "linkedin", url: validated.linkedinUrl });
+    if (validated.instagramUrl) links.push({ linkType: "instagram", url: validated.instagramUrl });
+    if (validated.facebookUrl) links.push({ linkType: "facebook", url: validated.facebookUrl });
+    if (validated.twitterUrl) links.push({ linkType: "twitter", url: validated.twitterUrl });
+    if (validated.youtubeUrl) links.push({ linkType: "youtube", url: validated.youtubeUrl });
     for (const url of validated.websiteUrls ?? []) {
-      if (url) links.push({ linkType: 'website', url });
+      if (url) links.push({ linkType: "website", url });
     }
 
     // Create RegistrationRequest + related records in a transaction
@@ -219,12 +187,15 @@ export async function POST(request: NextRequest) {
         emailCipher: encryptPiiField(normalizedEmail),
         emailLookupHash: emailHash,
         contactCipher: hasPhone ? encryptPiiField(phoneTrim) : null,
-        contactType: hasPhone ? (validated.contactType as 'whatsapp' | 'mobile') : null,
+        contactType: hasPhone ? (validated.contactType as "whatsapp" | "mobile") : null,
         // Empty string when omitted: works before/after DB migration (NOT NULL legacy + optional URL).
-        profilePhotoUrl: profilePhotoUrl ?? '',
+        profilePhotoUrl: uploadedProfilePhoto?.url ?? "",
+        profilePhotoSourceUrl: null,
+        profilePhotoObjectKey: uploadedProfilePhoto?.objectKey ?? null,
+        profilePhotoRightsConfirmedAt: uploadedProfilePhoto?.rightsConfirmedAt ?? null,
         backgroundImageUrl: backgroundImageUrl ?? undefined,
         bioRichText: validated.bioRichText,
-        status: 'pending',
+        status: "pending",
         specialities: {
           create: validated.specialities.map((name) => ({ specialityName: name })),
         },
@@ -233,9 +204,10 @@ export async function POST(request: NextRequest) {
         },
       },
     });
+    registrationCreated = true;
 
     await notifyAdminRegistrationEvent({
-      event: 'new_registration',
+      event: "new_registration",
       registrationId,
       applicantName: validated.fullName,
       applicantEmail: validated.email,
@@ -244,9 +216,12 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ success: true });
   } catch (err) {
-    logSafeError('[api/registrations] Registration persistence failed', err);
+    if (!registrationCreated) {
+      await deleteManagedProfilePhotoBestEffort(uploadedProfilePhoto?.objectKey);
+    }
+    logSafeError("[api/registrations] Registration persistence failed", err);
     return NextResponse.json(
-      { error: 'SERVER_ERROR', message: 'Failed to save registration. Please try again.' },
+      { error: "SERVER_ERROR", message: "Failed to save registration. Please try again." },
       { status: 500 },
     );
   }

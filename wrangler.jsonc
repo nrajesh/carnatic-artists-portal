@@ -21,7 +21,8 @@
     }
   },
   // PostHog Cloud ingest (EU). US projects: https://us.i.posthog.com
-  // Declared here so CLI deploys do not drop runtime vars (see deploy scripts --keep-vars).
+  // This file intentionally mirrors the production dashboard config so CLI deploys
+  // do not rewrite routes or runtime vars unexpectedly.
   //
   // DATABASE_URL must be a Worker runtime secret (dashboard → Worker → Variables and Secrets,
   // or `wrangler secret put DATABASE_URL`). Build-only secrets are not available when handling requests.
@@ -45,9 +46,16 @@
     "DEPLOYMENT_BRANDING_LOGO_URL": "/assets/logo.svg",
     // Cloudflare R2 Bucket
     "R2_ACCOUNT_ID": "4a978c47ceb63bdb40ad391bfb690f83",
-    "R2_BUCKET_NAME": "artist-discovery-portal-r2-bucket",
-    "R2_PUBLIC_URL": "https://pub-720fa56797fb4f7081196455a57a2da5.r2.dev"
+    "R2_BUCKET_NAME": "find-artists-media",
+    "R2_PUBLIC_URL": "https://pub-e8514cc51e324fae9be6ed35b045b6d9.r2.dev"
   },
+  "routes": [
+    {
+      "pattern": "find-artists.com",
+      "zone_name": "find-artists.com",
+      "custom_domain": true
+    }
+  ],
   "assets": {
     "directory": ".open-next/assets",
     "binding": "ASSETS"

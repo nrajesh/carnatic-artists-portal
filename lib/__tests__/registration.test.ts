@@ -10,8 +10,8 @@
  * Testing framework: Vitest + fast-check (≥100 iterations per property)
  */
 
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import * as fc from 'fast-check';
+import { describe, it, expect, vi, beforeEach } from "vitest";
+import * as fc from "fast-check";
 
 // ---------------------------------------------------------------------------
 // Hoisted mock state
@@ -53,15 +53,16 @@ const mockState = vi.hoisted(() => {
 // Mock the DB
 // ---------------------------------------------------------------------------
 
-vi.mock('../db', () => {
+vi.mock("../db", () => {
   const mockClient = {
     registrationRequest: {
       create: vi.fn(async (args: { data: Record<string, unknown> }) => {
         if (mockState.registrationCreateShouldThrow) {
-          throw new Error('DB write should not be called');
+          throw new Error("DB write should not be called");
         }
-        mockState.capturedRegistrationCreate = args.data as typeof mockState.capturedRegistrationCreate;
-        return { id: 'mock-reg-id', ...args.data };
+        mockState.capturedRegistrationCreate =
+          args.data as typeof mockState.capturedRegistrationCreate;
+        return { id: "mock-reg-id", ...args.data };
       }),
     },
     artist: {
@@ -69,7 +70,8 @@ vi.mock('../db', () => {
     },
     notification: {
       createMany: vi.fn(async (args: { data: Array<Record<string, unknown>> }) => {
-        mockState.capturedNotificationCreateMany = args as typeof mockState.capturedNotificationCreateMany;
+        mockState.capturedNotificationCreateMany =
+          args as typeof mockState.capturedNotificationCreateMany;
         return { count: args.data.length };
       }),
     },
@@ -81,7 +83,7 @@ vi.mock('../db', () => {
 // Import the handler under test AFTER mocks are set up
 // ---------------------------------------------------------------------------
 
-import { registrationServerSchema } from '../../app/api/registrations/route';
+import { registrationServerSchema } from "../registration-server-schema";
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -95,19 +97,19 @@ function resetState() {
 }
 
 // All mandatory field names (phone / WhatsApp are optional)
-const MANDATORY_FIELDS = ['fullName', 'email', 'specialities'] as const;
+const MANDATORY_FIELDS = ["fullName", "email", "specialities"] as const;
 
 type MandatoryField = (typeof MANDATORY_FIELDS)[number];
 
 // A complete valid payload (text fields only - file upload tested separately)
 function validPayload(overrides: Partial<Record<MandatoryField | string, unknown>> = {}) {
   return {
-    fullName: 'Ravi Shankar',
-    email: 'ravi@example.com',
-    province: 'Hilversum',
-    contactNumber: '+31612345678',
-    contactType: 'whatsapp' as const,
-    specialities: ['Vocal'],
+    fullName: "Ravi Shankar",
+    email: "ravi@example.com",
+    province: "Hilversum",
+    contactNumber: "+31612345678",
+    contactType: "whatsapp" as const,
+    specialities: ["Vocal"],
     ...overrides,
   };
 }
@@ -117,34 +119,32 @@ function validPayload(overrides: Partial<Record<MandatoryField | string, unknown
 // ---------------------------------------------------------------------------
 
 // Non-empty string arbitrary
-const arbNonEmptyString = fc.string({ minLength: 1, maxLength: 80 }).filter((s) => s.trim().length > 0);
+const arbNonEmptyString = fc
+  .string({ minLength: 1, maxLength: 80 })
+  .filter((s) => s.trim().length > 0);
 
 // Valid email arbitrary
 const arbEmail = fc
   .tuple(
     fc.stringMatching(/^[a-z]{3,10}$/),
     fc.stringMatching(/^[a-z]{3,10}$/),
-    fc.constantFrom('com', 'nl', 'org', 'net'),
+    fc.constantFrom("com", "nl", "org", "net"),
   )
   .map(([user, domain, tld]) => `${user}@${domain}.${tld}`);
 
 // Valid contact type
-const arbContactType = fc.constantFrom('whatsapp' as const, 'mobile' as const);
+const arbContactType = fc.constantFrom("whatsapp" as const, "mobile" as const);
 
 // Valid specialities array (1-3 items)
 const arbSpecialities = fc
-  .array(
-    fc.constantFrom('Vocal', 'Violin', 'Mridangam', 'Veena', 'Flute', 'Ghatam'),
-    { minLength: 1, maxLength: 3 },
-  )
+  .array(fc.constantFrom("Vocal", "Violin", "Mridangam", "Veena", "Flute", "Ghatam"), {
+    minLength: 1,
+    maxLength: 3,
+  })
   .map((arr) => [...new Set(arr)]) // deduplicate
   .filter((arr) => arr.length >= 1);
 
 // Valid registration payload
-const arbProfilePhotoUrl = fc.webUrl().map((u) =>
-  u.startsWith('http://') ? u.replace('http://', 'https://') : u.startsWith('https://') ? u : `https://${u}`,
-);
-
 /** 7-15 digits, optional leading + */
 const arbContactNumber = fc.stringMatching(/^\+?\d{7,15}$/);
 
@@ -154,7 +154,6 @@ const arbValidPayload = fc.record({
   province: arbNonEmptyString,
   contactNumber: arbContactNumber,
   contactType: arbContactType,
-  profilePhotoUrl: fc.option(arbProfilePhotoUrl, { nil: undefined }),
   specialities: arbSpecialities,
 });
 
@@ -168,22 +167,22 @@ const arbMissingFields = fc
 // Validates: Requirements 1.2, 1.7
 // ---------------------------------------------------------------------------
 
-describe('Property 1: Registration mandatory-field validation', () => {
+describe("Property 1: Registration mandatory-field validation", () => {
   beforeEach(() => {
     resetState();
   });
 
-  it('rejects any submission with one or more missing mandatory fields with field-level errors', () => {
+  it("rejects any submission with one or more missing mandatory fields with field-level errors", () => {
     fc.assert(
       fc.property(arbMissingFields, (missingFields) => {
         // Build a payload with the specified fields removed/emptied
         const payload: Record<string, unknown> = validPayload();
 
         for (const field of missingFields) {
-          if (field === 'specialities') {
+          if (field === "specialities") {
             payload[field] = [];
           } else {
-            payload[field] = '';
+            payload[field] = "";
           }
         }
 
@@ -199,7 +198,7 @@ describe('Property 1: Registration mandatory-field validation', () => {
           // Each missing field should appear in the errors
           for (const field of missingFields) {
             const hasError = result.error.issues.some(
-              (issue) => issue.path[0] === field || issue.path.join('.') === field,
+              (issue) => issue.path[0] === field || issue.path.join(".") === field,
             );
             expect(hasError, `Expected error for field "${field}"`).toBe(true);
           }
@@ -209,20 +208,20 @@ describe('Property 1: Registration mandatory-field validation', () => {
     );
   });
 
-  it('rejects specialities array with more than 3 items', () => {
+  it("rejects specialities array with more than 3 items", () => {
     fc.assert(
       fc.property(
-        fc.array(
-          fc.constantFrom('Vocal', 'Violin', 'Mridangam', 'Veena', 'Flute', 'Ghatam'),
-          { minLength: 4, maxLength: 10 },
-        ),
+        fc.array(fc.constantFrom("Vocal", "Violin", "Mridangam", "Veena", "Flute", "Ghatam"), {
+          minLength: 4,
+          maxLength: 10,
+        }),
         (tooManySpecialities) => {
           const payload = validPayload({ specialities: tooManySpecialities });
           const result = registrationServerSchema.safeParse(payload);
           expect(result.success).toBe(false);
           if (!result.success) {
             const hasSpecialityError = result.error.issues.some(
-              (issue) => issue.path[0] === 'specialities',
+              (issue) => issue.path[0] === "specialities",
             );
             expect(hasSpecialityError).toBe(true);
           }
@@ -232,7 +231,7 @@ describe('Property 1: Registration mandatory-field validation', () => {
     );
   });
 
-  it('accepts a fully valid payload', () => {
+  it("accepts a fully valid payload", () => {
     fc.assert(
       fc.property(arbValidPayload, (payload) => {
         const result = registrationServerSchema.safeParse(payload);
@@ -242,20 +241,30 @@ describe('Property 1: Registration mandatory-field validation', () => {
     );
   });
 
-  it('accepts empty phone when contact type is omitted', () => {
+  it("accepts empty phone when contact type is omitted", () => {
     const result = registrationServerSchema.safeParse(
-      validPayload({ contactNumber: '', contactType: '' }),
+      validPayload({ contactNumber: "", contactType: "" }),
     );
     expect(result.success).toBe(true);
   });
 
-  it('rejects non-empty phone without contact type', () => {
+  it("rejects non-empty phone without contact type", () => {
     const result = registrationServerSchema.safeParse(
-      validPayload({ contactNumber: '+31612345678', contactType: '' }),
+      validPayload({ contactNumber: "+31612345678", contactType: "" }),
     );
     expect(result.success).toBe(false);
     if (!result.success) {
-      expect(result.error.issues.some((i) => i.path[0] === 'contactType')).toBe(true);
+      expect(result.error.issues.some((i) => i.path[0] === "contactType")).toBe(true);
+    }
+  });
+
+  it("rejects legacy remote profile photo URLs", () => {
+    const result = registrationServerSchema.safeParse(
+      validPayload({ profilePhotoUrl: "https://cdn.example.com/photo.jpg" }),
+    );
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error.issues.some((i) => i.path[0] === "profilePhotoUrl")).toBe(true);
     }
   });
 });
@@ -265,19 +274,19 @@ describe('Property 1: Registration mandatory-field validation', () => {
 // Validates: Requirements 1.6, 1.8
 // ---------------------------------------------------------------------------
 
-describe('Property 2: Registration data round-trip', () => {
+describe("Property 2: Registration data round-trip", () => {
   beforeEach(() => {
     resetState();
     // Set up env vars for the handler
-    process.env.ADMIN_EMAILS = '';
-    process.env.R2_ACCOUNT_ID = 'test-account';
-    process.env.R2_ACCESS_KEY_ID = 'test-key';
-    process.env.R2_SECRET_ACCESS_KEY = 'test-secret';
-    process.env.R2_BUCKET_NAME = 'test-bucket';
-    process.env.R2_PUBLIC_URL = 'https://cdn.example.com';
+    process.env.ADMIN_EMAILS = "";
+    process.env.R2_ACCOUNT_ID = "test-account";
+    process.env.R2_ACCESS_KEY_ID = "test-key";
+    process.env.R2_SECRET_ACCESS_KEY = "test-secret";
+    process.env.R2_BUCKET_NAME = "test-bucket";
+    process.env.R2_PUBLIC_URL = "https://cdn.example.com";
   });
 
-  it('stored record contains exactly the submitted values with no field loss or corruption', async () => {
+  it("stored record contains exactly the submitted values with no field loss or corruption", async () => {
     await fc.assert(
       fc.asyncProperty(arbValidPayload, async (payload) => {
         resetState();
@@ -291,7 +300,7 @@ describe('Property 2: Registration data round-trip', () => {
 
         // Simulate what the handler persists (the DB create call)
         // We call the DB mock directly to verify the data mapping
-        const { getDb } = await import('../db');
+        const { getDb } = await import("../db");
 
         const registrationId = crypto.randomUUID();
         await getDb().registrationRequest.create({
@@ -301,11 +310,11 @@ describe('Property 2: Registration data round-trip', () => {
             email: validated.email,
             contactNumber: validated.contactNumber,
             contactType:
-              validated.contactType === 'whatsapp' || validated.contactType === 'mobile'
+              validated.contactType === "whatsapp" || validated.contactType === "mobile"
                 ? validated.contactType
                 : null,
-            profilePhotoUrl: 'https://cdn.example.com/test-photo.jpg',
-            status: 'pending',
+            profilePhotoUrl: "https://cdn.example.com/test-photo.jpg",
+            status: "pending",
             specialities: {
               create: validated.specialities.map((name) => ({ specialityName: name })),
             },
@@ -320,7 +329,7 @@ describe('Property 2: Registration data round-trip', () => {
         expect(captured.email).toBe(validated.email);
         expect(captured.contactNumber).toBe(validated.contactNumber);
         expect(captured.contactType).toBe(validated.contactType);
-        expect(captured.status).toBe('pending');
+        expect(captured.status).toBe("pending");
 
         // Specialities are stored correctly
         const storedSpecialities = captured.specialities.create.map((s) => s.specialityName);
@@ -333,22 +342,22 @@ describe('Property 2: Registration data round-trip', () => {
     );
   });
 
-  it('stores specialities array with 1-3 items without loss', async () => {
+  it("stores specialities array with 1-3 items without loss", async () => {
     await fc.assert(
       fc.asyncProperty(arbSpecialities, async (specialities) => {
         resetState();
 
-        const { getDb } = await import('../db');
+        const { getDb } = await import("../db");
 
         await getDb().registrationRequest.create({
           data: {
             id: crypto.randomUUID(),
-            fullName: 'Test Artist',
-            email: 'test@example.com',
-            contactNumber: '+31600000000',
-            contactType: 'whatsapp',
-            profilePhotoUrl: 'https://cdn.example.com/photo.jpg',
-            status: 'pending',
+            fullName: "Test Artist",
+            email: "test@example.com",
+            contactNumber: "+31600000000",
+            contactType: "whatsapp",
+            profilePhotoUrl: "https://cdn.example.com/photo.jpg",
+            status: "pending",
             specialities: {
               create: specialities.map((name) => ({ specialityName: name })),
             },
@@ -375,13 +384,13 @@ describe('Property 2: Registration data round-trip', () => {
 // Validates: Requirements 1.9
 // ---------------------------------------------------------------------------
 
-describe('Property 3: Admin notification on registration', () => {
+describe("Property 3: Admin notification on registration", () => {
   beforeEach(() => {
     resetState();
-    process.env.ADMIN_EMAILS = '';
+    process.env.ADMIN_EMAILS = "";
   });
 
-  it('creates exactly one notification per admin when a registration is submitted', async () => {
+  it("creates exactly one notification per admin when a registration is submitted", async () => {
     // Generate random admin counts (1-5)
     await fc.assert(
       fc.asyncProperty(
@@ -395,7 +404,7 @@ describe('Property 3: Admin notification on registration', () => {
             id: `admin-${i}`,
           }));
 
-          const { getDb } = await import('../db');
+          const { getDb } = await import("../db");
 
           // Simulate the notification creation logic from the handler
           const registrationId = crypto.randomUUID();
@@ -408,8 +417,8 @@ describe('Property 3: Admin notification on registration', () => {
               email: payload.email,
               contactNumber: payload.contactNumber,
               contactType: payload.contactType,
-              profilePhotoUrl: 'https://cdn.example.com/photo.jpg',
-              status: 'pending',
+              profilePhotoUrl: "https://cdn.example.com/photo.jpg",
+              status: "pending",
               specialities: {
                 create: payload.specialities.map((name) => ({ specialityName: name })),
               },
@@ -419,7 +428,7 @@ describe('Property 3: Admin notification on registration', () => {
 
           // Fetch admin artists (mocked)
           const adminArtists = await getDb().artist.findMany({
-            where: { email: { in: ['admin@example.com'] } },
+            where: { email: { in: ["admin@example.com"] } },
             select: { id: true },
           });
 
@@ -428,7 +437,7 @@ describe('Property 3: Admin notification on registration', () => {
             await getDb().notification.createMany({
               data: adminArtists.map((admin) => ({
                 artistId: admin.id,
-                type: 'new_registration',
+                type: "new_registration",
                 payload: {
                   registrationId,
                   applicantName: payload.fullName,
@@ -446,9 +455,11 @@ describe('Property 3: Admin notification on registration', () => {
 
           // Each notification references the correct registration
           for (const notification of notifications) {
-            expect(notification.type).toBe('new_registration');
+            expect(notification.type).toBe("new_registration");
             expect(notification.isRead).toBe(false);
-            expect((notification.payload as Record<string, unknown>).registrationId).toBe(registrationId);
+            expect((notification.payload as Record<string, unknown>).registrationId).toBe(
+              registrationId,
+            );
           }
 
           // Each admin gets exactly one notification
@@ -461,13 +472,13 @@ describe('Property 3: Admin notification on registration', () => {
     );
   });
 
-  it('does not call notification.createMany when there are no admin accounts', async () => {
+  it("does not call notification.createMany when there are no admin accounts", async () => {
     await fc.assert(
       fc.asyncProperty(arbValidPayload, async (payload) => {
         resetState();
         mockState.mockAdminArtists = []; // no admins
 
-        const { getDb } = await import('../db');
+        const { getDb } = await import("../db");
 
         const registrationId = crypto.randomUUID();
 
@@ -478,8 +489,8 @@ describe('Property 3: Admin notification on registration', () => {
             email: payload.email,
             contactNumber: payload.contactNumber,
             contactType: payload.contactType,
-            profilePhotoUrl: 'https://cdn.example.com/photo.jpg',
-            status: 'pending',
+            profilePhotoUrl: "https://cdn.example.com/photo.jpg",
+            status: "pending",
             specialities: {
               create: payload.specialities.map((name) => ({ specialityName: name })),
             },
@@ -497,7 +508,7 @@ describe('Property 3: Admin notification on registration', () => {
           await getDb().notification.createMany({
             data: adminArtists.map((admin) => ({
               artistId: admin.id,
-              type: 'new_registration',
+              type: "new_registration",
               payload: { registrationId },
               isRead: false,
             })),

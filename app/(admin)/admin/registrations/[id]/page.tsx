@@ -197,12 +197,26 @@ export default async function ReviewRegistrationPage({
               Profile Photo
             </span>
             {reg.profilePhotoUrl ? (
-              /* eslint-disable-next-line @next/next/no-img-element */
-              <img
-                src={reg.profilePhotoUrl}
-                alt={`${reg.fullName} profile`}
-                className="h-28 w-28 rounded-xl border border-stone-200 object-cover"
-              />
+              <div className="space-y-2">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={reg.profilePhotoUrl}
+                  alt={`${reg.fullName} profile`}
+                  className="h-28 w-28 rounded-xl border border-stone-200 object-cover"
+                />
+                {reg.profilePhotoObjectKey ? (
+                  <p className="text-xs leading-relaxed text-green-700">
+                    Managed upload
+                    {reg.profilePhotoRightsConfirmedAt
+                      ? ` · rights confirmed ${formatDeploymentRegistrationDate(reg.profilePhotoRightsConfirmedAt)}`
+                      : ""}
+                  </p>
+                ) : (
+                  <p className="text-xs leading-relaxed text-amber-700">
+                    Legacy external URL. Prefer requesting a managed upload before approval.
+                  </p>
+                )}
+              </div>
             ) : (
               <p className="text-sm text-stone-500 italic">No profile photo URL provided.</p>
             )}

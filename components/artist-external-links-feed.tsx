@@ -1,14 +1,45 @@
-import { siFacebook, siInstagram, siX, siYoutube } from "simple-icons";
-import type { SimpleIcon } from "simple-icons";
 import { WebsiteLinkIcon } from "@/components/website-link-icon";
 
+type BrandIcon = {
+  title: string;
+  slug: string;
+  path: string;
+  hex: string;
+};
+
+const siInstagram: BrandIcon = {
+  title: "Instagram",
+  slug: "instagram",
+  path: "M7.75 2C4.574 2 2 4.574 2 7.75v8.5C2 19.426 4.574 22 7.75 22h8.5C19.426 22 22 19.426 22 16.25v-8.5C22 4.574 19.426 2 16.25 2zm0 1.8h8.5a3.95 3.95 0 013.95 3.95v8.5a3.95 3.95 0 01-3.95 3.95h-8.5a3.95 3.95 0 01-3.95-3.95v-8.5A3.95 3.95 0 017.75 3.8m9.15 1.35a1.1 1.1 0 100 2.2 1.1 1.1 0 000-2.2M12 6.4A5.6 5.6 0 106.4 12 5.6 5.6 0 0012 6.4m0 1.8A3.8 3.8 0 118.2 12 3.8 3.8 0 0112 8.2",
+  hex: "E4405F",
+};
+
+const siYoutube: BrandIcon = {
+  title: "YouTube",
+  slug: "youtube",
+  path: "M23.498 6.186a2.999 2.999 0 00-2.11-2.12C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.389.521a3 3 0 00-2.109 2.12C0 8.07 0 12 0 12s0 3.93.502 5.814a2.999 2.999 0 002.11 2.12c1.883.52 9.388.52 9.388.52s7.505 0 9.389-.52a2.999 2.999 0 002.109-2.12C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12z",
+  hex: "FF0000",
+};
+
+const siFacebook: BrandIcon = {
+  title: "Facebook",
+  slug: "facebook",
+  path: "M24 12.073C24 5.405 18.627 0 12 0S0 5.405 0 12.073c0 6.016 4.388 11.004 10.125 11.927v-8.437H7.078v-3.49h3.047V9.413c0-3.03 1.792-4.707 4.533-4.707 1.312 0 2.686.236 2.686.236v2.973h-1.514c-1.492 0-1.956.931-1.956 1.887v2.271h3.328l-.532 3.49h-2.796V24C19.612 23.077 24 18.09 24 12.073z",
+  hex: "1877F2",
+};
+
+const siX: BrandIcon = {
+  title: "X",
+  slug: "x",
+  path: "M18.901 1.153h3.68l-8.04 9.19L24 22.847h-7.406l-5.8-7.584-6.64 7.584H.474l8.6-9.83L0 1.154h7.594l5.243 6.932zm-1.29 19.494h2.039L6.486 3.24H4.298z",
+  hex: "000000",
+};
+
 /** LinkedIn was removed from simple-icons; use canonical bug mark (brand color #0A66C2). */
-const siLinkedInCompat: SimpleIcon = {
+const siLinkedInCompat: BrandIcon = {
   title: "LinkedIn",
   slug: "linkedin",
-  svg: "<svg />",
   path: "M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z",
-  source: "https://linkedin.com",
   hex: "0A66C2",
 };
 
@@ -33,7 +64,7 @@ function normalizeKey(raw: string): PlatformKey {
 
 function platformMeta(key: PlatformKey): {
   label: string;
-  icon: SimpleIcon | "globe";
+  icon: BrandIcon | "globe";
   accent: string;
   subtitle: string;
 } {
@@ -115,7 +146,7 @@ function BrandGlyph({
   accent,
   className,
 }: {
-  icon: SimpleIcon | "globe";
+  icon: BrandIcon | "globe";
   accent: string;
   className?: string;
 }) {

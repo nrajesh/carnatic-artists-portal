@@ -11,6 +11,7 @@ import { buildEncryptedArtistPiiPayload, decryptRegistrationStoredContact } from
 import { issueMagicLink } from "@/lib/auth";
 import { getDb } from "@/lib/db";
 import { notifyAdminRegistrationEvent } from "@/lib/notifications";
+import { deleteManagedProfilePhotoBestEffort } from "@/lib/profile-photo-storage";
 import { resolveSpecialityForApproval } from "@/lib/speciality-resolve";
 
 export async function generateRegistrationArtistSlug(fullName: string): Promise<string> {
@@ -153,6 +154,9 @@ export async function approvePendingRegistrationRouteStyle(options: {
       contactCipher: pii.contactCipher,
       contactType: registration.contactType,
       profilePhotoUrl: registration.profilePhotoUrl ?? "",
+      profilePhotoSourceUrl: registration.profilePhotoSourceUrl ?? null,
+      profilePhotoObjectKey: registration.profilePhotoObjectKey ?? null,
+      profilePhotoRightsConfirmedAt: registration.profilePhotoRightsConfirmedAt ?? null,
       backgroundImageUrl: registration.backgroundImageUrl ?? undefined,
       bioRichText: registration.bioRichText ?? undefined,
       province: registration.province,
@@ -260,6 +264,8 @@ export async function rejectPendingRegistrationRouteStyle(options: {
 
   const now = new Date();
 
+  const profilePhotoObjectKey = registration.profilePhotoObjectKey;
+
   await db.registrationRequest.update({
     where: { id: registrationId },
     data: {
@@ -267,8 +273,14 @@ export async function rejectPendingRegistrationRouteStyle(options: {
       reviewedAt: now,
       reviewedBy: reviewerId ?? undefined,
       reviewComment,
+      profilePhotoUrl: "",
+      profilePhotoSourceUrl: registration.profilePhotoSourceUrl ?? registration.profilePhotoUrl,
+      profilePhotoObjectKey: null,
+      profilePhotoRightsConfirmedAt: null,
     },
   });
+
+  await deleteManagedProfilePhotoBestEffort(profilePhotoObjectKey);
 
   const reviewer = reviewerId
     ? await db.artist.findUnique({

@@ -1,8 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { useState, FormEvent, useMemo, useTransition } from "react";
+import { useState, FormEvent, useMemo, useRef, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import dynamic from "next/dynamic";
 import { usePostHog } from "posthog-js/react";
 import SpecialityPicker from "@/components/speciality-picker";
 import { RegistrationPrefixedUrlInput } from "@/components/registration-prefixed-url-input";
@@ -16,7 +17,6 @@ import {
   slugLiveRestrictedHandlers,
   urlSuffixRestrictedHandlers,
 } from "@/lib/restricted-input-handlers";
-import { BioRichTextEditor } from "@/components/bio-rich-text-editor";
 import {
   REGISTRATION_FACEBOOK_PREFIX,
   REGISTRATION_HTTPS_PREFIX,
@@ -45,6 +45,18 @@ import type { ArtistProfileEditInput } from "@/lib/artist-profile-update-schema"
 import { updateArtistProfile } from "@/app/(artist)/profile/edit/actions";
 import { updateAdminArtistProfile } from "@/app/(admin)/admin/artists/[id]/edit/actions";
 
+const BioRichTextEditor = dynamic(
+  () => import("@/components/bio-rich-text-editor").then((mod) => mod.BioRichTextEditor),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="rounded-md border border-stone-300 bg-white px-4 py-5 text-sm text-stone-600">
+        Loading editor...
+      </div>
+    ),
+  },
+);
+
 type Variant = "artist" | "admin";
 
 type FormFieldsSnapshot = {
@@ -68,6 +80,68 @@ type FormFieldsSnapshot = {
   twitterUrl: string;
   youtubeUrl: string;
 };
+
+const PROFILE_PHOTO_INPUT_MAX_BYTES = 5 * 1024 * 1024;
+const PROFILE_PHOTO_OUTPUT_SIZE = 320;
+const PROFILE_PHOTO_ALLOWED_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
+
+async function loadImageForCanvas(file: File): Promise<ImageBitmap | HTMLImageElement> {
+  if ("createImageBitmap" in window) {
+    return createImageBitmap(file, { imageOrientation: "from-image" } as ImageBitmapOptions);
+  }
+
+  const image = new Image();
+  image.decoding = "async";
+  image.src = URL.createObjectURL(file);
+  try {
+    await image.decode();
+    return image;
+  } finally {
+    URL.revokeObjectURL(image.src);
+  }
+}
+
+async function processProfilePhotoFile(file: File): Promise<File> {
+  if (!PROFILE_PHOTO_ALLOWED_TYPES.has(file.type)) {
+    throw new Error("Choose a JPEG, PNG, or WebP image.");
+  }
+  if (file.size > PROFILE_PHOTO_INPUT_MAX_BYTES) {
+    throw new Error("Choose an image smaller than 5 MB.");
+  }
+
+  const source = await loadImageForCanvas(file);
+  const sourceWidth = source instanceof HTMLImageElement ? source.naturalWidth : source.width;
+  const sourceHeight = source instanceof HTMLImageElement ? source.naturalHeight : source.height;
+  const side = Math.min(sourceWidth, sourceHeight);
+  const sourceX = Math.max(0, (sourceWidth - side) / 2);
+  const sourceY = Math.max(0, (sourceHeight - side) / 2);
+  const canvas = document.createElement("canvas");
+  canvas.width = PROFILE_PHOTO_OUTPUT_SIZE;
+  canvas.height = PROFILE_PHOTO_OUTPUT_SIZE;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) throw new Error("Could not prepare the image.");
+
+  ctx.fillStyle = "#FFFFFF";
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  ctx.drawImage(
+    source,
+    sourceX,
+    sourceY,
+    side,
+    side,
+    0,
+    0,
+    PROFILE_PHOTO_OUTPUT_SIZE,
+    PROFILE_PHOTO_OUTPUT_SIZE,
+  );
+  if ("close" in source && typeof source.close === "function") source.close();
+
+  const blob = await new Promise<Blob | null>((resolve) =>
+    canvas.toBlob(resolve, "image/jpeg", 0.86),
+  );
+  if (!blob) throw new Error("Could not prepare the image.");
+  return new File([blob], "profile-photo.jpg", { type: "image/jpeg", lastModified: Date.now() });
+}
 
 /** TipTap empty doc is often `<p></p>` while the DB may store `""` - treat both as empty for dirty checks only. */
 function normalizeBioRichTextForFingerprint(html: string | undefined): string {
@@ -180,6 +254,7 @@ export function ArtistProfileEditForm({
 }: ArtistProfileEditFormProps) {
   const router = useRouter();
   const posthog = usePostHog();
+  const profilePhotoInputRef = useRef<HTMLInputElement | null>(null);
   const [slug, setSlug] = useState(initial.slug);
   const [fullName, setFullName] = useState(initial.fullName);
   const [email, setEmail] = useState(initial.email);
@@ -203,6 +278,14 @@ export function ArtistProfileEditForm({
   const [websiteUrls, setWebsiteUrls] = useState<{ url: string }[]>(
     initial.websiteUrls.length > 0 ? initial.websiteUrls : [{ url: "" }],
   );
+  const [baselineSnapshot, setBaselineSnapshot] = useState<FormFieldsSnapshot>(() =>
+    snapshotFromEditView(initial),
+  );
+  const [pendingProfilePhotoFile, setPendingProfilePhotoFile] = useState<File | null>(null);
+  const [profilePhotoRightsConfirmed, setProfilePhotoRightsConfirmed] = useState(false);
+  const [photoUploadError, setPhotoUploadError] = useState<string | null>(null);
+  const [photoUploadSuccess, setPhotoUploadSuccess] = useState<string | null>(null);
+  const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
 
   const [errors, setErrors] = useState<Partial<Record<keyof ArtistProfileEditInput, string>>>({});
   const [saved, setSaved] = useState(false);
@@ -214,14 +297,12 @@ export function ArtistProfileEditForm({
     () =>
       fingerprintArtistProfileInput(
         toArtistProfileEditInput(
-          snapshotFromEditView(initial),
+          baselineSnapshot,
           collabsRatingsEnabled,
           initial.openToCollab,
         ),
       ),
-    // `profileRevision` bumps when the server sends a new saved snapshot for this form.
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- same revision keeps one logical baseline
-    [initial.profileRevision, collabsRatingsEnabled],
+    [baselineSnapshot, collabsRatingsEnabled, initial.openToCollab],
   );
 
   const currentFingerprint = useMemo(() => {
@@ -360,6 +441,59 @@ export function ArtistProfileEditForm({
         setErrors(result.fieldErrors ?? {});
       }
     });
+  }
+
+  async function handleProfilePhotoUpload() {
+    setPhotoUploadError(null);
+    setPhotoUploadSuccess(null);
+
+    if (!pendingProfilePhotoFile) {
+      setPhotoUploadError("Choose a photo first.");
+      return;
+    }
+    if (!profilePhotoRightsConfirmed) {
+      setPhotoUploadError("Confirm that you have rights to use this profile photo.");
+      return;
+    }
+
+    setIsUploadingPhoto(true);
+    try {
+      const processedFile = await processProfilePhotoFile(pendingProfilePhotoFile);
+      const formData = new FormData();
+      formData.append("profilePhotoFile", processedFile);
+      formData.append("profilePhotoRightsConfirmed", "true");
+
+      const response = await fetch(`/api/artists/${targetArtistId ?? initial.id}/profile-photo`, {
+        method: "POST",
+        body: formData,
+      });
+      const body = (await response.json().catch(() => null)) as
+        | { message?: string; fields?: Record<string, string>; profilePhotoUrl?: string }
+        | null;
+
+      if (!response.ok || !body?.profilePhotoUrl) {
+        setPhotoUploadError(
+          body?.fields?.profilePhotoFile ??
+            body?.fields?.profilePhotoRightsConfirmed ??
+            body?.message ??
+            "Profile photo upload failed.",
+        );
+        return;
+      }
+
+      setProfilePhotoUrl(body.profilePhotoUrl);
+      setBaselineSnapshot((current) => ({ ...current, profilePhotoUrl: body.profilePhotoUrl! }));
+      setPendingProfilePhotoFile(null);
+      setProfilePhotoRightsConfirmed(false);
+      if (profilePhotoInputRef.current) profilePhotoInputRef.current.value = "";
+      setPhotoUploadSuccess("Profile photo uploaded. The public card preview is now up to date.");
+    } catch (err) {
+      setPhotoUploadError(
+        err instanceof Error ? err.message : "Profile photo upload failed unexpectedly.",
+      );
+    } finally {
+      setIsUploadingPhoto(false);
+    }
   }
 
   const ring = "focus:ring-amber-400";
@@ -636,24 +770,79 @@ export function ArtistProfileEditForm({
           </div>
         )}
 
-        <div>
-          <RegistrationPrefixedUrlInput
-            id="profilePhotoUrl"
-            label="Profile photo URL"
-            helperText="Optional. Must be HTTPS. Shown on your public profile."
-            prefix={REGISTRATION_HTTPS_PREFIX}
-            suffixPlaceholder="cdn.example.com/photo.jpg"
-            suffixFromStored={websitePathSuffixFromStored}
-            merge={mergeWebsitePath}
-            field={{
-              value: profilePhotoUrl,
-              onChange: setProfilePhotoUrl,
-              onBlur: () => {},
-            }}
-            error={errors.profilePhotoUrl}
-            onFormatNote={formatNote.show}
-          />
+        <div className="rounded-xl border border-stone-200 bg-stone-50 px-4 py-4">
+          <p className="text-sm font-semibold text-stone-800">Profile photo</p>
+          <p className="mt-1 text-xs leading-relaxed text-stone-500">
+            Uploading here stores only a square `320x320` JPEG derivative, strips metadata, and
+            serves the image from managed object storage. If upload is unavailable, the current
+            photo stays unchanged and the profile falls back to initials when needed.
+          </p>
+          <div className="mt-4 space-y-3">
+            <input
+              ref={profilePhotoInputRef}
+              type="file"
+              accept="image/jpeg,image/png,image/webp"
+              onChange={(event) => {
+                const nextFile = event.target.files?.[0] ?? null;
+                setPendingProfilePhotoFile(nextFile);
+                setPhotoUploadError(null);
+                setPhotoUploadSuccess(null);
+              }}
+              className={`block min-h-[44px] w-full rounded-lg border border-stone-200 bg-white px-3 py-2 text-sm text-stone-700 focus:outline-none focus:ring-2 ${ring}`}
+            />
+            <label className="flex cursor-pointer items-start gap-3">
+              <input
+                type="checkbox"
+                checked={profilePhotoRightsConfirmed}
+                onChange={(event) => setProfilePhotoRightsConfirmed(event.target.checked)}
+                className="mt-1 accent-amber-600"
+              />
+              <span className="text-xs leading-relaxed text-stone-600">
+                I confirm I have the rights to use this photo on the public artist profile.
+              </span>
+            </label>
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+              <button
+                type="button"
+                onClick={handleProfilePhotoUpload}
+                disabled={isUploadingPhoto}
+                className="min-h-[44px] rounded-lg border border-stone-300 bg-white px-4 py-2 text-sm font-semibold text-stone-700 transition-colors hover:bg-stone-100 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {isUploadingPhoto ? "Uploading..." : "Upload profile photo"}
+              </button>
+              <p className="text-xs text-stone-500">
+                {pendingProfilePhotoFile
+                  ? `Selected: ${pendingProfilePhotoFile.name}`
+                  : "JPEG, PNG, or WebP up to 5 MB before processing."}
+              </p>
+            </div>
+            {photoUploadError ? <FormFieldNotice tone="error">{photoUploadError}</FormFieldNotice> : null}
+            {photoUploadSuccess ? (
+              <FormFieldNotice tone="success">{photoUploadSuccess}</FormFieldNotice>
+            ) : null}
+          </div>
         </div>
+
+        {variant === "admin" ? (
+          <div>
+            <RegistrationPrefixedUrlInput
+              id="profilePhotoUrl"
+              label="Profile photo URL"
+              helperText="Optional fallback HTTPS URL. Uploading above is preferred; this keeps a direct reference when you intentionally use one."
+              prefix={REGISTRATION_HTTPS_PREFIX}
+              suffixPlaceholder="cdn.example.com/photo.jpg"
+              suffixFromStored={websitePathSuffixFromStored}
+              merge={mergeWebsitePath}
+              field={{
+                value: profilePhotoUrl,
+                onChange: setProfilePhotoUrl,
+                onBlur: () => {},
+              }}
+              error={errors.profilePhotoUrl}
+              onFormatNote={formatNote.show}
+            />
+          </div>
+        ) : null}
 
         <div>
           <RegistrationPrefixedUrlInput
