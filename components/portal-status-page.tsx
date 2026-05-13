@@ -2,7 +2,6 @@
 
 import type { ReactNode } from "react";
 import { HardNavAnchor } from "@/components/hard-nav-anchor";
-import { getDeploymentDisplayConfig } from "@/lib/deployment-display";
 
 export type PortalStatusVariant = "not-found" | "error" | "unavailable";
 
@@ -60,7 +59,6 @@ export function PortalStatusPage({
   const preset = COPY[variant];
   const title = headline ?? preset.headline;
   const message = body ?? preset.body;
-  const displayConfig = getDeploymentDisplayConfig();
 
   return (
     <main className="flex min-h-0 flex-1 flex-col bg-amber-50">
@@ -118,10 +116,6 @@ export function PortalStatusPage({
           </div>
           {children ? <div className="mt-6 flex flex-wrap justify-center gap-3 border-t border-amber-100 pt-6">{children}</div> : null}
         </div>
-
-        <p className="mt-8 text-center text-xs text-stone-500">
-          Discover artists and portfolios based in {displayConfig.countryName} - same portal, different room.
-        </p>
       </div>
     </main>
   );

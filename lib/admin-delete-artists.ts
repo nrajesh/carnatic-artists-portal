@@ -11,6 +11,7 @@ export async function deleteArtistById(tx: Prisma.TransactionClient, artistId: s
   });
 
   await tx.dailyFeatured.deleteMany({ where: { artistId } });
+  await tx.externalLink.deleteMany({ where: { artistId } });
 
   const owned = await tx.collab.findMany({
     where: { ownerId: artistId },

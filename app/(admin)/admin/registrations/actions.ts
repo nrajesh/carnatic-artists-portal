@@ -10,6 +10,10 @@ import {
 } from "@/lib/admin-registration-route-handlers";
 import { REGISTRATION_APPROVE_DEFAULT_COMMENT } from "@/lib/admin-review-comment";
 import { getDb } from "@/lib/db";
+import {
+  deleteManagedFileByUrlBestEffort,
+  deleteManagedProfilePhotoBestEffort,
+} from "@/lib/profile-photo-storage";
 import { prismaStringIdArraySchema } from "@/lib/prisma-string-id";
 import { verifySession } from "@/lib/session-jwt";
 
@@ -54,9 +58,24 @@ export async function deleteRegistrationRequestsAction(ids: string[]): Promise<B
   const unique = [...new Set(parsed.data)];
 
   try {
-    const result = await getDb().registrationRequest.deleteMany({
+    const db = getDb();
+    const registrations = await db.registrationRequest.findMany({
       where: { id: { in: unique } },
+      select: {
+        id: true,
+        profilePhotoObjectKey: true,
+        backgroundImageUrl: true,
+      },
     });
+    const result = await db.registrationRequest.deleteMany({
+      where: { id: { in: registrations.map((registration) => registration.id) } },
+    });
+    await Promise.all(
+      registrations.flatMap((registration) => [
+        deleteManagedProfilePhotoBestEffort(registration.profilePhotoObjectKey),
+        deleteManagedFileByUrlBestEffort(registration.backgroundImageUrl),
+      ]),
+    );
     revalidatePath("/admin/registrations");
     revalidatePath("/admin/dashboard");
     return { ok: true, deleted: result.count };

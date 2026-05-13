@@ -46,7 +46,7 @@ export default function SearchTypeahead({ value, onChange, options, placeholder 
   const selectedOption = options.find(o => o.label === value);
 
   return (
-    <div ref={containerRef} className="relative flex-1 sm:flex-none sm:min-w-[200px]">
+    <div ref={containerRef} className="relative z-[1200] flex-1 sm:flex-none sm:min-w-[200px]">
       {value ? (
         <div className="flex min-h-[44px] items-center rounded-lg border border-stone-200 bg-white px-2 py-1">
           <span 
@@ -85,7 +85,7 @@ export default function SearchTypeahead({ value, onChange, options, placeholder 
       )}
 
       {open && !value && query.trim().length >= 2 && available.length > 0 && (
-        <ul className="absolute z-20 mt-1 max-h-52 w-full overflow-y-auto rounded-xl border border-stone-200 bg-white shadow-lg">
+        <ul className="absolute z-[1200] mt-1 max-h-52 w-full overflow-y-auto rounded-xl border border-stone-200 bg-white shadow-lg">
           {available.map((s) => (
             <li key={s.label}>
               <button
@@ -105,7 +105,7 @@ export default function SearchTypeahead({ value, onChange, options, placeholder 
       )}
 
       {open && !value && query.trim().length >= 2 && available.length === 0 && (
-        <div className="absolute z-20 mt-1 w-full rounded-xl border border-stone-200 bg-white px-4 py-3 text-sm text-stone-400 shadow-lg">
+        <div className="absolute z-[1200] mt-1 w-full rounded-xl border border-stone-200 bg-white px-4 py-3 text-sm text-stone-400 shadow-lg">
           No matches found
         </div>
       )}

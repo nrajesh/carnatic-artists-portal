@@ -1,14 +1,16 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { LatLngExpression, LatLngTuple, LayerGroup, Map as LeafletMap, Marker as LeafletMarker } from "leaflet";
 import type { LocationMapPoint } from "@/lib/location-map-data";
+import SearchTypeahead, { type SearchOption } from "@/components/search-typeahead";
 
 type ArtistsLocationExplorerProps = {
   locationPoints: LocationMapPoint[];
   areaLabelSingular: string;
   areaLabelPlural: string;
+  enableSpecialityFilter?: boolean;
 };
 
 type Cluster = {
@@ -102,7 +104,13 @@ function markerHtml(count: number): string {
   `;
 }
 
-function popupHtml(cluster: Cluster, singularLower: string, pluralLower: string): string {
+function popupHtml(
+  cluster: Cluster,
+  singularLower: string,
+  pluralLower: string,
+  selectedCity: string,
+  selectedSpeciality: string,
+): string {
   if (cluster.points.length > 1) {
     const names = cluster.points.slice(0, 4).map((point) => escapeHtml(point.label)).join(", ");
     return `
@@ -121,6 +129,9 @@ function popupHtml(cluster: Cluster, singularLower: string, pluralLower: string)
   }
 
   const point = cluster.points[0]!;
+  const browseParams = new URLSearchParams({ location: point.locationValue });
+  if (selectedCity) browseParams.set("location", selectedCity);
+  if (selectedSpeciality) browseParams.set("speciality", selectedSpeciality);
   return `
     <div style="min-width:220px">
       <div style="font-size:11px;font-weight:700;letter-spacing:0.18em;text-transform:uppercase;color:#b45309;margin-bottom:6px">
@@ -133,7 +144,7 @@ function popupHtml(cluster: Cluster, singularLower: string, pluralLower: string)
         ${cluster.count} ${cluster.count === 1 ? "artist" : "artists"} listed here.
       </div>
       <a
-        href="/artists?location=${encodeURIComponent(point.locationValue)}"
+        href="/artists?${browseParams.toString()}"
         style="
           display:inline-flex;
           align-items:center;
@@ -161,6 +172,8 @@ function openPopupForClusterKey(
   clusterRegistry: Map<string, Cluster>,
   singularLower: string,
   pluralLower: string,
+  selectedCity: string,
+  selectedSpeciality: string,
 ) {
   if (!clusterKey) return;
   const marker = markerRegistry.get(clusterKey);
@@ -168,7 +181,7 @@ function openPopupForClusterKey(
   if (!marker || !cluster) return;
 
   marker
-    .bindPopup(popupHtml(cluster, singularLower, pluralLower), {
+    .bindPopup(popupHtml(cluster, singularLower, pluralLower, selectedCity, selectedSpeciality), {
       className: "artist-location-popup",
       closeButton: true,
       autoClose: true,
@@ -182,6 +195,7 @@ export function ArtistsLocationExplorer({
   locationPoints,
   areaLabelSingular,
   areaLabelPlural,
+  enableSpecialityFilter = false,
 }: ArtistsLocationExplorerProps) {
   const mapRootRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<LeafletMap | null>(null);
@@ -189,12 +203,71 @@ export function ArtistsLocationExplorer({
   const markerRegistryRef = useRef<Map<string, LeafletMarker>>(new Map());
   const clusterRegistryRef = useRef<Map<string, Cluster>>(new Map());
   const activePopupClusterKeyRef = useRef<string | null>(null);
-  const pointsKey = useMemo(
-    () => locationPoints.map((point) => `${point.locationValue}:${point.count}:${point.latitude}:${point.longitude}`).join("|"),
+  const filteredLocationPointsRef = useRef<LocationMapPoint[]>(locationPoints);
+  const selectedCityRef = useRef("");
+  const selectedSpecialityRef = useRef("");
+  const refreshMarkersRef = useRef<(() => void) | null>(null);
+  const [selectedCity, setSelectedCity] = useState("");
+  const [selectedSpeciality, setSelectedSpeciality] = useState("");
+  const cityOptions = useMemo<SearchOption[]>(
+    () =>
+      locationPoints
+        .map((point) => ({ label: point.label }))
+        .sort((left, right) => left.label.localeCompare(right.label)),
     [locationPoints],
+  );
+  const specialityOptions = useMemo<SearchOption[]>(() => {
+    const options = new Map<string, SearchOption>();
+    for (const point of locationPoints) {
+      for (const artist of point.artists) {
+        for (const speciality of artist.specialities) {
+          if (!options.has(speciality.name)) {
+            options.set(speciality.name, { label: speciality.name, color: speciality.color });
+          }
+        }
+      }
+    }
+    return Array.from(options.values()).sort((left, right) => left.label.localeCompare(right.label));
+  }, [locationPoints]);
+  const filteredLocationPoints = useMemo(() => {
+    if (!selectedCity && !selectedSpeciality) return locationPoints;
+
+    return locationPoints
+      .map((point) => {
+        if (selectedCity && point.label !== selectedCity) return null;
+        const artists = point.artists.filter((artist) =>
+          !selectedSpeciality ||
+          artist.specialities.some((speciality) => speciality.name === selectedSpeciality),
+        );
+        if (artists.length === 0) return null;
+        return {
+          ...point,
+          count: artists.length,
+          artists,
+        };
+      })
+      .filter((point): point is LocationMapPoint => point !== null);
+  }, [locationPoints, selectedCity, selectedSpeciality]);
+  const browseDirectoryHref = useMemo(() => {
+    const params = new URLSearchParams();
+    if (selectedCity) params.set("location", selectedCity);
+    if (selectedSpeciality) params.set("speciality", selectedSpeciality);
+    const query = params.toString();
+    return query ? `/artists?${query}` : "/artists";
+  }, [selectedCity, selectedSpeciality]);
+  const pointsKey = useMemo(
+    () =>
+      filteredLocationPoints
+        .map((point) => `${point.locationValue}:${point.count}:${point.latitude}:${point.longitude}`)
+        .join("|"),
+    [filteredLocationPoints],
   );
   const singularLower = areaLabelSingular.toLowerCase();
   const pluralLower = areaLabelPlural.toLowerCase();
+
+  filteredLocationPointsRef.current = filteredLocationPoints;
+  selectedCityRef.current = selectedCity;
+  selectedSpecialityRef.current = selectedSpeciality;
 
   useEffect(() => {
     if (!mapRootRef.current || mapRef.current) return;
@@ -233,7 +306,7 @@ export function ArtistsLocationExplorer({
         markerRegistryRef.current = new Map();
         clusterRegistryRef.current = new Map();
 
-        const clusters = clusterPoints(locationPoints, map);
+        const clusters = clusterPoints(filteredLocationPointsRef.current, map);
         for (const cluster of clusters) {
           clusterRegistryRef.current.set(cluster.key, cluster);
           const icon = leaflet.divIcon({
@@ -260,6 +333,8 @@ export function ArtistsLocationExplorer({
                   clusterRegistryRef.current,
                   singularLower,
                   pluralLower,
+                  selectedCityRef.current,
+                  selectedSpecialityRef.current,
                 );
               });
               return;
@@ -274,6 +349,8 @@ export function ArtistsLocationExplorer({
                 clusterRegistryRef.current,
                 singularLower,
                 pluralLower,
+                selectedCityRef.current,
+                selectedSpecialityRef.current,
               );
             });
           });
@@ -288,23 +365,26 @@ export function ArtistsLocationExplorer({
           clusterRegistryRef.current,
           singularLower,
           pluralLower,
+          selectedCityRef.current,
+          selectedSpecialityRef.current,
         );
       };
+      refreshMarkersRef.current = updateMarkers;
 
       const fitInitialBounds = () => {
-        if (locationPoints.length === 0) {
+        if (filteredLocationPointsRef.current.length === 0) {
           map.setView([20, 0], 2);
           return;
         }
 
-        if (locationPoints.length === 1) {
-          const point = locationPoints[0]!;
+        if (filteredLocationPointsRef.current.length === 1) {
+          const point = filteredLocationPointsRef.current[0]!;
           map.setView([point.latitude, point.longitude], 5);
           return;
         }
 
         const bounds = leaflet.latLngBounds(
-          locationPoints.map((point) => [point.latitude, point.longitude] as LatLngTuple),
+          filteredLocationPointsRef.current.map((point) => [point.latitude, point.longitude] as LatLngTuple),
         );
         map.fitBounds(bounds.pad(0.9), { maxZoom: 6 });
       };
@@ -321,33 +401,84 @@ export function ArtistsLocationExplorer({
         mapRef.current = null;
       }
       markerLayerRef.current = null;
+      refreshMarkersRef.current = null;
     };
-  }, [locationPoints, pluralLower, singularLower]);
+  }, [pluralLower, singularLower]);
 
   useEffect(() => {
     if (!mapRef.current) return;
+    refreshMarkersRef.current?.();
 
     void (async () => {
       const map = mapRef.current;
       if (!map) return;
 
-      if (locationPoints.length === 0) {
+      if (filteredLocationPoints.length === 0) {
         map.setView([20, 0], 2);
-      } else if (locationPoints.length === 1) {
-        const point = locationPoints[0]!;
+      } else if (filteredLocationPoints.length === 1) {
+        const point = filteredLocationPoints[0]!;
         map.flyTo([point.latitude, point.longitude], 5, { duration: 0.4 });
       } else {
         const leaflet = await import("leaflet");
         const bounds = leaflet.latLngBounds(
-          locationPoints.map((point) => [point.latitude, point.longitude] as LatLngTuple),
+          filteredLocationPoints.map((point) => [point.latitude, point.longitude] as LatLngTuple),
         );
         map.flyToBounds(bounds.pad(0.9), { maxZoom: 6, duration: 0.55 });
       }
     })();
-  }, [pointsKey, locationPoints]);
+  }, [filteredLocationPoints, pointsKey]);
 
   return (
     <div className="overflow-hidden rounded-[30px] border border-amber-200/80 bg-gradient-to-b from-amber-50/60 via-amber-50/25 to-transparent shadow-sm">
+      {enableSpecialityFilter ? (
+        <div className="border-b border-amber-200/70 bg-white/70 px-5 py-4">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+            <div>
+              <p className="text-sm font-semibold text-stone-900">Filter map by city / speciality</p>
+              <p className="mt-1 text-xs text-stone-500">Type at least two letters to focus the map.</p>
+            </div>
+            <div className="grid w-full gap-2 sm:w-auto sm:grid-cols-2">
+              <SearchTypeahead
+                value={selectedCity}
+                onChange={setSelectedCity}
+                options={cityOptions}
+                placeholder="All cities"
+              />
+              <SearchTypeahead
+                value={selectedSpeciality}
+                onChange={setSelectedSpeciality}
+                options={specialityOptions}
+                placeholder="All specialities"
+              />
+            </div>
+          </div>
+          {selectedCity || selectedSpeciality ? (
+            <div className="mt-3 flex flex-wrap items-center justify-between gap-2 text-xs text-stone-500">
+              <p>
+                Showing mapped locations
+                {selectedCity ? (
+                  <>
+                    {" "}in <span className="font-semibold text-stone-700">{selectedCity}</span>
+                  </>
+                ) : null}
+                {selectedSpeciality ? (
+                  <>
+                    {selectedCity ? " for " : " for "}
+                    <span className="font-semibold text-stone-700">{selectedSpeciality}</span>
+                  </>
+                ) : null}
+                .
+              </p>
+              <Link
+                href={browseDirectoryHref}
+                className="font-semibold text-amber-800 underline underline-offset-2 hover:text-amber-900"
+              >
+                Browse matching artists
+              </Link>
+            </div>
+          ) : null}
+        </div>
+      ) : null}
       <div className="px-2 pb-2 pt-3 sm:px-3">
         <div className="overflow-hidden rounded-[26px] border border-amber-200/80 shadow-inner">
           <div ref={mapRootRef} className="h-[620px] w-full bg-amber-50" />
@@ -357,7 +488,7 @@ export function ArtistsLocationExplorer({
             Markers reflect artists whose current profile location could be mapped.
           </p>
           <Link
-            href="/artists"
+            href={browseDirectoryHref}
             className="inline-flex min-h-[38px] items-center justify-center rounded-xl border border-amber-300 bg-amber-50 px-3 py-1.5 text-xs font-semibold text-amber-800 transition-colors hover:bg-amber-100"
           >
             Browse full directory

@@ -616,6 +616,10 @@ export default function RegisterPage() {
             Your registration request has been submitted. An admin will review it and you&apos;ll
             receive an email once approved.
           </p>
+          <p className="mt-3 font-semibold text-amber-950">
+            Please expect an email from the <strong>imaginest.nl</strong> domain once your
+            registration is approved, and make sure it does not end up in your spam folder.
+          </p>
         </div>
       </main>
     );
