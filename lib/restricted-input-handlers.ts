@@ -16,6 +16,10 @@ import {
 
 export type FormatNoteFn = (message: string) => void;
 
+function readInputValue(value: unknown): string {
+  return typeof value === "string" ? value : "";
+}
+
 /** React may not always expose a full InputEvent; `inputType` is missing in some browsers/paths. */
 function asBeforeInputEvent(e: FormEvent<HTMLInputElement>): InputEvent | null {
   const n = e.nativeEvent;
@@ -57,7 +61,7 @@ function handlePasteReplace(
   const text = e.clipboardData.getData("text/plain");
   const start = el.selectionStart ?? 0;
   const end = el.selectionEnd ?? 0;
-  const merged = mergePastedIntoField(el.value, start, end, text);
+  const merged = mergePastedIntoField(readInputValue(el.value), start, end, text);
   if (hadDisallowed(merged)) onHadDisallowed();
   onCommit(merged);
 }
@@ -95,7 +99,7 @@ export function contactNumberRestrictedHandlers(onFormatNote: FormatNoteFn, onVa
       );
     },
     onChange(e: ChangeEvent<HTMLInputElement>) {
-      onValue(sanitizeContactNumberInput(e.target.value));
+      onValue(sanitizeContactNumberInput(readInputValue(e.currentTarget.value)));
     },
   } satisfies Pick<InputHTMLAttributes<HTMLInputElement>, "onBeforeInput" | "onPaste" | "onChange">;
 }
@@ -118,7 +122,7 @@ export function personNameRestrictedHandlers(onFormatNote: FormatNoteFn, onValue
       );
     },
     onChange(e: ChangeEvent<HTMLInputElement>) {
-      const raw = e.target.value;
+      const raw = readInputValue(e.currentTarget.value);
       const c = sanitizePersonNameInput(raw);
       onValue(c);
     },
@@ -143,7 +147,7 @@ export function emailFieldRestrictedHandlers(onFormatNote: FormatNoteFn, onValue
       );
     },
     onChange(e: ChangeEvent<HTMLInputElement>) {
-      onValue(sanitizeEmailFieldInput(e.target.value));
+      onValue(sanitizeEmailFieldInput(readInputValue(e.currentTarget.value)));
     },
   } satisfies Pick<InputHTMLAttributes<HTMLInputElement>, "onBeforeInput" | "onPaste" | "onChange">;
 }
@@ -166,7 +170,7 @@ export function slugLiveRestrictedHandlers(onFormatNote: FormatNoteFn, onValue: 
       );
     },
     onChange(e: ChangeEvent<HTMLInputElement>) {
-      onValue(sanitizeSlugLiveInput(e.target.value));
+      onValue(sanitizeSlugLiveInput(readInputValue(e.currentTarget.value)));
     },
   } satisfies Pick<InputHTMLAttributes<HTMLInputElement>, "onBeforeInput" | "onPaste" | "onChange">;
 }
@@ -193,7 +197,7 @@ export function urlSuffixRestrictedHandlers(
       );
     },
     onChange(e: ChangeEvent<HTMLInputElement>) {
-      const raw = e.target.value;
+      const raw = readInputValue(e.currentTarget.value);
       onStoredValue(merge(sanitizeUrlFragmentInput(raw)));
     },
   } satisfies Pick<InputHTMLAttributes<HTMLInputElement>, "onBeforeInput" | "onPaste" | "onChange">;

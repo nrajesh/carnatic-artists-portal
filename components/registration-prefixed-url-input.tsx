@@ -5,7 +5,7 @@ import { useTimedFieldNotice } from "@/hooks/use-timed-field-notice";
 import { urlSuffixRestrictedHandlers, type FormatNoteFn } from "@/lib/restricted-input-handlers";
 
 type ControllerField = {
-  value: string | undefined;
+  value: string | null | undefined;
   onChange: (v: string) => void;
   onBlur: () => void;
 };
