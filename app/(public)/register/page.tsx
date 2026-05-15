@@ -409,6 +409,17 @@ export default function RegisterPage() {
   }, []);
 
   useEffect(() => {
+    const clearTransientSubmitError = () => {
+      setSubmitError(null);
+    };
+
+    window.addEventListener("pageshow", clearTransientSubmitError);
+    return () => {
+      window.removeEventListener("pageshow", clearTransientSubmitError);
+    };
+  }, []);
+
+  useEffect(() => {
     let active = true;
     (async () => {
       try {
