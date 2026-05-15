@@ -1,6 +1,5 @@
 import { randomUUID } from "crypto";
 import jpeg from "jpeg-js";
-import sharp from "sharp";
 import { deleteFile, managedObjectKeyFromPublicUrl, StorageError, uploadFile } from "@/lib/storage";
 
 export const PROFILE_PHOTO_MAX_UPLOAD_BYTES = 1 * 1024 * 1024;
@@ -139,6 +138,12 @@ async function fetchRemoteImage(sourceUrl: string): Promise<Buffer> {
 
 async function buildProfilePhotoDerivativeFromRemote(buffer: Buffer): Promise<Buffer> {
   try {
+    // Load sharp only when remote URL ingestion is actually used.
+    // Cloudflare Workers can choke on sharp's Node-oriented module init even when this code path
+    // is never executed, so keep it out of route module evaluation for plain registrations.
+    const sharpModule = await import("sharp");
+    const sharp = sharpModule.default;
+
     return await sharp(buffer, { failOn: "none" })
       .rotate()
       .resize(320, 320, { fit: "cover", position: "attention" })

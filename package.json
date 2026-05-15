@@ -39,7 +39,7 @@
     "jpeg-js": "^0.4.4",
     "leaflet": "^1.9.4",
     "next": "^16.2.4",
-    "posthog-js": "^1.368.2",
+    "posthog-js": "^1.373.5",
     "prisma": "^6.19.3",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
