@@ -14,7 +14,7 @@ export function JoinCtaButton(): JSX.Element {
     <Link
       href="/register"
       onClick={handleClick}
-      className="px-6 py-3 bg-white text-amber-900 font-semibold rounded-lg hover:bg-amber-100 transition-colors min-h-[44px] flex items-center"
+      className="flex min-h-[44px] items-center justify-center whitespace-nowrap rounded-lg bg-white px-3 py-2.5 text-sm font-semibold text-amber-900 transition-colors hover:bg-amber-100 sm:px-6 sm:py-3 sm:text-base"
     >
       Join as an Artist
     </Link>

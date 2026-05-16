@@ -18,6 +18,28 @@ const displayConfig = getDeploymentDisplayConfig();
 export const metadata: Metadata = {
   title: displayConfig.name,
   description: `Discover artists and portfolios based in ${displayConfig.countryName}`,
+  openGraph: {
+    title: displayConfig.name,
+    description: `Discover artists and portfolios based in ${displayConfig.countryName}`,
+    images: [
+      { url: "/assets/social-share-logo.png", width: 1024, height: 1024, alt: displayConfig.name },
+    ],
+  },
+  twitter: {
+    card: "summary",
+    title: displayConfig.name,
+    description: `Discover artists and portfolios based in ${displayConfig.countryName}`,
+    images: ["/assets/social-share-logo.png"],
+  },
+  icons: {
+    icon: [
+      { url: "/favicon.ico", sizes: "any" },
+      { url: "/assets/favicon-32.png", type: "image/png", sizes: "32x32" },
+      { url: "/assets/favicon-16.png", type: "image/png", sizes: "16x16" },
+      { url: "/icon.svg", type: "image/svg+xml" },
+    ],
+    apple: [{ url: "/assets/apple-touch-icon.png", type: "image/png", sizes: "180x180" }],
+  },
 };
 
 export default async function RootLayout({
@@ -38,7 +60,10 @@ export default async function RootLayout({
       : session.role);
 
   return (
-    <html lang={displayConfig.primaryLocale} className={`${fontSans.variable} ${fontDisplay.variable}`}>
+    <html
+      lang={displayConfig.primaryLocale}
+      className={`${fontSans.variable} ${fontDisplay.variable}`}
+    >
       <body className="flex min-h-screen flex-col font-sans antialiased text-stone-900">
         <SiteHeader />
         <div className="flex min-h-0 min-w-0 flex-1 flex-col">

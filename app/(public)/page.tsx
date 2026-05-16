@@ -108,7 +108,7 @@ export default async function HomePage({
     <main className="min-h-screen bg-amber-50">
       {ph_reset === "1" && <PostHogReset />}
 
-      <div className="bg-gradient-to-br from-amber-900 via-amber-800 to-amber-700 px-6 py-14 text-center text-white sm:py-20">
+      <div className="bg-gradient-to-br from-amber-900 via-amber-800 to-amber-700 px-4 py-10 text-center text-white sm:px-6 sm:py-20">
 
         <h1 className="mb-3 font-display text-3xl font-bold tracking-tight sm:mb-4 sm:text-5xl">
           {displayConfig.name}
@@ -116,12 +116,12 @@ export default async function HomePage({
         <p className="mx-auto mb-6 max-w-2xl text-base text-amber-200 sm:mb-8 sm:max-w-4xl sm:text-xl">
           {collabsRatingsEnabled
             ? "Browse artists, discover profiles, find collaborators, and grow your musical network."
-            : "Browse artists, discover profiles, and connect with local talents."}
+            : "A professional artist community"}
         </p>
-        <div className="flex flex-wrap justify-center gap-3 sm:gap-4">
+        <div className="flex flex-wrap justify-center gap-2 sm:gap-4">
           <Link
             href={artistsDirectoryHref}
-            className="px-6 py-3 border-2 border-white text-white font-semibold rounded-lg hover:bg-white/10 transition-colors min-h-[44px] flex items-center"
+            className="flex min-h-[44px] items-center justify-center whitespace-nowrap rounded-lg border-2 border-white px-3 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-white/10 sm:px-6 sm:py-3 sm:text-base"
           >
             Meet our artists
           </Link>

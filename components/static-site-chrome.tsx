@@ -22,7 +22,7 @@ export function StaticSiteHeader() {
         <nav className={siteNavShellClass} aria-label="Primary">
           <BackNavButton />
           <HardNavAnchor href="/" className={siteBrandHomeClass}>
-            <SiteBrandMark className="h-5 w-5" />
+            <SiteBrandMark className="h-9 w-9" />
             <span className="sr-only">Home</span>
           </HardNavAnchor>
           <HardNavAnchor href="/about" className={siteNavPillClass}>
