@@ -7,9 +7,11 @@
   role="img"
   aria-labelledby="title desc"
 >
-  <title id="title">Artist Discovery Portal logo</title>
-  <desc id="desc">An amber creative portal mark with a central compass diamond.</desc>
-  <rect width="96" height="96" rx="28" fill="#FFFBEB" />
+  <title id="title">Artist Discovery Portal transparent logo</title>
+  <desc id="desc">
+    An amber circular artist discovery mark with a central compass diamond on a transparent
+    background.
+  </desc>
   <circle cx="48" cy="48" r="36" fill="url(#bg)" />
   <g clip-path="url(#markClip)">
     <path

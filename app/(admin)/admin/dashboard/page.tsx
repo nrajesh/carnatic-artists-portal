@@ -68,19 +68,25 @@ export default async function AdminDashboardPage({
               <h2 className="font-semibold text-stone-800 transition-colors group-hover:text-amber-900">
                 Registration Requests
               </h2>
-              <p className="mt-1 text-sm leading-relaxed text-stone-500">Review and approve new artist applications</p>
+              <p className="mt-1 text-sm leading-relaxed text-stone-500">
+                Review and approve new artist applications
+              </p>
             </div>
           </Link>
 
           <Link href="/admin/artists" className={cardClass}>
             <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-amber-50 to-amber-100/90 text-2xl shadow-inner ring-1 ring-amber-200/30">
-              <span className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-amber-400 via-orange-500 to-amber-700 text-white shadow-sm ring-1 ring-white/70">
-                <SiteBrandMark className="h-6 w-6" />
+              <span className="flex h-9 w-9 items-center justify-center overflow-hidden rounded-full bg-gradient-to-br from-amber-400 via-orange-500 to-amber-700 text-white shadow-sm ring-1 ring-white/70">
+                <SiteBrandMark className="h-9 w-9" />
               </span>
             </div>
             <div>
-              <h2 className="font-semibold text-stone-800 transition-colors group-hover:text-amber-900">Artists</h2>
-              <p className="mt-1 text-sm leading-relaxed text-stone-500">View, edit, and manage artist profiles</p>
+              <h2 className="font-semibold text-stone-800 transition-colors group-hover:text-amber-900">
+                Artists
+              </h2>
+              <p className="mt-1 text-sm leading-relaxed text-stone-500">
+                View, edit, and manage artist profiles
+              </p>
             </div>
           </Link>
 
@@ -104,8 +110,12 @@ export default async function AdminDashboardPage({
                 💬
               </div>
               <div>
-                <h2 className="font-semibold text-stone-800 transition-colors group-hover:text-amber-900">Collabs</h2>
-                <p className="mt-1 text-sm leading-relaxed text-stone-500">Monitor and moderate group chats</p>
+                <h2 className="font-semibold text-stone-800 transition-colors group-hover:text-amber-900">
+                  Collabs
+                </h2>
+                <p className="mt-1 text-sm leading-relaxed text-stone-500">
+                  Monitor and moderate group chats
+                </p>
               </div>
             </Link>
           )}
@@ -115,8 +125,12 @@ export default async function AdminDashboardPage({
               🎨
             </div>
             <div>
-              <h2 className="font-semibold text-stone-800 transition-colors group-hover:text-amber-900">Specialities</h2>
-              <p className="mt-1 text-sm leading-relaxed text-stone-500">Manage instrument specialities and colour themes</p>
+              <h2 className="font-semibold text-stone-800 transition-colors group-hover:text-amber-900">
+                Specialities
+              </h2>
+              <p className="mt-1 text-sm leading-relaxed text-stone-500">
+                Manage instrument specialities and colour themes
+              </p>
             </div>
           </Link>
         </div>

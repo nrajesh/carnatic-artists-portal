@@ -226,17 +226,7 @@ async function processImageFile(params: {
 
   ctx.fillStyle = "#FFFFFF";
   ctx.fillRect(0, 0, canvas.width, canvas.height);
-  ctx.drawImage(
-    source,
-    sourceX,
-    sourceY,
-    cropWidth,
-    cropHeight,
-    0,
-    0,
-    outputWidth,
-    outputHeight,
-  );
+  ctx.drawImage(source, sourceX, sourceY, cropWidth, cropHeight, 0, 0, outputWidth, outputHeight);
   if ("close" in source && typeof source.close === "function") source.close();
 
   const blob = await new Promise<Blob | null>((resolve) =>
@@ -616,8 +606,8 @@ export default function RegisterPage() {
       <main className="min-h-screen bg-amber-50 flex items-center justify-center px-4">
         <div className="max-w-md w-full bg-white rounded-2xl shadow-lg p-8 text-center border border-amber-200">
           <div className="mb-4 flex justify-center">
-            <span className="flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-br from-amber-400 via-orange-500 to-amber-700 text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.36),0_12px_22px_rgba(154,52,18,0.18)] ring-1 ring-amber-100">
-              <SiteBrandMark className="h-10 w-10" />
+            <span className="flex h-16 w-16 items-center justify-center overflow-hidden rounded-full bg-gradient-to-br from-amber-400 via-orange-500 to-amber-700 text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.36),0_12px_22px_rgba(154,52,18,0.18)] ring-1 ring-amber-100">
+              <SiteBrandMark className="h-16 w-16" />
             </span>
           </div>
           <h1 className="mb-3 font-display text-2xl font-bold tracking-tight text-amber-900">
@@ -882,9 +872,8 @@ export default function RegisterPage() {
                 <div className="rounded-2xl border border-amber-200 bg-amber-50/60 p-4">
                   <p className="text-sm font-semibold text-amber-900">Images</p>
                   <p className="mt-1 text-xs leading-relaxed text-amber-700">
-                    Profile photos and Header Images can use either managed upload or a direct
-                    HTTPS URL. Remote profile-photo URLs are ingested into managed storage before
-                    review.
+                    Profile photos and Header Images can use either managed upload or a direct HTTPS
+                    URL. Remote profile-photo URLs are ingested into managed storage before review.
                   </p>
 
                   <div className="mt-4 grid gap-4 border-b border-amber-200 pb-4 md:grid-cols-2">
@@ -903,7 +892,9 @@ export default function RegisterPage() {
                           </div>
                         )}
                         <div>
-                          <p className="text-sm font-semibold text-amber-900">Profile photo upload</p>
+                          <p className="text-sm font-semibold text-amber-900">
+                            Profile photo upload
+                          </p>
                           <p className="text-xs text-amber-700">Cropped to a square avatar.</p>
                         </div>
                       </div>
@@ -987,7 +978,9 @@ export default function RegisterPage() {
                           </div>
                         )}
                         <div>
-                          <p className="text-sm font-semibold text-amber-900">Header Image upload</p>
+                          <p className="text-sm font-semibold text-amber-900">
+                            Header Image upload
+                          </p>
                           <p className="text-xs text-amber-700">Cropped to a wide hero banner.</p>
                         </div>
                       </div>
