@@ -112,9 +112,8 @@ export default async function AboutPage() {
         <p className="text-amber-300 text-sm font-semibold uppercase tracking-widest mb-3">Maintainer Reference</p>
         <h1 className="mb-4 font-display text-4xl font-bold tracking-tight sm:text-5xl">Find Artists</h1>
         <p className="text-amber-200 text-lg max-w-2xl mx-auto mb-6">
-          If you are looking for talents or collabortators across fine arts,
-          modern media, performing arts or literary arts this artist discovery
-          portal is for you.
+          A portal to discover creative talents. Find artists to collaborate 
+          across visual, performing, literary & applied crafts.
         </p>
         <div className="flex flex-wrap justify-center gap-4 mt-6 sm:mt-8">
           <Link href="/" className="px-5 py-2.5 bg-white text-amber-900 font-semibold rounded-lg hover:bg-amber-50 transition-colors text-sm">
