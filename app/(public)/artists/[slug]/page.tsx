@@ -617,7 +617,7 @@ export default async function ArtistProfilePage({ params, searchParams }: PagePr
 
         {/* External links - feed-style cards (web + mobile) */}
         {artist.links.length > 0 && (
-          <SectionCard title="Connect">
+          <SectionCard title="Online presence">
             {isLoggedIn ? (
               <ArtistExternalLinksFeed links={artist.links} />
             ) : (

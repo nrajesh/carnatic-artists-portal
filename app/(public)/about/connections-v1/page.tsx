@@ -1,13 +1,6 @@
 import Link from "next/link";
+import { MermaidDiagram } from "@/components/mermaid-diagram";
 import { PortalSectionHeading } from "@/components/portal-section-heading";
-
-function MermaidBlock({ children }: { children: string }) {
-  return (
-    <pre className="overflow-x-auto rounded-2xl border border-stone-200 bg-stone-950 p-4 text-xs leading-6 text-stone-100 shadow-sm">
-      <code>{children}</code>
-    </pre>
-  );
-}
 
 export default function ConnectionsV1AboutPage() {
   return (
@@ -55,7 +48,8 @@ export default function ConnectionsV1AboutPage() {
             flag and also soft-fail when the Prisma delegate or database table is unavailable. That
             keeps unrelated artist and admin pages stable during rollout.
           </p>
-          <MermaidBlock>{`flowchart TD
+          <MermaidDiagram
+            chart={`flowchart TD
   A["Profile page"] --> B["canUseArtistConnections(viewer)"]
   A --> C["canUseArtistConnections(target)"]
   B --> D["PostHog flag evaluation"]
@@ -64,14 +58,16 @@ export default function ConnectionsV1AboutPage() {
   E --> F["Connection status lookup"]
   F --> G["Render Connect / Pending / Connected"]
   F --> H["Approved mention targets"]
-  H --> I["Bio + collab message linkification"]`}</MermaidBlock>
+  H --> I["Bio + collab message linkification"]`}
+          />
         </section>
 
         <section className="rounded-2xl border border-stone-200 bg-white p-6 shadow-sm">
           <PortalSectionHeading variant="title" className="mb-3">
             Relationship lifecycle
           </PortalSectionHeading>
-          <MermaidBlock>{`stateDiagram-v2
+          <MermaidDiagram
+            chart={`stateDiagram-v2
   [*] --> NONE
   NONE --> PENDING_OUTGOING: requester sends request
   PENDING_OUTGOING --> APPROVED: recipient approves
@@ -80,14 +76,16 @@ export default function ConnectionsV1AboutPage() {
   APPROVED --> NONE: either artist removes connection
   REJECTED --> PENDING_OUTGOING: requester retries later
   NONE --> DISABLED: recipient pauses requests
-  DISABLED --> NONE: recipient re-enables requests`}</MermaidBlock>
+  DISABLED --> NONE: recipient re-enables requests`}
+          />
         </section>
 
         <section className="rounded-2xl border border-stone-200 bg-white p-6 shadow-sm">
           <PortalSectionHeading variant="title" className="mb-3">
             Data design
           </PortalSectionHeading>
-          <MermaidBlock>{`erDiagram
+          <MermaidDiagram
+            chart={`erDiagram
   Artist ||--o{ ArtistConnection : requester
   Artist ||--o{ ArtistConnection : recipient
   Artist ||--|| NotificationPreference : has
@@ -110,7 +108,8 @@ export default function ConnectionsV1AboutPage() {
     bool connectionRequestsAllowed
     bool connectionRequestEnabled
     bool connectionApprovedEnabled
-  }`}</MermaidBlock>
+  }`}
+          />
         </section>
 
         <section className="rounded-2xl border border-stone-200 bg-white p-6 shadow-sm">

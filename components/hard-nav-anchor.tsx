@@ -1,10 +1,9 @@
 "use client";
 
-import type { MouseEvent, ReactNode } from "react";
+import type { AnchorHTMLAttributes, MouseEvent, ReactNode } from "react";
 
-type Props = {
+type Props = Omit<AnchorHTMLAttributes<HTMLAnchorElement>, "href"> & {
   href: string;
-  className?: string;
   children: ReactNode;
 };
 
@@ -13,7 +12,7 @@ type Props = {
  * Needed after {@link app/error.tsx} because client `<Link>` transitions can
  * leave the error UI mounted or bounce via history to the failing URL.
  */
-export function HardNavAnchor({ href, className, children }: Props) {
+export function HardNavAnchor({ href, className, children, ...rest }: Props) {
   function onClick(e: MouseEvent<HTMLAnchorElement>) {
     if (e.defaultPrevented) return;
     if (e.metaKey || e.ctrlKey || e.altKey || e.shiftKey) return;
@@ -25,7 +24,7 @@ export function HardNavAnchor({ href, className, children }: Props) {
   }
 
   return (
-    <a href={href} className={className} onClick={onClick}>
+    <a href={href} className={className} onClick={onClick} {...rest}>
       {children}
     </a>
   );

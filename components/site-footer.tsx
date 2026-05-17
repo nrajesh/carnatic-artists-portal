@@ -3,6 +3,9 @@ import { cookies } from "next/headers";
 import { verifySession } from "@/lib/session-jwt";
 import { AnalyticsOptOutFooterNote } from "@/components/analytics-opt-out-footer-note";
 import { getDeploymentDisplayConfig } from "@/lib/deployment-display";
+import { formatDeploymentDateTime } from "@/lib/format-deployment-datetime";
+import { getArtistFullNameById } from "@/lib/queries/artists";
+import { siteNavPillClass, siteNavShellClass, siteNavTextClass } from "@/components/site-nav-styles";
 
 /**
  * Global footer - safe for production (About, Privacy, auth state).
@@ -21,63 +24,77 @@ export async function SiteFooter() {
   const sessionCookie = (await cookies()).get("session")?.value ?? null;
   const session = sessionCookie ? await verifySession(sessionCookie) : null;
   const isLoggedIn = session !== null;
-  const dashboardHref = session?.role === "admin" ? "/admin/dashboard" : "/dashboard";
   const displayConfig = getDeploymentDisplayConfig();
+  const sessionDisplayName = session ? await getArtistFullNameById(session.artistId) : null;
+  const sessionBannerLabel =
+    session &&
+    (sessionDisplayName
+      ? session.role === "admin"
+        ? `${sessionDisplayName} (admin)`
+        : sessionDisplayName
+      : session.role);
 
-  const linkClass =
-    "text-sm font-medium text-stone-700 underline-offset-4 transition-colors hover:text-amber-900 hover:underline";
+  const isDev = process.env.NODE_ENV === "development";
+  const footerPaddingClass = isDev ? "" : "pb-[72px] sm:pb-[84px]";
 
   return (
-    <footer
-      className="mt-auto border-t border-amber-200/80 bg-gradient-to-b from-amber-50/90 to-amber-100/50"
-      aria-label="Site"
-    >
-      <div className="mx-auto max-w-5xl px-4 py-8 sm:py-10">
-        <nav className="flex flex-row flex-wrap items-center justify-center gap-x-8 gap-y-2">
-          <Link href="/about" className={linkClass}>
-            About
+    <>
+      <div className="fixed inset-x-0 bottom-0 z-[90] border-t border-amber-200/90 bg-gradient-to-t from-amber-100/70 to-amber-50/95 px-4 py-3 shadow-[0_-10px_30px_rgba(120,53,15,0.08)] backdrop-blur sm:py-4">
+        <nav
+          className={`${siteNavShellClass} mx-auto`}
+          aria-label="Quick actions"
+        >
+          <Link href="/about" className={siteNavPillClass}>
+            <span className={siteNavTextClass}>About</span>
           </Link>
-          <Link href="/privacy" className={linkClass}>
-            Privacy
+          <Link href="/privacy" className={siteNavPillClass}>
+            <span className={siteNavTextClass}>Privacy</span>
           </Link>
           {isLoggedIn ? (
-            <>
-              <Link href={dashboardHref} className={linkClass}>
-                Dashboard
-              </Link>
-              <form action="/api/auth/logout" method="POST" className="inline">
-                <button
-                  type="submit"
-                  className={`${linkClass} cursor-pointer border-0 bg-transparent p-0`}
-                >
-                  Log out
-                </button>
-              </form>
-            </>
+            <form action="/api/auth/logout" method="POST" className="inline">
+              <button
+                type="submit"
+                className={`${siteNavPillClass} cursor-pointer border-0 bg-transparent`}
+              >
+                <span className={siteNavTextClass}>Log out</span>
+              </button>
+            </form>
           ) : (
-            <Link href="/auth/login" className={linkClass}>
-              Sign in
+            <Link href="/auth/login" className={siteNavPillClass}>
+              <span className={siteNavTextClass}>Sign in</span>
             </Link>
           )}
         </nav>
-        <AnalyticsOptOutFooterNote />
-        <div className="mt-6 flex flex-col items-center gap-2 text-center text-xs text-stone-500">
-          <p>
-            {displayConfig.name} - connecting artists across geographies
-          </p>
-          <p>
-            Built with ❤️ for artists by{" "}
-            <a
-              href="https://imaginest.nl"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-stone-700 font-medium hover:text-amber-900 hover:underline transition-colors"
-            >
-              Imaginest
-            </a>
-          </p>
-        </div>
       </div>
-    </footer>
+
+      <footer
+        className={`border-t border-amber-200/80 bg-gradient-to-b from-amber-50/90 to-amber-100/50 ${footerPaddingClass}`}
+        aria-label="Site"
+      >
+        <div className="mx-auto max-w-5xl px-4 py-3 sm:py-4">
+          <AnalyticsOptOutFooterNote />
+          <div className="flex flex-col items-center gap-1 text-center text-xs text-stone-500">
+            <p>{displayConfig.name} - connecting artists across geographies</p>
+            <p>
+              Built with ❤️ for artists by{" "}
+              <a
+                href="https://imaginest.nl"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-stone-700 font-medium hover:text-amber-900 hover:underline transition-colors"
+              >
+                Imaginest
+              </a>
+            </p>
+            {session && sessionBannerLabel ? (
+              <p className="pt-1 text-[11px] text-stone-400">
+                Logged in as {sessionBannerLabel} · Session expires{" "}
+                {formatDeploymentDateTime(session.expiresAt)}
+              </p>
+            ) : null}
+          </div>
+        </div>
+      </footer>
+    </>
   );
 }

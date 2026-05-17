@@ -113,7 +113,7 @@ export default async function HomePage({
   }
 
   return (
-    <main className="min-h-screen bg-amber-50">
+    <main className="bg-amber-50">
       {ph_reset === "1" && <PostHogReset />}
 
       <div className="bg-gradient-to-br from-amber-900 via-amber-800 to-amber-700 px-4 py-10 text-center text-white sm:px-6 sm:py-20">
@@ -248,7 +248,7 @@ export default async function HomePage({
 
       <section
         id="home-location-explorer"
-        className="mx-auto max-w-5xl px-6 pb-10 scroll-mt-24"
+        className="mx-auto max-w-5xl px-6 pb-28 scroll-mt-24 sm:pb-32"
         aria-labelledby="home-location-explorer-heading"
       >
         <h2 id="home-location-explorer-heading" className="portal-section-article">
@@ -271,7 +271,7 @@ export default async function HomePage({
       </section>
 
       {collabsRatingsEnabled && (
-        <div className="max-w-4xl mx-auto px-6 pb-16">
+        <div className="mx-auto max-w-4xl px-6 pb-28 sm:pb-32">
           <div className="mb-4 flex flex-wrap items-end justify-between gap-2 border-b border-amber-400/70 pb-2">
             <PortalSectionHeading variant="title" textOnly className="mb-0 text-lg font-bold text-stone-900">
               Collaborations in motion

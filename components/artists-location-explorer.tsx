@@ -271,9 +271,11 @@ export function ArtistsLocationExplorer({
   const singularLower = areaLabelSingular.toLowerCase();
   const pluralLower = areaLabelPlural.toLowerCase();
 
-  filteredLocationPointsRef.current = filteredLocationPoints;
-  selectedCityRef.current = selectedCity;
-  selectedSpecialityRef.current = selectedSpeciality;
+  useEffect(() => {
+    filteredLocationPointsRef.current = filteredLocationPoints;
+    selectedCityRef.current = selectedCity;
+    selectedSpecialityRef.current = selectedSpeciality;
+  }, [filteredLocationPoints, selectedCity, selectedSpeciality]);
 
   useEffect(() => {
     if (!mapRootRef.current || mapRef.current) return;
@@ -435,7 +437,7 @@ export function ArtistsLocationExplorer({
   }, [filteredLocationPoints, pointsKey]);
 
   return (
-    <div className="overflow-hidden rounded-[30px] border border-amber-200/80 bg-gradient-to-b from-amber-50/60 via-amber-50/25 to-transparent shadow-sm">
+    <div className="relative z-0 overflow-hidden rounded-[30px] border border-amber-200/80 bg-gradient-to-b from-amber-50/60 via-amber-50/25 to-transparent shadow-sm">
       {enableSpecialityFilter ? (
         <div className="border-b border-amber-200/70 bg-white/70 px-5 py-4">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
@@ -485,9 +487,9 @@ export function ArtistsLocationExplorer({
           ) : null}
         </div>
       ) : null}
-      <div className="px-2 pb-2 pt-3 sm:px-3">
+      <div className="relative z-0 px-2 pb-2 pt-3 sm:px-3">
         <div className="overflow-hidden rounded-[26px] border border-amber-200/80 shadow-inner">
-          <div ref={mapRootRef} className="h-[620px] w-full bg-amber-50" />
+          <div ref={mapRootRef} className="relative z-0 h-[620px] w-full bg-amber-50" />
         </div>
         <div className="mt-3 flex flex-wrap items-center justify-between gap-3 px-3 pb-2 sm:px-4 text-xs text-stone-500">
           <p>

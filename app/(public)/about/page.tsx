@@ -146,7 +146,7 @@ export default async function AboutPage() {
           <ol className="grid sm:grid-cols-2 gap-2 text-sm">
             {[
               ["#colour-theming", "1. Speciality-based colour theming"],
-              ["#unicode", "2. Indic script & Unicode support"],
+              ["#unicode", "2. Multilingual Unicode support"],
               ["#search", "3. Structured artist search"],
               ["#auth", "4. Magic-link authentication"],
               ["#pwa", "5. PWA & mobile-first design"],
@@ -155,6 +155,7 @@ export default async function AboutPage() {
               ["#admin", "8. Admin moderation tools"],
               ["#analytics", "9. Product analytics & privacy (PostHog)"],
               ["#tech", "10. Tech stack at a glance"],
+              ["#connections-v1", "11. Connections V1 rollout notes"],
             ].map(([href, label]) => (
               <li key={href}>
                 <a
@@ -248,11 +249,11 @@ export default async function AboutPage() {
           </div>
         </Section>
 
-        {/* 2. Unicode / Indic scripts */}
+        {/* 2. Unicode / multilingual scripts */}
         <Section
           id="unicode"
-          title="2. Indic script & Unicode support"
-          subtitle="Artists can write their bio and other profile text in any Indic script - Tamil, Kannada, Telugu, Malayalam, Devanagari and more."
+          title="2. Multilingual Unicode support"
+          subtitle="Artists can write their bio and profile text in Unicode scripts across regions - Indic scripts, Arabic, Chinese, Japanese, Korean, Latin, and mixed-script combinations."
         >
           <div className="grid sm:grid-cols-2 gap-4 mb-6">
             {[
@@ -262,16 +263,16 @@ export default async function AboutPage() {
                 script: "ta",
               },
               {
-                lang: "Malayalam",
+                lang: "Arabic",
                 sample:
-                  "കർണ്ണാടക സംഗീതം എന്റെ ജീവിതത്തിന്റെ ഭാഗമാണ്. ഞാൻ ചെറുപ്പം മുതൽ മൃദംഗം പഠിച്ചു.",
-                script: "ml",
+                  "الموسيقى جزء من حياتي الإبداعية. تعلمت العود منذ الصغر وأحب التعاون مع فنانين من مجالات مختلفة.",
+                script: "ar",
               },
               {
-                lang: "Telugu",
+                lang: "Chinese",
                 sample:
-                  "కర్ణాటక సంగీతం నా జీవితంలో అంతర్భాగం. నేను చిన్నప్పటి నుండి వీణ నేర్చుకున్నాను.",
-                script: "te",
+                  "音乐是我创作生活的一部分。我从小学习古筝，也喜欢与不同领域的艺术家合作。",
+                script: "zh",
               },
               {
                 lang: "Kannada",
@@ -286,7 +287,7 @@ export default async function AboutPage() {
               {
                 lang: "Mixed",
                 sample:
-                  "My journey in music began in Chennai (சென்னை) and continues in Amsterdam - classical vocals (ശാസ്‌ത്രീയ സംഗീതം) remain my anchor.",
+                  "My journey in music began in Chennai (சென்னை) and continues in Amsterdam - classical vocals (ശാസ്‌ത്രീയ സംഗീതം) and Korean theatre (한국 연극) shape my practice.",
                 script: "mixed",
               },
             ].map(({ lang, sample, script }) => (
@@ -296,10 +297,11 @@ export default async function AboutPage() {
                 </p>
                 <p
                   lang={script === "mixed" ? "en" : script}
+                  dir={script === "ar" ? "rtl" : "auto"}
                   className="text-stone-700 leading-relaxed text-sm"
                   style={{
                     fontFamily:
-                      "'Noto Sans', 'Noto Sans Tamil', 'Noto Sans Malayalam', 'Noto Sans Telugu', 'Noto Sans Kannada', 'Noto Sans Devanagari', sans-serif",
+                      "'Noto Sans', 'Noto Sans Tamil', 'Noto Sans Malayalam', 'Noto Sans Arabic', 'Noto Sans SC', 'Noto Sans KR', 'Noto Sans Kannada', 'Noto Sans Devanagari', sans-serif",
                   }}
                 >
                   {sample}
@@ -309,11 +311,13 @@ export default async function AboutPage() {
           </div>
           <div className="bg-blue-50 border border-blue-200 rounded-xl p-5 text-sm text-blue-800">
             <strong>How it works:</strong> The Tiptap rich-text editor accepts direct Unicode
-            keyboard input for all Indic scripts. The Google Fonts Noto family (loaded with{" "}
-            <code>font-display: swap</code>) provides full glyph coverage with no tofu (□)
-            characters. Correct <code>lang</code> attributes are set on all user-generated content
-            elements for screen readers and browser shaping engines. Mixed-script content (English +
-            Tamil + Malayalam in the same paragraph) renders cleanly.
+            keyboard input across scripts, including Indic families, Arabic, CJK text, Hangul, and
+            ordinary Latin content. The Google Fonts Noto family (loaded with{" "}
+            <code>font-display: swap</code>) provides broad glyph coverage with no tofu (□)
+            characters. Correct <code>lang</code> attributes are set on user-generated content
+            samples for screen readers and browser shaping engines. Mixed-script content (for
+            example English + Tamil + Malayalam + Korean in the same paragraph) renders cleanly, and the same
+            editor pipeline remains compatible with Arabic, Chinese, Japanese, and Korean text.
           </div>
         </Section>
 
@@ -769,6 +773,26 @@ export default async function AboutPage() {
                 </Link>
               ))}
             </div>
+          </div>
+        </Section>
+
+        <Section
+          id="connections-v1"
+          title="11. Connections V1 rollout notes"
+          subtitle="The new artist-to-artist connection layer is documented separately so operators can follow the live implementation."
+        >
+          <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-6 text-sm text-emerald-950 shadow-sm">
+            <p className="leading-relaxed">
+              The connections module is currently feature-flagged and documented on a dedicated
+              sub-page with lifecycle diagrams, runtime gating notes, data design, and V1 admin
+              oversight details.
+            </p>
+            <Link
+              href="/about/connections-v1"
+              className="mt-4 inline-flex min-h-[42px] items-center justify-center rounded-lg border border-emerald-300 bg-white px-4 py-2 font-semibold text-emerald-900 transition-colors hover:bg-emerald-100"
+            >
+              Open Connections V1 notes
+            </Link>
           </div>
         </Section>
 

@@ -95,6 +95,19 @@ function isConnectionStorageUnavailable(error: unknown): boolean {
   return message.includes("ArtistConnection") || message.includes("artistConnection");
 }
 
+function isConnectionPreferenceUnavailable(error: unknown): boolean {
+  if (!error || typeof error !== "object") return false;
+  const code = "code" in error ? String(error.code) : "";
+  if (code === "P2021" || code === "P2022") return true;
+  const message = "message" in error ? String(error.message) : "";
+  return (
+    message.includes("connectionRequestsAllowed") ||
+    message.includes("notificationPreference.findUnique") ||
+    message.includes("Unknown field") ||
+    message.includes("PrismaClientValidationError")
+  );
+}
+
 function connectionSetupError(): Error {
   return new Error(
     "Artist connections are not ready. Generate Prisma Client and apply the latest migration.",
@@ -274,11 +287,16 @@ export async function getArtistConnectionCenterView(
 }
 
 export async function canArtistReceiveConnectionRequests(artistId: string): Promise<boolean> {
-  const pref = await getDb().notificationPreference.findUnique({
-    where: { artistId },
-    select: { connectionRequestsAllowed: true },
-  });
-  return pref?.connectionRequestsAllowed ?? true;
+  try {
+    const pref = await getDb().notificationPreference.findUnique({
+      where: { artistId },
+      select: { connectionRequestsAllowed: true },
+    });
+    return pref?.connectionRequestsAllowed ?? true;
+  } catch (error) {
+    if (isConnectionPreferenceUnavailable(error)) return true;
+    throw error;
+  }
 }
 
 export async function createConnectionRequest(requesterId: string, recipientId: string) {

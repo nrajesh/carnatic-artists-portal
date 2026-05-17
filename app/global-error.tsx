@@ -22,9 +22,10 @@ export default function GlobalError({
   const isServerError = Boolean(digest);
 
   return (
-    <html lang="en" className={`${fontSans.variable} ${fontDisplay.variable}`}>
-      <body className="flex min-h-screen flex-col font-sans antialiased text-stone-900">
+    <html lang="en" className={`${fontSans.variable} ${fontDisplay.variable}`} suppressHydrationWarning>
+      <body className="flex min-h-screen flex-col bg-amber-50 font-sans antialiased text-stone-900" suppressHydrationWarning>
         <StaticSiteHeader />
+        <div aria-hidden="true" className="h-[92px] shrink-0 sm:h-[104px]" />
         <div className="flex min-h-0 min-w-0 flex-1 flex-col">
           <PortalStatusPage
             variant="error"

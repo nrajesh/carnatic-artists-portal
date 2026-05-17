@@ -17,7 +17,7 @@ import {
  */
 export function StaticSiteHeader() {
   return (
-    <header className="relative z-20 border-b border-amber-200/80 bg-gradient-to-b from-amber-50/95 to-amber-100/60">
+    <header className="fixed inset-x-0 top-0 z-[80] border-b border-amber-200/80 bg-gradient-to-b from-amber-50/95 to-amber-100/60 backdrop-blur">
       <div className="mx-auto w-full max-w-5xl px-4 py-3 sm:py-4">
         <nav className={siteNavShellClass} aria-label="Primary">
           <BackNavButton />
@@ -41,12 +41,12 @@ export function StaticSiteFooter() {
   const displayConfig = getDeploymentDisplayConfig();
 
   return (
-    <footer
-      className="mt-auto border-t border-amber-200/80 bg-gradient-to-b from-amber-50/90 to-amber-100/50"
-      aria-label="Site"
-    >
-      <div className="mx-auto max-w-5xl px-4 py-8 sm:py-10">
-        <nav className="flex flex-row flex-wrap items-center justify-center gap-x-8 gap-y-2">
+    <>
+      <div className="fixed inset-x-0 bottom-0 z-[90] border-t border-amber-200/90 bg-gradient-to-t from-amber-100/70 to-amber-50/95 px-4 py-3 shadow-[0_-10px_30px_rgba(120,53,15,0.08)] backdrop-blur sm:py-4">
+        <nav
+          className={`${siteNavShellClass} mx-auto`}
+          aria-label="Quick actions"
+        >
           <HardNavAnchor href="/about" className={siteNavPillClass}>
             <span className={siteNavTextClass}>About</span>
           </HardNavAnchor>
@@ -57,10 +57,29 @@ export function StaticSiteFooter() {
             <span className={siteNavTextClass}>Sign in</span>
           </HardNavAnchor>
         </nav>
-        <p className="mt-6 text-center text-xs text-stone-500">
-          {displayConfig.name} - connecting artists across geographies
-        </p>
       </div>
-    </footer>
+
+      <footer
+        className="mt-auto border-t border-amber-200/80 bg-gradient-to-b from-amber-50/90 to-amber-100/50 pb-[72px] sm:pb-[84px]"
+        aria-label="Site"
+      >
+        <div className="mx-auto max-w-5xl px-4 py-3 sm:py-4">
+          <div className="flex flex-col items-center gap-1 text-center text-xs text-stone-500">
+            <p>{displayConfig.name} - connecting artists across geographies</p>
+            <p>
+              Built with ❤️ for artists by{" "}
+              <a
+                href="https://imaginest.nl"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="font-medium text-stone-700 transition-colors hover:text-amber-900 hover:underline"
+              >
+                Imaginest
+              </a>
+            </p>
+          </div>
+        </div>
+      </footer>
+    </>
   );
 }

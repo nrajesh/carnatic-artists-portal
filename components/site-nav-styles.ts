@@ -7,6 +7,9 @@ export const siteNavShellClass =
 export const siteNavPillClass =
   "group inline-flex min-h-[38px] shrink-0 items-center justify-center gap-1.5 rounded-full border border-transparent bg-transparent px-2.5 py-2 text-base font-semibold text-stone-700 transition-all duration-200 ease-out hover:-translate-y-0.5 hover:border-amber-200 hover:bg-gradient-to-r hover:from-white hover:to-amber-50 hover:text-amber-900 hover:shadow-[0_10px_20px_rgba(120,53,15,0.12)] active:translate-y-0 active:scale-[0.99] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400 focus-visible:ring-offset-2 focus-visible:ring-offset-amber-50 sm:min-h-[42px] sm:gap-2 sm:px-4";
 
+export const siteNavIconPillClass =
+  "group inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-transparent bg-transparent text-stone-700 transition-all duration-200 ease-out hover:-translate-y-0.5 hover:border-amber-200 hover:bg-gradient-to-r hover:from-white hover:to-amber-50 hover:text-amber-900 hover:shadow-[0_10px_20px_rgba(120,53,15,0.12)] active:translate-y-0 active:scale-[0.99] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400 focus-visible:ring-offset-2 focus-visible:ring-offset-amber-50 sm:h-[42px] sm:w-[42px]";
+
 export const siteNavTextClass = "whitespace-nowrap";
 
 export const siteNavIconBadgeClass =

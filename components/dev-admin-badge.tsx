@@ -16,7 +16,7 @@ export function DevAdminBadge() {
 
   return (
     <footer
-      className="border-t border-amber-400/30 bg-amber-950/95 text-amber-100 shadow-inner backdrop-blur-sm"
+      className="border-t border-amber-400/30 bg-amber-950/95 text-amber-100 shadow-inner backdrop-blur-sm pb-[72px] sm:pb-[84px]"
       aria-label="Development shortcuts"
     >
       <div className="mx-auto flex max-w-5xl flex-wrap items-center justify-between gap-x-4 gap-y-2 px-4 py-2 text-xs">
