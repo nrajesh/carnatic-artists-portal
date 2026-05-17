@@ -25,9 +25,11 @@ export function ArtistAccountStatus({ isSuspended, initialMessages }: ArtistAcco
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
-  useEffect(() => {
+  const [prevInitialMessages, setPrevInitialMessages] = useState(initialMessages);
+  if (initialMessages !== prevInitialMessages) {
+    setPrevInitialMessages(initialMessages);
     setMessages(initialMessages);
-  }, [initialMessages]);
+  }
 
   useEffect(() => {
     if (!open) return;
@@ -80,7 +82,9 @@ export function ArtistAccountStatus({ isSuspended, initialMessages }: ArtistAcco
 
   return (
     <div className="flex flex-wrap items-center gap-2">
-      <span className="text-xs font-semibold uppercase tracking-wide text-stone-500">Account status</span>
+      <span className="text-xs font-semibold uppercase tracking-wide text-stone-500">
+        Account status
+      </span>
       {isSuspended ? (
         <button
           type="button"
@@ -102,7 +106,10 @@ export function ArtistAccountStatus({ isSuspended, initialMessages }: ArtistAcco
       )}
 
       {open ? (
-        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 p-4 sm:items-center" role="presentation">
+        <div
+          className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 p-4 sm:items-center"
+          role="presentation"
+        >
           <div
             ref={dialogRef}
             role="dialog"

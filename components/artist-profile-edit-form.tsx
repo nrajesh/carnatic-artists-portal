@@ -520,9 +520,11 @@ export function ArtistProfileEditForm({
   const [photoUploadSuccess, setPhotoUploadSuccess] = useState<string | null>(null);
   const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
   const [pendingBackgroundImageFile, setPendingBackgroundImageFile] = useState<File | null>(null);
-  const [pendingBackgroundPreviewUrl, setPendingBackgroundPreviewUrl] = useState<string | null>(
-    null,
-  );
+  const pendingBackgroundPreviewUrl = useMemo(() => {
+    if (!pendingBackgroundImageFile) return null;
+    return URL.createObjectURL(pendingBackgroundImageFile);
+  }, [pendingBackgroundImageFile]);
+
   const [backgroundImageRightsConfirmed, setBackgroundImageRightsConfirmed] = useState(false);
   const [backgroundUploadError, setBackgroundUploadError] = useState<string | null>(null);
   const [backgroundUploadSuccess, setBackgroundUploadSuccess] = useState<string | null>(null);
@@ -536,15 +538,12 @@ export function ArtistProfileEditForm({
   const locationAreaLabelLower = locationAreaLabel.toLowerCase();
 
   useEffect(() => {
-    if (!pendingBackgroundImageFile) {
-      setPendingBackgroundPreviewUrl(null);
-      return;
-    }
-
-    const objectUrl = URL.createObjectURL(pendingBackgroundImageFile);
-    setPendingBackgroundPreviewUrl(objectUrl);
-    return () => URL.revokeObjectURL(objectUrl);
-  }, [pendingBackgroundImageFile]);
+    return () => {
+      if (pendingBackgroundPreviewUrl) {
+        URL.revokeObjectURL(pendingBackgroundPreviewUrl);
+      }
+    };
+  }, [pendingBackgroundPreviewUrl]);
 
   const baselineFingerprint = useMemo(
     () =>
@@ -860,7 +859,6 @@ export function ArtistProfileEditForm({
     setBackgroundUploadError(null);
     setBackgroundUploadSuccess(null);
     setBackgroundImageUrl("");
-    setPendingBackgroundPreviewUrl(null);
     setBackgroundImageFocusX(BACKGROUND_IMAGE_FOCUS_DEFAULTS.backgroundImageFocusX);
     setBackgroundImageFocusY(BACKGROUND_IMAGE_FOCUS_DEFAULTS.backgroundImageFocusY);
     setBackgroundImageZoom(BACKGROUND_IMAGE_FOCUS_DEFAULTS.backgroundImageZoom);

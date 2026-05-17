@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useTransition } from "react";
+import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import type { SuspensionMessage } from "@/lib/suspension-thread";
 
@@ -29,9 +29,12 @@ export function SuspendControls({
   const [successNotice, setSuccessNotice] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
-  useEffect(() => {
+  const [prevInitialSuspensionMessages, setPrevInitialSuspensionMessages] =
+    useState(initialSuspensionMessages);
+  if (initialSuspensionMessages !== prevInitialSuspensionMessages) {
+    setPrevInitialSuspensionMessages(initialSuspensionMessages);
     setSuspensionMessages(initialSuspensionMessages);
-  }, [initialSuspensionMessages]);
+  }
 
   function setStatus(next: boolean, comment: string) {
     setMessage(null);
@@ -73,7 +76,8 @@ export function SuspendControls({
       <div className="space-y-3">
         {message ? <p className="text-sm text-red-600">{message}</p> : null}
         <p className="text-sm text-stone-600">
-          You cannot suspend your own account. Ask another admin if this account should be suspended.
+          You cannot suspend your own account. Ask another admin if this account should be
+          suspended.
         </p>
       </div>
     );
@@ -82,14 +86,18 @@ export function SuspendControls({
   return (
     <div className="space-y-3">
       {successNotice ? (
-        <p className="rounded-lg border border-green-200 bg-green-50 px-3 py-2 text-sm text-green-950">{successNotice}</p>
+        <p className="rounded-lg border border-green-200 bg-green-50 px-3 py-2 text-sm text-green-950">
+          {successNotice}
+        </p>
       ) : null}
       {message ? <p className="text-sm text-red-600">{message}</p> : null}
       {suspended ? (
         <>
           {suspensionMessages.length > 0 ? (
             <div className="max-h-64 space-y-2 overflow-y-auto rounded-lg border border-stone-200 bg-stone-50/90 p-3">
-              <p className="text-[10px] font-semibold uppercase tracking-wide text-stone-500">Thread</p>
+              <p className="text-[10px] font-semibold uppercase tracking-wide text-stone-500">
+                Thread
+              </p>
               {suspensionMessages.map((m, i) => (
                 <div
                   key={`${m.at}-${i}`}
@@ -128,7 +136,10 @@ export function SuspendControls({
       ) : (
         <>
           <div>
-            <label htmlFor="suspend-reason" className="mb-1 block text-xs font-semibold text-stone-700">
+            <label
+              htmlFor="suspend-reason"
+              className="mb-1 block text-xs font-semibold text-stone-700"
+            >
               Suspension reason <span className="text-red-600">*</span>
             </label>
             <textarea

@@ -37,6 +37,15 @@ export function CityAutocomplete({
   const wrapperRef = useRef<HTMLDivElement | null>(null);
   const listboxId = useId();
 
+  const [prevValue, setPrevValue] = useState(value);
+  if (value !== prevValue) {
+    setPrevValue(value);
+    if (value.trim().length < 2) {
+      setRemoteSuggestions([]);
+      setIsLoading(false);
+    }
+  }
+
   const localSuggestions = useMemo(() => {
     const query = value.trim().toLocaleLowerCase();
     const options = normalizeOptions(localOptions);
@@ -47,8 +56,6 @@ export function CityAutocomplete({
   useEffect(() => {
     const query = value.trim();
     if (query.length < 2) {
-      setRemoteSuggestions([]);
-      setIsLoading(false);
       return;
     }
 
@@ -149,7 +156,9 @@ export function CityAutocomplete({
         autoComplete="off"
         aria-autocomplete="list"
         aria-controls={showList ? listboxId : undefined}
-        aria-activedescendant={showList && activeIndex >= 0 ? `${listboxId}-${activeIndex}` : undefined}
+        aria-activedescendant={
+          showList && activeIndex >= 0 ? `${listboxId}-${activeIndex}` : undefined
+        }
       />
       {showList ? (
         <div
