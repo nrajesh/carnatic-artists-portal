@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useEffect, useMemo, useState } from "react";
+import { rankTypeaheadMatches, splitTypeaheadHighlight } from "@/lib/typeahead-search";
 
 export type SearchOption = { label: string; color?: string };
 
@@ -17,14 +18,7 @@ export default function SearchTypeahead({ value, onChange, options, placeholder 
   const containerRef = useRef<HTMLDivElement>(null);
 
   const available = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    if (!q) return options;
-    return options.filter((s) => s.label.toLowerCase().includes(q)).sort((a, b) => {
-      const al = a.label.toLowerCase().startsWith(q) ? 0 : 1;
-      const bl = b.label.toLowerCase().startsWith(q) ? 0 : 1;
-      if (al !== bl) return al - bl;
-      return a.label.localeCompare(b.label);
-    });
+    return rankTypeaheadMatches(options, (option) => option.label, query);
   }, [options, query]);
 
   useEffect(() => {
@@ -46,7 +40,7 @@ export default function SearchTypeahead({ value, onChange, options, placeholder 
   const selectedOption = options.find(o => o.label === value);
 
   return (
-    <div ref={containerRef} className="relative z-[1200] flex-1 sm:flex-none sm:min-w-[200px]">
+    <div ref={containerRef} className={`relative ${open ? "z-[1300]" : "z-[1200]"} flex-1 sm:flex-none sm:min-w-[200px]`}>
       {value ? (
         <div className="flex min-h-[44px] items-center rounded-lg border border-stone-200 bg-white px-2 py-1">
           <span 
@@ -86,21 +80,34 @@ export default function SearchTypeahead({ value, onChange, options, placeholder 
 
       {open && !value && query.trim().length >= 2 && available.length > 0 && (
         <ul className="absolute z-[1200] mt-1 max-h-52 w-full overflow-y-auto rounded-xl border border-stone-200 bg-white shadow-lg">
-          {available.map((s) => (
-            <li key={s.label}>
+          {available.map(({ item }) => {
+            const highlight = splitTypeaheadHighlight(item.label, query);
+            return (
+            <li key={item.label}>
               <button
                 type="button"
                 onMouseDown={(e) => {
                   e.preventDefault();
-                  selectOption(s.label);
+                  selectOption(item.label);
                 }}
                 className="flex min-h-[44px] w-full items-center gap-2 px-4 py-2.5 text-left text-sm text-stone-800 hover:bg-amber-50"
               >
-                {s.color && <span className="h-3 w-3 flex-shrink-0 rounded-full" style={{ backgroundColor: s.color }} />}
-                {s.label}
+                {item.color && <span className="h-3 w-3 flex-shrink-0 rounded-full" style={{ backgroundColor: item.color }} />}
+                <span>
+                  {highlight ? (
+                    <>
+                      {highlight.before}
+                      <strong className="font-semibold text-stone-950">{highlight.match}</strong>
+                      {highlight.after}
+                    </>
+                  ) : (
+                    item.label
+                  )}
+                </span>
               </button>
             </li>
-          ))}
+            );
+          })}
         </ul>
       )}
 

@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { getDb } from "@/lib/db";
 import { isBrowserDocumentNavigation, redirectPublicPath } from "@/lib/http/document-navigation";
 import { notifyAdminProfilePhotoReport } from "@/lib/notifications";
-import { createProfilePhotoReport } from "@/lib/profile-photo-reports";
+import { createProfilePhotoReport, hasOpenProfilePhotoReport } from "@/lib/profile-photo-reports";
 import { verifySession } from "@/lib/session-jwt";
 
 export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -21,7 +21,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   const [artist, reporter] = await Promise.all([
     db.artist.findUnique({
       where: { id },
-      select: { id: true, slug: true, fullName: true, profilePhotoUrl: true },
+      select: { id: true, slug: true, fullName: true, isSuspended: true, isSystemAccount: true },
     }),
     db.artist.findUnique({
       where: { id: session.artistId },
@@ -29,15 +29,33 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     }),
   ]);
 
-  if (!artist || !artist.profilePhotoUrl) {
+  if (!artist || artist.isSuspended || artist.isSystemAccount) {
     if (html) return redirectPublicPath(request, "/artists");
     return NextResponse.json({ error: "NOT_FOUND" }, { status: 404 });
   }
 
-  await createProfilePhotoReport({
+  if (artist.id === session.artistId) {
+    if (html) return redirectPublicPath(request, `/artists/${artist.slug}`);
+    return NextResponse.json({ error: "FORBIDDEN" }, { status: 403 });
+  }
+
+  const alreadyOpen = await hasOpenProfilePhotoReport({
     artistId: artist.id,
     reporterId: session.artistId,
   });
+  if (alreadyOpen) {
+    if (html) return redirectPublicPath(request, `/artists/${artist.slug}?profile_reported=1`);
+    return NextResponse.json({ success: true, alreadyReported: true });
+  }
+
+  const created = await createProfilePhotoReport({
+    artistId: artist.id,
+    reporterId: session.artistId,
+  });
+  if (!created) {
+    if (html) return redirectPublicPath(request, `/artists/${artist.slug}?profile_reported=1`);
+    return NextResponse.json({ success: true, alreadyReported: true });
+  }
 
   await notifyAdminProfilePhotoReport({
     artistId: artist.id,
@@ -49,6 +67,6 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
 
   revalidatePath(`/artists/${artist.slug}`);
 
-  if (html) return redirectPublicPath(request, `/artists/${artist.slug}?photo_reported=1`);
+  if (html) return redirectPublicPath(request, `/artists/${artist.slug}?profile_reported=1`);
   return NextResponse.json({ success: true });
 }

@@ -63,9 +63,32 @@ model Artist {
   profilePhotoReportsFiled      ProfilePhotoReport[]    @relation("ProfilePhotoReportReporter")
   profilePhotoReportsReceived   ProfilePhotoReport[]    @relation("ProfilePhotoReportArtist")
   profilePhotoReportsResolved   ProfilePhotoReport[]    @relation("ProfilePhotoReportResolver")
+  connectionRequestsSent        ArtistConnection[]      @relation("ArtistConnectionRequester")
+  connectionRequestsReceived    ArtistConnection[]      @relation("ArtistConnectionRecipient")
   pushSubscriptions             PushSubscription[]
   reviewedRegistrations         RegistrationRequest[]   @relation("ReviewedBy")
   sessions                      Session[]
+}
+
+enum ArtistConnectionStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+model ArtistConnection {
+  id          String                 @id @default(uuid())
+  requesterId String
+  recipientId String
+  status      ArtistConnectionStatus @default(PENDING)
+  createdAt   DateTime               @default(now())
+  updatedAt   DateTime               @updatedAt
+  requester   Artist                 @relation("ArtistConnectionRequester", fields: [requesterId], references: [id], onDelete: Cascade)
+  recipient   Artist                 @relation("ArtistConnectionRecipient", fields: [recipientId], references: [id], onDelete: Cascade)
+
+  @@unique([requesterId, recipientId])
+  @@index([requesterId, status, createdAt])
+  @@index([recipientId, status, createdAt])
 }
 
 model Speciality {
@@ -223,15 +246,15 @@ model Feedback {
 }
 
 model ProfilePhotoReport {
-  id         String   @id @default(uuid())
+  id         String    @id @default(uuid())
   artistId   String
   reporterId String
-  createdAt  DateTime @default(now())
+  createdAt  DateTime  @default(now())
   resolvedAt DateTime?
   resolvedBy String?
-  artist     Artist   @relation("ProfilePhotoReportArtist", fields: [artistId], references: [id], onDelete: Cascade)
-  reporter   Artist   @relation("ProfilePhotoReportReporter", fields: [reporterId], references: [id], onDelete: Cascade)
-  resolver   Artist?  @relation("ProfilePhotoReportResolver", fields: [resolvedBy], references: [id], onDelete: SetNull)
+  artist     Artist    @relation("ProfilePhotoReportArtist", fields: [artistId], references: [id], onDelete: Cascade)
+  reporter   Artist    @relation("ProfilePhotoReportReporter", fields: [reporterId], references: [id], onDelete: Cascade)
+  resolver   Artist?   @relation("ProfilePhotoReportResolver", fields: [resolvedBy], references: [id], onDelete: SetNull)
 
   @@index([artistId, resolvedAt, createdAt])
   @@index([reporterId, createdAt])

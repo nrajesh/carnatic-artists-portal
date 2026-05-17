@@ -5,8 +5,15 @@ import { useEditor, EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import TiptapImage from "@tiptap/extension-image";
 import TiptapLink from "@tiptap/extension-link";
+import type { MentionableArtist } from "@/lib/artist-mentions";
 
-function BioEditorToolbar({ editor }: { editor: ReturnType<typeof useEditor> }) {
+function BioEditorToolbar({
+  editor,
+  mentionTargets,
+}: {
+  editor: ReturnType<typeof useEditor> | null;
+  mentionTargets: MentionableArtist[];
+}) {
   if (!editor) return null;
 
   const addImage = () => {
@@ -23,8 +30,12 @@ function BioEditorToolbar({ editor }: { editor: ReturnType<typeof useEditor> }) 
     }
   };
 
-  const bar =
-    "flex flex-wrap gap-1 border border-b-0 rounded-t-md p-2 ";
+  const insertMention = (slug: string) => {
+    const target = mentionTargets.find((artist) => artist.slug === slug);
+    if (target) editor.chain().focus().insertContent(`${target.tag} `).run();
+  };
+
+  const bar = "flex flex-wrap gap-1 border border-b-0 rounded-t-md p-2 ";
   const btnBase = "px-2 py-1 text-sm rounded min-w-[44px] min-h-[44px] ";
   const btnOn = "bg-stone-700 text-white ";
   const btnOff = "bg-white border ";
@@ -67,6 +78,24 @@ function BioEditorToolbar({ editor }: { editor: ReturnType<typeof useEditor> }) 
       >
         🖼
       </button>
+      {mentionTargets.length > 0 && (
+        <select
+          aria-label="Insert approved artist mention"
+          defaultValue=""
+          onChange={(event) => {
+            insertMention(event.target.value);
+            event.target.value = "";
+          }}
+          className="min-h-[44px] rounded border border-stone-300 bg-white px-2 py-1 text-sm text-stone-800"
+        >
+          <option value="">@ mention</option>
+          {mentionTargets.map((artist) => (
+            <option key={artist.id} value={artist.slug}>
+              {artist.tag} · {artist.fullName}
+            </option>
+          ))}
+        </select>
+      )}
     </div>
   );
 }
@@ -75,12 +104,18 @@ type BioRichTextEditorProps = {
   initialHtml: string;
   onHtmlChange: (html: string) => void;
   disabled?: boolean;
+  mentionTargets?: MentionableArtist[];
 };
 
 /**
  * Tiptap bio editor aligned with the public registration form (StarterKit + image + link).
  */
-export function BioRichTextEditor({ initialHtml, onHtmlChange, disabled }: BioRichTextEditorProps) {
+export function BioRichTextEditor({
+  initialHtml,
+  onHtmlChange,
+  disabled,
+  mentionTargets = [],
+}: BioRichTextEditorProps) {
   const prevInitialRef = useRef(initialHtml);
   const onHtmlChangeRef = useRef(onHtmlChange);
   /** Coalesce TipTap updates to one rAF so undo/redo and fast typing stay in sync with React state (no 300ms dirty lag). */
@@ -89,11 +124,7 @@ export function BioRichTextEditor({ initialHtml, onHtmlChange, disabled }: BioRi
   const editorRef = useRef<ReturnType<typeof useEditor>>(null);
   const editor = useEditor({
     immediatelyRender: false,
-    extensions: [
-      StarterKit,
-      TiptapImage,
-      TiptapLink.configure({ openOnClick: false }),
-    ],
+    extensions: [StarterKit, TiptapImage, TiptapLink.configure({ openOnClick: false })],
     content: initialHtml || "",
     editable: !disabled,
     editorProps: {
@@ -135,12 +166,12 @@ export function BioRichTextEditor({ initialHtml, onHtmlChange, disabled }: BioRi
     if (!editor) return;
     if (prevInitialRef.current === initialHtml) return;
     prevInitialRef.current = initialHtml;
-    editor.commands.setContent(initialHtml || "<p></p>", false);
+    editor.commands.setContent(initialHtml || "<p></p>", { emitUpdate: false });
   }, [initialHtml, editor]);
 
   return (
     <div className={disabled ? "pointer-events-none opacity-60" : ""}>
-      <BioEditorToolbar editor={editor} />
+      <BioEditorToolbar editor={editor} mentionTargets={mentionTargets} />
       <EditorContent
         editor={editor}
         className="rounded-b-md border border-t-0 border-stone-300 bg-white focus-within:ring-2 focus-within:ring-amber-500"

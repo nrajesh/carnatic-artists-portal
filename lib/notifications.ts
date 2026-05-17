@@ -247,9 +247,7 @@ function buildAdminRegistrationMessage(input: {
   }
 
   const byText = input.reviewedByName ? ` by ${input.reviewedByName}` : "";
-  const reason = input.reviewComment?.trim()
-    ? ` Reason: ${input.reviewComment.trim()}`
-    : "";
+  const reason = input.reviewComment?.trim() ? ` Reason: ${input.reviewComment.trim()}` : "";
   return {
     title: "Registration rejected",
     text: `Registration for ${input.applicantName} was rejected${byText}.${reason}`,
@@ -264,9 +262,9 @@ function buildProfilePhotoReportMessage(input: {
   reporterName: string;
 }): { title: string; text: string; emailSubject: string; href: string } {
   return {
-    title: "Profile photo reported",
-    text: `${input.reporterName} reported ${input.artistName}'s profile photo.`,
-    emailSubject: "Profile photo reported",
+    title: "Profile reported",
+    text: `${input.reporterName} reported ${input.artistName}'s profile for admin review.`,
+    emailSubject: "Profile reported",
     href: `/admin/artists/${input.artistId}/edit`,
   };
 }

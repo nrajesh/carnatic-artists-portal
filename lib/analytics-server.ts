@@ -20,10 +20,11 @@ type CaptureArgs = {
 export type AnalyticsServer = {
   capture: (args: CaptureArgs) => void;
   isFeatureEnabled: (key: string, distinctId: string) => Promise<boolean>;
+  getFeatureFlagValue: (key: string, distinctId: string) => Promise<string | boolean | null>;
 };
 
 function getHostAndKey(): { host: string; key: string } | null {
-  const host = process.env.POSTHOG_HOST?.replace(/\/+$/, '');
+  const host = process.env.POSTHOG_HOST?.replace(/\/+$/, "");
   const key = process.env.NEXT_PUBLIC_POSTHOG_KEY;
   if (!host || !key) return null;
   return { host, key };
@@ -43,8 +44,8 @@ function createAnalyticsServer(): AnalyticsServer | null {
         properties: args.properties ?? {},
       });
       void fetch(`${cfg.host}/capture/`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body,
       }).catch(() => {
         //
@@ -52,12 +53,17 @@ function createAnalyticsServer(): AnalyticsServer | null {
     },
 
     async isFeatureEnabled(key: string, distinctId: string): Promise<boolean> {
+      const raw = await this.getFeatureFlagValue(key, distinctId);
+      return raw === true || raw === "true";
+    },
+
+    async getFeatureFlagValue(key: string, distinctId: string): Promise<string | boolean | null> {
       const cfg = getHostAndKey();
       if (!cfg) return false;
       try {
         const res = await fetch(`${cfg.host}/decide/?v=3`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             api_key: cfg.key,
             distinct_id: distinctId,
@@ -67,10 +73,9 @@ function createAnalyticsServer(): AnalyticsServer | null {
         const data = (await res.json()) as {
           featureFlags?: Record<string, string | boolean>;
         };
-        const raw = data.featureFlags?.[key];
-        return raw === true || raw === 'true';
+        return data.featureFlags?.[key] ?? null;
       } catch {
-        return false;
+        return null;
       }
     },
   };

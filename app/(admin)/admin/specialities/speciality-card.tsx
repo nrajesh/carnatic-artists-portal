@@ -130,131 +130,138 @@ export function SpecialityCard({
         onCancel={dismissConfirm}
       />
       <div className="overflow-hidden rounded-xl border border-stone-200 bg-white shadow-sm">
-      <div
-        className="flex h-12 items-center px-5"
-        style={{
-          background: `linear-gradient(135deg, ${headerPrimary}, ${headerPrimary}cc)`,
-        }}
-      >
-        <span className="text-sm font-bold" style={{ color: headerTextCol }}>
-          {row.name}
-        </span>
-      </div>
-      <div className="px-5 py-4">
-        {message ? <p className="mb-2 text-sm text-red-600">{message}</p> : null}
+        <div
+          className="flex h-12 items-center px-5"
+          style={{
+            background: `linear-gradient(135deg, ${headerPrimary}, ${headerPrimary}cc)`,
+          }}
+        >
+          <span className="text-sm font-bold" style={{ color: headerTextCol }}>
+            {row.name}
+          </span>
+        </div>
+        <div className="px-5 py-4">
+          {message ? <p className="mb-2 text-sm text-red-600">{message}</p> : null}
 
-        {!editing ? (
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div className="flex items-center gap-3">
-              <div className="h-5 w-5 rounded-full border border-stone-200" style={{ backgroundColor: row.primaryColor }} />
-              <span className="font-mono text-xs text-stone-500">{row.primaryColor}</span>
-              <span className="text-xs text-stone-400">text {row.textColor}</span>
-            </div>
-            <div className="flex items-center gap-2">
-              {row.artistCount > 0 ? (
-                <Link
-                  href={`/admin/artists?speciality=${row.id}`}
-                  className="text-xs font-medium text-amber-800 underline underline-offset-2 hover:text-amber-950"
-                >
-                  {row.artistCount} artist{row.artistCount !== 1 ? "s" : ""}
-                </Link>
-              ) : (
-                <span className="text-xs text-stone-500">0 artists</span>
-              )}
-              <button
-                type="button"
-                onClick={openEditor}
-                className="text-xs font-medium text-amber-700 underline underline-offset-2 hover:text-amber-900"
-              >
-                Edit
-              </button>
-              <button
-                type="button"
-                onClick={onDelete}
-                disabled={pending || row.artistCount > 0}
-                title={row.artistCount > 0 ? "Remove artists from this speciality first" : undefined}
-                className="text-xs font-medium text-red-700 underline underline-offset-2 hover:text-red-900 disabled:cursor-not-allowed disabled:opacity-40"
-              >
-                Delete
-              </button>
-            </div>
-          </div>
-        ) : (
-          <form onSubmit={onUpdate} className="space-y-3">
-            <input type="hidden" name="id" value={row.id} />
-            <label className="flex flex-col gap-1 text-xs font-medium text-stone-600">
-              Name
-              <input
-                name="name"
-                required
-                defaultValue={row.name}
-                className="rounded border border-stone-300 px-2 py-1.5 text-sm"
-              />
-            </label>
-            <div className="flex flex-wrap items-end gap-3">
-              <label className="flex flex-col gap-1 text-xs font-medium text-stone-600">
-                Primary
-                <input
-                  name="primaryColor"
-                  required
-                  value={draftPrimary}
-                  onChange={(e) => setDraftPrimary(e.target.value)}
-                  pattern="^#[0-9A-Fa-f]{6}$"
-                  className="w-24 rounded border border-stone-300 px-2 py-1.5 font-mono text-sm"
-                />
-              </label>
-              <label className="flex flex-col gap-1 text-xs font-medium text-stone-600">
-                Text
-                <input
-                  name="textColor"
-                  required
-                  value={draftText}
-                  onChange={(e) => setDraftText(e.target.value)}
-                  pattern="^#[0-9A-Fa-f]{6}$"
-                  className="w-24 rounded border border-stone-300 px-2 py-1.5 font-mono text-sm"
-                />
-              </label>
-              <div className="flex items-end gap-2">
+          {!editing ? (
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
                 <div
-                  className="h-8 w-8 shrink-0 rounded-md border border-stone-300 shadow-sm"
-                  style={{
-                    background: `linear-gradient(135deg, ${headerPrimary}, ${headerPrimary}cc)`,
-                  }}
-                  title="Preview of header colours"
-                  aria-hidden
+                  className="h-5 w-5 rounded-full border border-stone-200"
+                  style={{ backgroundColor: row.primaryColor }}
                 />
+                <span className="font-mono text-xs text-stone-500">{row.primaryColor}</span>
+                <span className="text-xs text-stone-400">text {row.textColor}</span>
+              </div>
+              <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                {row.artistCount > 0 ? (
+                  <Link
+                    href={`/admin/artists?speciality=${row.id}`}
+                    className="text-xs font-medium text-amber-800 underline underline-offset-2 hover:text-amber-950"
+                  >
+                    {row.artistCount} artist{row.artistCount !== 1 ? "s" : ""}
+                  </Link>
+                ) : (
+                  <span className="text-xs text-stone-500">0 artists</span>
+                )}
                 <button
                   type="button"
-                  onClick={applyRandomColours}
-                  className="rounded border border-stone-300 bg-white px-2 py-1.5 text-xs font-medium text-stone-700 hover:bg-stone-50"
+                  onClick={openEditor}
+                  className="text-xs font-medium text-amber-700 underline underline-offset-2 hover:text-amber-900"
                 >
-                  Randomize
+                  Edit
+                </button>
+                <button
+                  type="button"
+                  onClick={onDelete}
+                  disabled={pending || row.artistCount > 0}
+                  title={
+                    row.artistCount > 0
+                      ? "Remove artists from this speciality first"
+                      : undefined
+                  }
+                  className="text-xs font-medium text-red-700 underline underline-offset-2 hover:text-red-900 disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  Delete
                 </button>
               </div>
             </div>
-            <div className="flex gap-2">
-              <button
-                type="submit"
-                disabled={pending}
-                className="rounded-lg bg-amber-700 px-3 py-1.5 text-xs font-semibold text-white hover:bg-amber-800 disabled:opacity-50"
-              >
-                Save
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setEditing(false);
-                  setMessage(null);
-                }}
-                className="rounded-lg border border-stone-300 px-3 py-1.5 text-xs font-semibold text-stone-600 hover:bg-stone-50"
-              >
-                Cancel
-              </button>
-            </div>
-          </form>
-        )}
+          ) : (
+            <form onSubmit={onUpdate} className="space-y-3">
+              <input type="hidden" name="id" value={row.id} />
+              <label className="flex flex-col gap-1 text-xs font-medium text-stone-600">
+                Name
+                <input
+                  name="name"
+                  required
+                  defaultValue={row.name}
+                  className="rounded border border-stone-300 px-2 py-1.5 text-sm"
+                />
+              </label>
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] sm:items-end">
+                <label className="flex flex-col gap-1 text-xs font-medium text-stone-600">
+                  Primary
+                  <input
+                    name="primaryColor"
+                    required
+                    value={draftPrimary}
+                    onChange={(e) => setDraftPrimary(e.target.value)}
+                    pattern="^#[0-9A-Fa-f]{6}$"
+                    className="w-24 rounded border border-stone-300 px-2 py-1.5 font-mono text-sm"
+                  />
+                </label>
+                <label className="flex flex-col gap-1 text-xs font-medium text-stone-600">
+                  Text
+                  <input
+                    name="textColor"
+                    required
+                    value={draftText}
+                    onChange={(e) => setDraftText(e.target.value)}
+                    pattern="^#[0-9A-Fa-f]{6}$"
+                    className="w-24 rounded border border-stone-300 px-2 py-1.5 font-mono text-sm"
+                  />
+                </label>
+                <div className="col-span-2 flex items-end gap-2 sm:col-span-1">
+                  <div
+                    className="h-8 w-8 shrink-0 rounded-md border border-stone-300 shadow-sm"
+                    style={{
+                      background: `linear-gradient(135deg, ${headerPrimary}, ${headerPrimary}cc)`,
+                    }}
+                    title="Preview of header colours"
+                    aria-hidden
+                  />
+                  <button
+                    type="button"
+                    onClick={applyRandomColours}
+                    className="rounded border border-stone-300 bg-white px-2 py-1.5 text-xs font-medium text-stone-700 hover:bg-stone-50"
+                  >
+                    Randomize
+                  </button>
+                </div>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <button
+                  type="submit"
+                  disabled={pending}
+                  className="rounded-lg bg-amber-700 px-3 py-1.5 text-xs font-semibold text-white hover:bg-amber-800 disabled:opacity-50"
+                >
+                  Save
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setEditing(false);
+                    setMessage(null);
+                  }}
+                  className="rounded-lg border border-stone-300 px-3 py-1.5 text-xs font-semibold text-stone-600 hover:bg-stone-50"
+                >
+                  Cancel
+                </button>
+              </div>
+            </form>
+          )}
+        </div>
       </div>
-    </div>
     </>
   );
 }

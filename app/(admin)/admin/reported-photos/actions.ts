@@ -14,11 +14,9 @@ import { suspensionThreadPayloadFromAdminNote } from "@/lib/suspension-thread";
 
 const IdsSchema = prismaStringIdArraySchema(100);
 const REPEAT_REPORT_SUSPEND_COMMENT =
-  "[Profile photo moderation] Suspended after repeated profile photo reports pending admin review.";
+  "[Profile moderation] Suspended after repeated profile reports pending admin review.";
 
-type ActionResult =
-  | { ok: true; updated: number; skipped: number }
-  | { ok: false; error: string };
+type ActionResult = { ok: true; updated: number; skipped: number } | { ok: false; error: string };
 
 async function requireAdmin(): Promise<{ artistId: string } | null> {
   const token = (await cookies()).get("session")?.value ?? null;
@@ -29,6 +27,7 @@ async function requireAdmin(): Promise<{ artistId: string } | null> {
 
 function revalidateArtistModerationPaths(artists: Array<{ id: string; slug: string }>) {
   revalidatePath("/admin/reported-photos");
+  revalidatePath("/admin/reported-profiles");
   revalidatePath("/admin/dashboard");
   revalidatePath("/admin/artists");
   for (const artist of artists) {
@@ -101,7 +100,6 @@ export async function clearReportedProfilePhotosAction(ids: string[]): Promise<A
         ),
       );
     }
-
   });
   await resolveOpenProfilePhotoReports({
     artistIds: unique,

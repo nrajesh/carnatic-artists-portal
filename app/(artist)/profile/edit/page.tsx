@@ -7,19 +7,25 @@ import { getDeploymentLocationConfig } from "@/lib/deployment-location";
 import { ArtistAccountStatus } from "@/components/artist-account-status";
 import { EditProfileForm } from "./edit-profile-form";
 import { isArtistCollabsRatingsEnabledServer } from "@/lib/feature-flags-server";
+import { canUseArtistConnections, listApprovedMentionTargets } from "@/lib/artist-connections";
 
 export default async function EditProfilePage() {
   const sessionCookie = (await cookies()).get("session")?.value ?? null;
   const session = sessionCookie ? await verifySession(sessionCookie) : null;
   if (!session) redirect("/auth/login");
 
-  const [artist, allSpecialities, collabsRatingsEnabled, locationConfig] = await Promise.all([
-    getArtistForEdit(session.artistId),
-    listSpecialities(),
-    isArtistCollabsRatingsEnabledServer({ distinctId: session.artistId }),
-    getDeploymentLocationConfig(),
-  ]);
+  const [artist, allSpecialities, collabsRatingsEnabled, locationConfig, artistConnectionsEnabled] =
+    await Promise.all([
+      getArtistForEdit(session.artistId),
+      listSpecialities(),
+      isArtistCollabsRatingsEnabledServer({ distinctId: session.artistId }),
+      getDeploymentLocationConfig(),
+      canUseArtistConnections({ distinctId: session.artistId }),
+    ]);
   if (!artist) redirect("/auth/login");
+  const mentionTargets = artistConnectionsEnabled
+    ? await listApprovedMentionTargets(session.artistId)
+    : [];
 
   return (
     <main className="min-h-screen bg-amber-50 px-4 py-8 sm:px-8">
@@ -51,6 +57,7 @@ export default async function EditProfilePage() {
           locationAreaLabel="City"
           locationOptions={locationConfig.areaOptions}
           collabsRatingsEnabled={collabsRatingsEnabled}
+          mentionTargets={mentionTargets}
         />
       </div>
     </main>

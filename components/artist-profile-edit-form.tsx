@@ -51,6 +51,7 @@ import { stripHtmlForSearch } from "@/lib/artist-directory-search";
 import { getThemeFromArtistSpecialities } from "@/lib/speciality-theme";
 import type { ArtistEditView } from "@/lib/queries/artists";
 import type { ArtistProfileEditInput } from "@/lib/artist-profile-update-schema";
+import type { MentionableArtist } from "@/lib/artist-mentions";
 import { updateArtistProfile } from "@/app/(artist)/profile/edit/actions";
 import { updateAdminArtistProfile } from "@/app/(admin)/admin/artists/[id]/edit/actions";
 
@@ -154,17 +155,7 @@ async function processImageFile(params: {
 
   ctx.fillStyle = "#FFFFFF";
   ctx.fillRect(0, 0, canvas.width, canvas.height);
-  ctx.drawImage(
-    source,
-    sourceX,
-    sourceY,
-    cropWidth,
-    cropHeight,
-    0,
-    0,
-    outputWidth,
-    outputHeight,
-  );
+  ctx.drawImage(source, sourceX, sourceY, cropWidth, cropHeight, 0, 0, outputWidth, outputHeight);
   if ("close" in source && typeof source.close === "function") source.close();
 
   const blob = await new Promise<Blob | null>((resolve) =>
@@ -363,8 +354,10 @@ function BackgroundFocusEditor({
     const dy = event.clientY - drag.startY;
     const motionFactor = Math.max(0.55, 100 / drag.focus.backgroundImageZoom);
     const nextFocus = normalizeBackgroundImageFocus({
-      backgroundImageFocusX: drag.focus.backgroundImageFocusX + (dx / frame.clientWidth) * 100 * motionFactor,
-      backgroundImageFocusY: drag.focus.backgroundImageFocusY + (dy / frame.clientHeight) * 100 * motionFactor,
+      backgroundImageFocusX:
+        drag.focus.backgroundImageFocusX + (dx / frame.clientWidth) * 100 * motionFactor,
+      backgroundImageFocusY:
+        drag.focus.backgroundImageFocusY + (dy / frame.clientHeight) * 100 * motionFactor,
       backgroundImageZoom: drag.focus.backgroundImageZoom,
     });
     onChange(nextFocus);
@@ -456,9 +449,7 @@ function BackgroundFocusEditor({
             min={MIN_BACKGROUND_IMAGE_ZOOM}
             max={MAX_BACKGROUND_IMAGE_ZOOM}
             value={focus.backgroundImageZoom}
-            onChange={(event) =>
-              setFocusPatch({ backgroundImageZoom: Number(event.target.value) })
-            }
+            onChange={(event) => setFocusPatch({ backgroundImageZoom: Number(event.target.value) })}
             className="block w-full accent-amber-700"
           />
         </label>
@@ -477,6 +468,7 @@ type ArtistProfileEditFormProps = {
   targetArtistId?: string;
   /** PostHog `artist-collabs-ratings`; when false, hide collaboration opt-in UI. */
   collabsRatingsEnabled?: boolean;
+  mentionTargets?: MentionableArtist[];
 };
 
 export function ArtistProfileEditForm({
@@ -487,6 +479,7 @@ export function ArtistProfileEditForm({
   locationOptions,
   targetArtistId,
   collabsRatingsEnabled = true,
+  mentionTargets = [],
 }: ArtistProfileEditFormProps) {
   const router = useRouter();
   const posthog = usePostHog();
@@ -527,7 +520,9 @@ export function ArtistProfileEditForm({
   const [photoUploadSuccess, setPhotoUploadSuccess] = useState<string | null>(null);
   const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
   const [pendingBackgroundImageFile, setPendingBackgroundImageFile] = useState<File | null>(null);
-  const [pendingBackgroundPreviewUrl, setPendingBackgroundPreviewUrl] = useState<string | null>(null);
+  const [pendingBackgroundPreviewUrl, setPendingBackgroundPreviewUrl] = useState<string | null>(
+    null,
+  );
   const [backgroundImageRightsConfirmed, setBackgroundImageRightsConfirmed] = useState(false);
   const [backgroundUploadError, setBackgroundUploadError] = useState<string | null>(null);
   const [backgroundUploadSuccess, setBackgroundUploadSuccess] = useState<string | null>(null);
@@ -554,11 +549,7 @@ export function ArtistProfileEditForm({
   const baselineFingerprint = useMemo(
     () =>
       fingerprintArtistProfileInput(
-        toArtistProfileEditInput(
-          baselineSnapshot,
-          collabsRatingsEnabled,
-          initial.openToCollab,
-        ),
+        toArtistProfileEditInput(baselineSnapshot, collabsRatingsEnabled, initial.openToCollab),
       ),
     [baselineSnapshot, collabsRatingsEnabled, initial.openToCollab],
   );
@@ -641,13 +632,10 @@ export function ArtistProfileEditForm({
       })
       .filter((x): x is { name: string; color: string } => x !== null);
     const theme = getThemeFromArtistSpecialities(specs);
-    const headerBg = theme.background.startsWith("linear-gradient")
-      ? theme.background
-      : `linear-gradient(135deg, ${theme.background}, ${theme.background}cc)`;
     const avatarAccent = theme.background.startsWith("linear-gradient")
       ? theme.background
       : theme.accentColor;
-    return { headerBg, avatarAccent };
+    return { headerBg: theme.background, avatarAccent };
   }, [specialities, allSpecialities]);
 
   function addWebsiteRow() {
@@ -744,9 +732,11 @@ export function ArtistProfileEditForm({
         method: "POST",
         body: formData,
       });
-      const body = (await response.json().catch(() => null)) as
-        | { message?: string; fields?: Record<string, string>; profilePhotoUrl?: string }
-        | null;
+      const body = (await response.json().catch(() => null)) as {
+        message?: string;
+        fields?: Record<string, string>;
+        profilePhotoUrl?: string;
+      } | null;
 
       if (!response.ok || !body?.profilePhotoUrl) {
         setPhotoUploadError(
@@ -803,16 +793,14 @@ export function ArtistProfileEditForm({
           body: formData,
         },
       );
-      const body = (await response.json().catch(() => null)) as
-        | {
-            message?: string;
-            fields?: Record<string, string>;
-            backgroundImageUrl?: string;
-            backgroundImageFocusX?: number;
-            backgroundImageFocusY?: number;
-            backgroundImageZoom?: number;
-          }
-        | null;
+      const body = (await response.json().catch(() => null)) as {
+        message?: string;
+        fields?: Record<string, string>;
+        backgroundImageUrl?: string;
+        backgroundImageFocusX?: number;
+        backgroundImageFocusY?: number;
+        backgroundImageZoom?: number;
+      } | null;
 
       if (!response.ok || !body?.backgroundImageUrl) {
         setBackgroundUploadError(
@@ -907,7 +895,9 @@ export function ArtistProfileEditForm({
         <div className="overflow-hidden rounded-xl border border-stone-100">
           <div
             className="relative flex h-20 items-end px-5 pb-3"
-            style={!backgroundImagePreviewUrl ? { background: previewCardTheme.headerBg } : undefined}
+            style={
+              !backgroundImagePreviewUrl ? { background: previewCardTheme.headerBg } : undefined
+            }
           >
             {backgroundImagePreviewUrl ? (
               <>
@@ -1239,7 +1229,9 @@ export function ArtistProfileEditForm({
                   ? `Selected: ${pendingProfilePhotoFile.name}`
                   : "JPEG, PNG, or WebP up to 5 MB."}
               </p>
-              {photoUploadError ? <FormFieldNotice tone="error">{photoUploadError}</FormFieldNotice> : null}
+              {photoUploadError ? (
+                <FormFieldNotice tone="error">{photoUploadError}</FormFieldNotice>
+              ) : null}
               {photoUploadSuccess ? (
                 <FormFieldNotice tone="success">{photoUploadSuccess}</FormFieldNotice>
               ) : null}
@@ -1385,6 +1377,7 @@ export function ArtistProfileEditForm({
             initialHtml={initial.bioRichText}
             onHtmlChange={setBioHtml}
             disabled={isPending}
+            mentionTargets={mentionTargets}
           />
           {errors.bioRichText && <p className="mt-1 text-xs text-red-500">{errors.bioRichText}</p>}
         </div>

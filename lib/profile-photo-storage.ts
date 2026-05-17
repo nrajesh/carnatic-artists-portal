@@ -138,17 +138,9 @@ async function fetchRemoteImage(sourceUrl: string): Promise<Buffer> {
 
 async function buildProfilePhotoDerivativeFromRemote(buffer: Buffer): Promise<Buffer> {
   try {
-    // Load sharp only when remote URL ingestion is actually used.
-    // Cloudflare Workers can choke on sharp's Node-oriented module init even when this code path
-    // is never executed, so keep it out of route module evaluation for plain registrations.
-    const sharpModule = await import("sharp");
-    const sharp = sharpModule.default;
-
-    return await sharp(buffer, { failOn: "none" })
-      .rotate()
-      .resize(320, 320, { fit: "cover", position: "attention" })
-      .jpeg({ quality: 86, mozjpeg: true })
-      .toBuffer();
+    // Re-encode JPEG without metadata using pure JS (jpeg-js)
+    // This is safe for Cloudflare Workers and avoids heavy dependencies like sharp.
+    return reencodeJpegWithoutMetadata(buffer);
   } catch {
     throw new StorageError("UNSUPPORTED_FILE_TYPE", "Could not process the profile photo URL.");
   }

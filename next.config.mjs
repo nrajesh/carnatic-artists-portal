@@ -1,5 +1,25 @@
 import { initOpenNextCloudflareForDev } from "@opennextjs/cloudflare";
 
+function remoteImagePatternsFromEnv() {
+  const publicUrl = process.env.R2_PUBLIC_URL?.trim();
+  if (!publicUrl) return [];
+
+  try {
+    const { hostname, protocol } = new URL(publicUrl);
+    if (!hostname || protocol !== "https:") return [];
+
+    return [
+      {
+        protocol: "https",
+        hostname,
+        pathname: "/profile-photos/**",
+      },
+    ];
+  } catch {
+    return [];
+  }
+}
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   // PostHog ingest uses trailing slashes (e.g. `/e/`); avoid Next redirecting those requests.
@@ -22,6 +42,9 @@ const nextConfig = {
     NEXT_PUBLIC_DEPLOYMENT_LOCATION_LABEL_PLURAL:
       process.env.DEPLOYMENT_LOCATION_LABEL_PLURAL ?? "",
     NEXT_PUBLIC_DEPLOYMENT_LOCATION_OPTIONS: process.env.DEPLOYMENT_LOCATION_OPTIONS ?? "",
+  },
+  images: {
+    remotePatterns: remoteImagePatternsFromEnv(),
   },
   webpack: (config, { isServer }) => {
     if (isServer) {

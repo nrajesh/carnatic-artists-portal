@@ -4,7 +4,7 @@
  */
 import { PrismaClient } from "@prisma/client";
 import { buildEncryptedArtistPiiPayload } from "../lib/artist-pii";
-import { DUMMY_ARTISTS } from "../lib/dummy-artists";
+import { DEMO_ARTIST_IDS, DUMMY_ARTISTS } from "../lib/dummy-artists";
 import { getLocalCalendarDateForDb } from "../lib/local-day";
 import { logSafeError } from "../lib/safe-log";
 
@@ -16,7 +16,7 @@ function parseReviewDate(s: string): Date {
   return new Date();
 }
 
-const PLACEHOLDER_IMG = (name: string, slug: string) =>
+const PLACEHOLDER_IMG = (name: string) =>
   `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(name)}&backgroundType=gradientLinear`;
 
 function mapLinkType(label: string): string {
@@ -39,44 +39,152 @@ const COLLABS: {
   status: string;
   closedAt: Date | null;
 }[] = [
-  { slug: "margazhi-concert-prep", name: "Margazhi Concert Prep", ownerId: "1", status: "active", closedAt: null },
-  { slug: "thyagaraja-aradhana-2025", name: "Thyagaraja Aradhana 2025", ownerId: "2", status: "active", closedAt: null },
-  { slug: "rotterdam-kutcheri", name: "Rotterdam Kutcheri", ownerId: "3", status: "completed", closedAt: new Date("2024-12-15T20:00:00Z") },
-  { slug: "amsterdam-rasikas-evening", name: "Amsterdam Rasikas Evening", ownerId: "6", status: "active", closedAt: null },
-  { slug: "veena-flute-jugalbandi", name: "Veena & Flute Jugalbandi", ownerId: "4", status: "completed", closedAt: new Date("2025-01-20T18:00:00Z") },
-  { slug: "percussion-ensemble-nl", name: "Percussion Ensemble NL", ownerId: "7", status: "active", closedAt: null },
-  { slug: "youth-music-workshop", name: "Youth Music Workshop", ownerId: "12", status: "active", closedAt: null },
-  { slug: "navarathri-golu-concert", name: "Navarathri Golu Concert", ownerId: "10", status: "incomplete", closedAt: null },
+  {
+    slug: "margazhi-concert-prep",
+    name: "Margazhi Concert Prep",
+    ownerId: DEMO_ARTIST_IDS.lakshmiNarayanan,
+    status: "active",
+    closedAt: null,
+  },
+  {
+    slug: "thyagaraja-aradhana-2025",
+    name: "Thyagaraja Aradhana 2025",
+    ownerId: DEMO_ARTIST_IDS.raviKrishnamurthy,
+    status: "active",
+    closedAt: null,
+  },
+  {
+    slug: "rotterdam-kutcheri",
+    name: "Rotterdam Kutcheri",
+    ownerId: DEMO_ARTIST_IDS.anandSubramanian,
+    status: "completed",
+    closedAt: new Date("2024-12-15T20:00:00Z"),
+  },
+  {
+    slug: "amsterdam-rasikas-evening",
+    name: "Amsterdam Rasikas Evening",
+    ownerId: DEMO_ARTIST_IDS.priyaBalakrishnan,
+    status: "active",
+    closedAt: null,
+  },
+  {
+    slug: "veena-flute-jugalbandi",
+    name: "Veena & Flute Jugalbandi",
+    ownerId: DEMO_ARTIST_IDS.meeraVenkatesh,
+    status: "completed",
+    closedAt: new Date("2025-01-20T18:00:00Z"),
+  },
+  {
+    slug: "percussion-ensemble-nl",
+    name: "Percussion Ensemble NL",
+    ownerId: DEMO_ARTIST_IDS.karthikSeshadri,
+    status: "active",
+    closedAt: null,
+  },
+  {
+    slug: "youth-music-workshop",
+    name: "Youth Music Workshop",
+    ownerId: DEMO_ARTIST_IDS.nithyaSubramanian,
+    status: "active",
+    closedAt: null,
+  },
+  {
+    slug: "navarathri-golu-concert",
+    name: "Navarathri Golu Concert",
+    ownerId: DEMO_ARTIST_IDS.kavithaMuralidharan,
+    status: "incomplete",
+    closedAt: null,
+  },
 ];
 
 const JOINED_ISO: Record<string, string> = {
-  "1": "2024-09-01T12:00:00.000Z",
-  "2": "2024-09-15T12:00:00.000Z",
-  "3": "2024-10-01T12:00:00.000Z",
-  "4": "2024-10-10T12:00:00.000Z",
-  "5": "2024-11-01T12:00:00.000Z",
-  "6": "2024-11-15T12:00:00.000Z",
-  "7": "2024-12-01T12:00:00.000Z",
-  "8": "2024-12-10T12:00:00.000Z",
-  "9": "2025-01-05T12:00:00.000Z",
-  "10": "2025-01-20T12:00:00.000Z",
-  "11": "2025-02-01T12:00:00.000Z",
-  "12": "2025-02-15T12:00:00.000Z",
+  [DEMO_ARTIST_IDS.lakshmiNarayanan]: "2024-09-01T12:00:00.000Z",
+  [DEMO_ARTIST_IDS.raviKrishnamurthy]: "2024-09-15T12:00:00.000Z",
+  [DEMO_ARTIST_IDS.anandSubramanian]: "2024-10-01T12:00:00.000Z",
+  [DEMO_ARTIST_IDS.meeraVenkatesh]: "2024-10-10T12:00:00.000Z",
+  [DEMO_ARTIST_IDS.sureshIyer]: "2024-11-01T12:00:00.000Z",
+  [DEMO_ARTIST_IDS.priyaBalakrishnan]: "2024-11-15T12:00:00.000Z",
+  [DEMO_ARTIST_IDS.karthikSeshadri]: "2024-12-01T12:00:00.000Z",
+  [DEMO_ARTIST_IDS.divyaRamachandran]: "2024-12-10T12:00:00.000Z",
+  [DEMO_ARTIST_IDS.srinivasParthasarathy]: "2025-01-05T12:00:00.000Z",
+  [DEMO_ARTIST_IDS.kavithaMuralidharan]: "2025-01-20T12:00:00.000Z",
+  [DEMO_ARTIST_IDS.vijayAnantharaman]: "2025-02-01T12:00:00.000Z",
+  [DEMO_ARTIST_IDS.nithyaSubramanian]: "2025-02-15T12:00:00.000Z",
 };
 
 const MESSAGES: { collabSlug: string; senderName: string; content: string; sentAt: Date }[] = [
-  { collabSlug: "margazhi-concert-prep", senderName: "Lakshmi Narayanan", content: "Let us plan the setlist for Margazhi. I am thinking we open with Kalyani.", sentAt: new Date("2025-01-10T10:00:00Z") },
-  { collabSlug: "margazhi-concert-prep", senderName: "Ravi Krishnamurthy", content: "Sounds great! I can prepare the violin accompaniment for the first 3 pieces.", sentAt: new Date("2025-01-10T10:15:00Z") },
-  { collabSlug: "margazhi-concert-prep", senderName: "Anand Subramanian", content: "I will handle the mridangam. Should we do a tani avartanam in the middle?", sentAt: new Date("2025-01-10T10:30:00Z") },
-  { collabSlug: "margazhi-concert-prep", senderName: "Lakshmi Narayanan", content: "Yes! Let us keep it to 10 minutes. Rehearsal on Saturday at 3pm?", sentAt: new Date("2025-01-11T09:00:00Z") },
-  { collabSlug: "margazhi-concert-prep", senderName: "Meera Venkatesh", content: "Saturday works for me. Shall I bring the tambura?", sentAt: new Date("2025-01-11T09:45:00Z") },
-  { collabSlug: "thyagaraja-aradhana-2025", senderName: "Ravi Krishnamurthy", content: "Welcome everyone to the Thyagaraja Aradhana planning group!", sentAt: new Date("2025-01-20T14:00:00Z") },
-  { collabSlug: "thyagaraja-aradhana-2025", senderName: "Priya Balakrishnan", content: "Excited to be part of this. Which pancharatna kritis are we doing?", sentAt: new Date("2025-01-20T14:30:00Z") },
-  { collabSlug: "thyagaraja-aradhana-2025", senderName: "Nithya Subramanian", content: "I suggest we do all five. It is a tradition after all.", sentAt: new Date("2025-01-20T15:00:00Z") },
-  { collabSlug: "thyagaraja-aradhana-2025", senderName: "Suresh Iyer", content: "Agreed. I will prepare the flute parts for Jagadananda Karaka.", sentAt: new Date("2025-01-21T10:00:00Z") },
-  { collabSlug: "rotterdam-kutcheri", senderName: "Anand Subramanian", content: "Great concert everyone! The audience loved the Bhairavi piece.", sentAt: new Date("2024-11-05T22:00:00Z") },
-  { collabSlug: "rotterdam-kutcheri", senderName: "Lakshmi Narayanan", content: "Thank you all. It was a wonderful evening. Shall we do this again?", sentAt: new Date("2024-11-05T22:15:00Z") },
-  { collabSlug: "rotterdam-kutcheri", senderName: "Meera Venkatesh", content: "Absolutely! Let us plan for spring.", sentAt: new Date("2024-11-06T09:00:00Z") },
+  {
+    collabSlug: "margazhi-concert-prep",
+    senderName: "Lakshmi Narayanan",
+    content: "Let us plan the setlist for Margazhi. I am thinking we open with Kalyani.",
+    sentAt: new Date("2025-01-10T10:00:00Z"),
+  },
+  {
+    collabSlug: "margazhi-concert-prep",
+    senderName: "Ravi Krishnamurthy",
+    content: "Sounds great! I can prepare the violin accompaniment for the first 3 pieces.",
+    sentAt: new Date("2025-01-10T10:15:00Z"),
+  },
+  {
+    collabSlug: "margazhi-concert-prep",
+    senderName: "Anand Subramanian",
+    content: "I will handle the mridangam. Should we do a tani avartanam in the middle?",
+    sentAt: new Date("2025-01-10T10:30:00Z"),
+  },
+  {
+    collabSlug: "margazhi-concert-prep",
+    senderName: "Lakshmi Narayanan",
+    content: "Yes! Let us keep it to 10 minutes. Rehearsal on Saturday at 3pm?",
+    sentAt: new Date("2025-01-11T09:00:00Z"),
+  },
+  {
+    collabSlug: "margazhi-concert-prep",
+    senderName: "Meera Venkatesh",
+    content: "Saturday works for me. Shall I bring the tambura?",
+    sentAt: new Date("2025-01-11T09:45:00Z"),
+  },
+  {
+    collabSlug: "thyagaraja-aradhana-2025",
+    senderName: "Ravi Krishnamurthy",
+    content: "Welcome everyone to the Thyagaraja Aradhana planning group!",
+    sentAt: new Date("2025-01-20T14:00:00Z"),
+  },
+  {
+    collabSlug: "thyagaraja-aradhana-2025",
+    senderName: "Priya Balakrishnan",
+    content: "Excited to be part of this. Which pancharatna kritis are we doing?",
+    sentAt: new Date("2025-01-20T14:30:00Z"),
+  },
+  {
+    collabSlug: "thyagaraja-aradhana-2025",
+    senderName: "Nithya Subramanian",
+    content: "I suggest we do all five. It is a tradition after all.",
+    sentAt: new Date("2025-01-20T15:00:00Z"),
+  },
+  {
+    collabSlug: "thyagaraja-aradhana-2025",
+    senderName: "Suresh Iyer",
+    content: "Agreed. I will prepare the flute parts for Jagadananda Karaka.",
+    sentAt: new Date("2025-01-21T10:00:00Z"),
+  },
+  {
+    collabSlug: "rotterdam-kutcheri",
+    senderName: "Anand Subramanian",
+    content: "Great concert everyone! The audience loved the Bhairavi piece.",
+    sentAt: new Date("2024-11-05T22:00:00Z"),
+  },
+  {
+    collabSlug: "rotterdam-kutcheri",
+    senderName: "Lakshmi Narayanan",
+    content: "Thank you all. It was a wonderful evening. Shall we do this again?",
+    sentAt: new Date("2024-11-05T22:15:00Z"),
+  },
+  {
+    collabSlug: "rotterdam-kutcheri",
+    senderName: "Meera Venkatesh",
+    content: "Absolutely! Let us plan for spring.",
+    sentAt: new Date("2024-11-06T09:00:00Z"),
+  },
 ];
 
 async function main() {
@@ -134,7 +242,7 @@ async function main() {
         emailVisibility: "PUBLIC_PROFILE",
         contactVisibility: "PUBLIC_PROFILE",
         contactType: a.contactType === "whatsapp" ? "whatsapp" : "mobile",
-        profilePhotoUrl: PLACEHOLDER_IMG(a.name, a.slug),
+        profilePhotoUrl: PLACEHOLDER_IMG(a.name),
         backgroundImageUrl: null,
         bioRichText: a.bio,
         province: a.province,
@@ -234,8 +342,16 @@ async function main() {
   const todayLocal = getLocalCalendarDateForDb(new Date());
   await prisma.dailyFeatured.createMany({
     data: [
-      { featureDate: todayLocal, featureType: "singer", artistId: "1" },
-      { featureDate: todayLocal, featureType: "instrumentalist", artistId: "3" },
+      {
+        featureDate: todayLocal,
+        featureType: "singer",
+        artistId: DEMO_ARTIST_IDS.lakshmiNarayanan,
+      },
+      {
+        featureDate: todayLocal,
+        featureType: "instrumentalist",
+        artistId: DEMO_ARTIST_IDS.anandSubramanian,
+      },
     ],
     skipDuplicates: true,
   });
@@ -243,13 +359,16 @@ async function main() {
   await prisma.notification.createMany({
     data: [
       {
-        artistId: "1",
+        artistId: DEMO_ARTIST_IDS.lakshmiNarayanan,
         type: "collab_invite",
-        payload: { text: "Ravi Krishnamurthy added you to Thyagaraja Aradhana 2025", href: "/collabs/thyagaraja-aradhana-2025" },
+        payload: {
+          text: "Ravi Krishnamurthy added you to Thyagaraja Aradhana 2025",
+          href: "/collabs/thyagaraja-aradhana-2025",
+        },
         isRead: false,
       },
       {
-        artistId: "1",
+        artistId: DEMO_ARTIST_IDS.lakshmiNarayanan,
         type: "feedback_received",
         payload: { text: "New review on your profile" },
         isRead: true,

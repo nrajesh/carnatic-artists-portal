@@ -6,7 +6,12 @@ import { getCachedHomeMarketingData } from "@/lib/cache/home-marketing";
 import { ArtistsLocationExplorer } from "@/components/artists-location-explorer";
 import { FeaturedArtistPhoto } from "@/components/featured-artist-photo";
 import { getDeploymentDisplayConfig } from "@/lib/deployment-display";
+import {
+  buildDirectoryLocationOptions,
+  buildDirectorySpecialityOptions,
+} from "@/lib/directory-filter-options";
 import { buildLocationMapPoints } from "@/lib/location-map-data";
+import { listSpecialities } from "@/lib/queries/artists";
 import { DEFAULT_ARTIST_ACCENT_COLOR, getThemeFromArtistSpecialities } from "@/lib/speciality-theme";
 import { verifySession } from "@/lib/session-jwt";
 import { PortalSectionHeading } from "@/components/portal-section-heading";
@@ -33,12 +38,15 @@ export default async function HomePage({
     homeCollabs,
     previewArtists,
   } = await getCachedHomeMarketingData();
+  const allSpecialities = await listSpecialities();
   const displayConfig = getDeploymentDisplayConfig();
   const locationPoints = await buildLocationMapPoints(
     previewArtists,
     displayConfig.countryName,
     displayConfig.countryCode,
   );
+  const locationOptions = buildDirectoryLocationOptions(previewArtists);
+  const specialityOptions = buildDirectorySpecialityOptions(allSpecialities);
   const locationsWithArtists = locationPoints.filter((point) => point.count > 0).length;
   const areaPluralTitle = "Locations";
   /** Full artist directory - must match `app/(public)/artists/page.tsx` route (not `/register`). */
@@ -256,6 +264,8 @@ export default async function HomePage({
             areaLabelSingular="location"
             areaLabelPlural="locations"
             enableSpecialityFilter
+            cityOptions={locationOptions}
+            specialityOptions={specialityOptions}
           />
         </div>
       </section>

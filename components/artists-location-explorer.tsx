@@ -11,6 +11,8 @@ type ArtistsLocationExplorerProps = {
   areaLabelSingular: string;
   areaLabelPlural: string;
   enableSpecialityFilter?: boolean;
+  cityOptions?: SearchOption[];
+  specialityOptions?: SearchOption[];
 };
 
 type Cluster = {
@@ -196,6 +198,8 @@ export function ArtistsLocationExplorer({
   areaLabelSingular,
   areaLabelPlural,
   enableSpecialityFilter = false,
+  cityOptions: cityOptionsProp,
+  specialityOptions: specialityOptionsProp,
 }: ArtistsLocationExplorerProps) {
   const mapRootRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<LeafletMap | null>(null);
@@ -209,14 +213,14 @@ export function ArtistsLocationExplorer({
   const refreshMarkersRef = useRef<(() => void) | null>(null);
   const [selectedCity, setSelectedCity] = useState("");
   const [selectedSpeciality, setSelectedSpeciality] = useState("");
-  const cityOptions = useMemo<SearchOption[]>(
+  const derivedCityOptions = useMemo<SearchOption[]>(
     () =>
       locationPoints
         .map((point) => ({ label: point.label }))
         .sort((left, right) => left.label.localeCompare(right.label)),
     [locationPoints],
   );
-  const specialityOptions = useMemo<SearchOption[]>(() => {
+  const derivedSpecialityOptions = useMemo<SearchOption[]>(() => {
     const options = new Map<string, SearchOption>();
     for (const point of locationPoints) {
       for (const artist of point.artists) {
@@ -229,6 +233,8 @@ export function ArtistsLocationExplorer({
     }
     return Array.from(options.values()).sort((left, right) => left.label.localeCompare(right.label));
   }, [locationPoints]);
+  const cityOptions = cityOptionsProp ?? derivedCityOptions;
+  const specialityOptions = specialityOptionsProp ?? derivedSpecialityOptions;
   const filteredLocationPoints = useMemo(() => {
     if (!selectedCity && !selectedSpeciality) return locationPoints;
 

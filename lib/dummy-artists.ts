@@ -15,9 +15,16 @@ export type DummyArtist = {
   availableForCollab: boolean;
   bio: string;
   availabilityDates: { from: string; to: string }[];
-  collabs: { id: string; slug: string; name: string; role: string; status: string; closedAt?: string }[];
+  collabs: {
+    id: string;
+    slug: string;
+    name: string;
+    role: string;
+    status: string;
+    closedAt?: string;
+  }[];
   reviews: {
-    id: string;          // stable review ID, e.g. "rv-lakshmi-ravi-rotterdam"
+    id: string; // stable review ID, e.g. "rv-lakshmi-ravi-rotterdam"
     reviewerSlug: string; // slug of the artist who wrote this review
     from: string;
     rating: number;
@@ -28,11 +35,33 @@ export type DummyArtist = {
   links: { type: string; url: string }[];
 };
 
+export const DEMO_ARTIST_IDS = {
+  lakshmiNarayanan: "3f6f4799-5d9a-4b5f-a731-71cc5e8f3021",
+  raviKrishnamurthy: "4d3f0a72-d4a1-4fe1-b5b8-363ca52d58c0",
+  anandSubramanian: "5b2bf4a3-6c38-4b28-9ce0-e2fa6d08f4f1",
+  meeraVenkatesh: "6c9e7342-2f5f-4af7-9d5c-f8d2f7b98341",
+  sureshIyer: "7af24193-1cb3-4b1f-b165-4cd8af9c6e52",
+  priyaBalakrishnan: "8d1407b5-438f-4d0b-b8be-2fe9668a4fd3",
+  karthikSeshadri: "91a28e46-69fc-432c-a5d6-35f93c9d1844",
+  divyaRamachandran: "a25bc9d8-3f74-49cb-9d39-6b4756435372",
+  srinivasParthasarathy: "b34dd3fa-1e62-4207-a646-9d8d8a5e8c63",
+  kavithaMuralidharan: "c46e8f0d-85d3-43f5-9cbf-0dbf73f2e974",
+  vijayAnantharaman: "d57f9b21-a6e4-41cf-8cb5-18fb06c2fa85",
+  nithyaSubramanian: "e6830c42-7bf5-4b8a-8cc4-2097184b0b96",
+} as const;
+
 export const DUMMY_ARTISTS: DummyArtist[] = [
   {
-    id: "1", slug: "lakshmi-narayanan", name: "Lakshmi Narayanan", email: "lakshmi@example.com",
-    province: "Noord-Holland", status: "active", joinedAt: "01 Sep 2024",
-    contactNumber: "+31612345678", contactType: "whatsapp", availableForCollab: true,
+    id: DEMO_ARTIST_IDS.lakshmiNarayanan,
+    slug: "lakshmi-narayanan",
+    name: "Lakshmi Narayanan",
+    email: "lakshmi@example.com",
+    province: "Noord-Holland",
+    status: "active",
+    joinedAt: "01 Sep 2024",
+    contactNumber: "+31612345678",
+    contactType: "whatsapp",
+    availableForCollab: true,
     specialities: [{ name: "Vocal", color: "#7C3AED" }],
     bio: `<p>Lakshmi Narayanan is a classically trained vocalist based in Amsterdam. She began her musical journey at the age of six under the tutelage of Smt. Suguna Varadachari in Chennai, completing a rigorous 15-year training in the Kirana gharana style.</p>
 <p>Her repertoire spans the entire gamut of South Indian classical music - from the devotional kritis of Tyagaraja and Muthuswami Dikshitar to the complex ragam-tanam-pallavi expositions that showcase her mastery of raga grammar. She is particularly renowned for her rendition of rare ragas such as Nalinakanti, Surutti, and Kambhoji.</p>
@@ -44,23 +73,68 @@ export const DUMMY_ARTISTS: DummyArtist[] = [
       { from: "2025-08-01", to: "2025-08-20" },
     ],
     collabs: [
-      { id: "c1", slug: "margazhi-concert-prep",    name: "Margazhi Concert Prep",    role: "Owner",  status: "active" },
-      { id: "c3", slug: "rotterdam-kutcheri",       name: "Rotterdam Kutcheri",       role: "Member", status: "completed", closedAt: "Dec 2024" },
-      { id: "c5", slug: "veena-flute-jugalbandi",   name: "Veena & Flute Jugalbandi", role: "Member", status: "completed", closedAt: "Jan 2025" },
+      {
+        id: "c1",
+        slug: "margazhi-concert-prep",
+        name: "Margazhi Concert Prep",
+        role: "Owner",
+        status: "active",
+      },
+      {
+        id: "c3",
+        slug: "rotterdam-kutcheri",
+        name: "Rotterdam Kutcheri",
+        role: "Member",
+        status: "completed",
+        closedAt: "Dec 2024",
+      },
+      {
+        id: "c5",
+        slug: "veena-flute-jugalbandi",
+        name: "Veena & Flute Jugalbandi",
+        role: "Member",
+        status: "completed",
+        closedAt: "Jan 2025",
+      },
     ],
     reviews: [
-      { id: "rv-lakshmi-ravi-rotterdam",  reviewerSlug: "ravi-krishnamurthy", from: "Ravi Krishnamurthy", rating: 5, comment: "Exceptional vocalist. Her sense of raga and rhythm is impeccable. A pleasure to accompany.", collab: "Rotterdam Kutcheri", date: "15 Dec 2024" },
-      { id: "rv-lakshmi-meera-veena",     reviewerSlug: "meera-venkatesh",    from: "Meera Venkatesh",    rating: 5, comment: "Lakshmi brings incredible depth to every performance. Highly recommend collaborating with her.", collab: "Veena & Flute Jugalbandi", date: "20 Jan 2025" },
+      {
+        id: "rv-lakshmi-ravi-rotterdam",
+        reviewerSlug: "ravi-krishnamurthy",
+        from: "Ravi Krishnamurthy",
+        rating: 5,
+        comment:
+          "Exceptional vocalist. Her sense of raga and rhythm is impeccable. A pleasure to accompany.",
+        collab: "Rotterdam Kutcheri",
+        date: "15 Dec 2024",
+      },
+      {
+        id: "rv-lakshmi-meera-veena",
+        reviewerSlug: "meera-venkatesh",
+        from: "Meera Venkatesh",
+        rating: 5,
+        comment:
+          "Lakshmi brings incredible depth to every performance. Highly recommend collaborating with her.",
+        collab: "Veena & Flute Jugalbandi",
+        date: "20 Jan 2025",
+      },
     ],
     links: [
-      { type: "YouTube",   url: "https://youtube.com/@lakshminaaryanan" },
+      { type: "YouTube", url: "https://youtube.com/@lakshminaaryanan" },
       { type: "Instagram", url: "https://instagram.com/lakshmivocalmusic" },
     ],
   },
   {
-    id: "2", slug: "ravi-krishnamurthy", name: "Ravi Krishnamurthy", email: "ravi@example.com",
-    province: "Zuid-Holland", status: "active", joinedAt: "15 Sep 2024",
-    contactNumber: "+31698765432", contactType: "mobile", availableForCollab: true,
+    id: DEMO_ARTIST_IDS.raviKrishnamurthy,
+    slug: "ravi-krishnamurthy",
+    name: "Ravi Krishnamurthy",
+    email: "ravi@example.com",
+    province: "Zuid-Holland",
+    status: "active",
+    joinedAt: "15 Sep 2024",
+    contactNumber: "+31698765432",
+    contactType: "mobile",
+    availableForCollab: true,
     specialities: [{ name: "Violin", color: "#B45309" }],
     bio: `<p>Ravi Krishnamurthy is a classical violinist of international repute, based in Rotterdam. A disciple of the legendary Shri T.N. Krishnan, Ravi has been performing since the age of ten and has accompanied some of the most celebrated vocalists in the Indian classical scene, including M.S. Subbulakshmi, Sanjay Subrahmanyan, and T.M. Krishna.</p>
 <p>His violin style is characterised by a rich, resonant tone, impeccable intonation, and a deep understanding of raga bhava. He is equally at home in the role of accompanist and soloist, and his solo violin concerts have been described as "meditative journeys through the landscape of classical ragas."</p>
@@ -71,19 +145,56 @@ export const DUMMY_ARTISTS: DummyArtist[] = [
       { from: "2025-07-01", to: "2025-07-31" },
     ],
     collabs: [
-      { id: "c2", slug: "thyagaraja-aradhana-2025", name: "Thyagaraja Aradhana 2025", role: "Owner",  status: "active" },
-      { id: "c3", slug: "rotterdam-kutcheri",       name: "Rotterdam Kutcheri",       role: "Member", status: "completed", closedAt: "Dec 2024" },
+      {
+        id: "c2",
+        slug: "thyagaraja-aradhana-2025",
+        name: "Thyagaraja Aradhana 2025",
+        role: "Owner",
+        status: "active",
+      },
+      {
+        id: "c3",
+        slug: "rotterdam-kutcheri",
+        name: "Rotterdam Kutcheri",
+        role: "Member",
+        status: "completed",
+        closedAt: "Dec 2024",
+      },
     ],
     reviews: [
-      { id: "rv-ravi-lakshmi-rotterdam",  reviewerSlug: "lakshmi-narayanan", from: "Lakshmi Narayanan", rating: 5, comment: "Ravi is a master accompanist. His bowing technique and improvisational skills are extraordinary.", collab: "Rotterdam Kutcheri", date: "15 Dec 2024" },
-      { id: "rv-ravi-anand-rotterdam",    reviewerSlug: "anand-subramanian", from: "Anand Subramanian", rating: 4, comment: "Great musician and very easy to work with. Would love to collaborate again.", collab: "Rotterdam Kutcheri", date: "16 Dec 2024" },
+      {
+        id: "rv-ravi-lakshmi-rotterdam",
+        reviewerSlug: "lakshmi-narayanan",
+        from: "Lakshmi Narayanan",
+        rating: 5,
+        comment:
+          "Ravi is a master accompanist. His bowing technique and improvisational skills are extraordinary.",
+        collab: "Rotterdam Kutcheri",
+        date: "15 Dec 2024",
+      },
+      {
+        id: "rv-ravi-anand-rotterdam",
+        reviewerSlug: "anand-subramanian",
+        from: "Anand Subramanian",
+        rating: 4,
+        comment: "Great musician and very easy to work with. Would love to collaborate again.",
+        collab: "Rotterdam Kutcheri",
+        date: "16 Dec 2024",
+      },
     ],
     links: [{ type: "YouTube", url: "https://youtube.com/@ravikrishnamurthy" }],
   },
   {
-    id: "3", slug: "anand-subramanian", name: "Anand Subramanian", email: "anand@example.com",
-    province: "Utrecht", status: "active", joinedAt: "01 Oct 2024",
-    contactNumber: "+31611223344", contactType: "whatsapp", availableForCollab: false,
+    id: DEMO_ARTIST_IDS.anandSubramanian,
+    slug: "anand-subramanian",
+    name: "Anand Subramanian",
+    email: "anand@example.com",
+    province: "Utrecht",
+    status: "active",
+    joinedAt: "01 Oct 2024",
+    contactNumber: "+31611223344",
+    contactType: "whatsapp",
+    availableForCollab: false,
     specialities: [{ name: "Mridangam", color: "#B91C1C" }],
     bio: `<p>Anand Subramanian is a mridangam virtuoso based in Utrecht. He trained under the legendary Shri Umayalpuram K. Sivaraman for over a decade, mastering both the Thanjavur and Pudukkottai styles of mridangam playing.</p>
 <p>Anand is known for his extraordinary command of laya (rhythm) and his ability to create complex rhythmic patterns while maintaining perfect synchrony with the main artist. His tani avartanam (solo percussion section) performances are legendary for their creativity and technical brilliance.</p>
@@ -91,18 +202,47 @@ export const DUMMY_ARTISTS: DummyArtist[] = [
 <p>In The Netherlands, Anand has been active in promoting Indian classical percussion through workshops and masterclasses. He recently completed a residency at the Utrecht Conservatory where he introduced South Indian rhythmic concepts to Western classical percussionists.</p>`,
     availabilityDates: [{ from: "2025-05-20", to: "2025-06-05" }],
     collabs: [
-      { id: "c3", slug: "rotterdam-kutcheri",     name: "Rotterdam Kutcheri",     role: "Owner",  status: "completed", closedAt: "Dec 2024" },
-      { id: "c6", slug: "percussion-ensemble-nl", name: "Percussion Ensemble NL", role: "Member", status: "active" },
+      {
+        id: "c3",
+        slug: "rotterdam-kutcheri",
+        name: "Rotterdam Kutcheri",
+        role: "Owner",
+        status: "completed",
+        closedAt: "Dec 2024",
+      },
+      {
+        id: "c6",
+        slug: "percussion-ensemble-nl",
+        name: "Percussion Ensemble NL",
+        role: "Member",
+        status: "active",
+      },
     ],
     reviews: [
-      { id: "rv-anand-lakshmi-rotterdam", reviewerSlug: "lakshmi-narayanan", from: "Lakshmi Narayanan", rating: 5, comment: "Anand's mridangam playing elevated the entire concert. His tani avartanam was breathtaking.", collab: "Rotterdam Kutcheri", date: "15 Dec 2024" },
+      {
+        id: "rv-anand-lakshmi-rotterdam",
+        reviewerSlug: "lakshmi-narayanan",
+        from: "Lakshmi Narayanan",
+        rating: 5,
+        comment:
+          "Anand's mridangam playing elevated the entire concert. His tani avartanam was breathtaking.",
+        collab: "Rotterdam Kutcheri",
+        date: "15 Dec 2024",
+      },
     ],
     links: [],
   },
   {
-    id: "4", slug: "meera-venkatesh", name: "Meera Venkatesh", email: "meera@example.com",
-    province: "Noord-Holland", status: "active", joinedAt: "10 Oct 2024",
-    contactNumber: "+31655443322", contactType: "mobile", availableForCollab: true,
+    id: DEMO_ARTIST_IDS.meeraVenkatesh,
+    slug: "meera-venkatesh",
+    name: "Meera Venkatesh",
+    email: "meera@example.com",
+    province: "Noord-Holland",
+    status: "active",
+    joinedAt: "10 Oct 2024",
+    contactNumber: "+31655443322",
+    contactType: "mobile",
+    availableForCollab: true,
     specialities: [{ name: "Veena", color: "#047857" }],
     bio: `<p>Meera Venkatesh is a veena artist of rare distinction, based in Haarlem. She trained in the Mysore bani of veena playing under Smt. Jayalakshmi Sekhar, a direct disciple of the legendary Veena Doreswamy Iyengar.</p>
 <p>The Mysore bani is characterised by its emphasis on gamaka (ornamental notes), a rich tonal quality, and a deeply meditative approach to raga elaboration. Meera has absorbed these qualities deeply and brings them to life in her performances with a rare combination of technical precision and emotional depth.</p>
@@ -113,19 +253,57 @@ export const DUMMY_ARTISTS: DummyArtist[] = [
       { from: "2025-09-01", to: "2025-09-30" },
     ],
     collabs: [
-      { id: "c5", slug: "veena-flute-jugalbandi", name: "Veena & Flute Jugalbandi", role: "Owner",  status: "completed", closedAt: "Jan 2025" },
-      { id: "c1", slug: "margazhi-concert-prep",  name: "Margazhi Concert Prep",    role: "Member", status: "active" },
+      {
+        id: "c5",
+        slug: "veena-flute-jugalbandi",
+        name: "Veena & Flute Jugalbandi",
+        role: "Owner",
+        status: "completed",
+        closedAt: "Jan 2025",
+      },
+      {
+        id: "c1",
+        slug: "margazhi-concert-prep",
+        name: "Margazhi Concert Prep",
+        role: "Member",
+        status: "active",
+      },
     ],
     reviews: [
-      { id: "rv-meera-suresh-veena",   reviewerSlug: "suresh-iyer",       from: "Suresh Iyer",       rating: 5, comment: "Playing with Meera was a transcendent experience. Her veena and my flute created a beautiful dialogue.", collab: "Veena & Flute Jugalbandi", date: "20 Jan 2025" },
-      { id: "rv-meera-lakshmi-margazhi", reviewerSlug: "lakshmi-narayanan", from: "Lakshmi Narayanan", rating: 5, comment: "Meera's veena playing is deeply moving. She has a rare gift for communicating the essence of a raga.", collab: "Margazhi Concert Prep", date: "15 Feb 2025" },
+      {
+        id: "rv-meera-suresh-veena",
+        reviewerSlug: "suresh-iyer",
+        from: "Suresh Iyer",
+        rating: 5,
+        comment:
+          "Playing with Meera was a transcendent experience. Her veena and my flute created a beautiful dialogue.",
+        collab: "Veena & Flute Jugalbandi",
+        date: "20 Jan 2025",
+      },
+      {
+        id: "rv-meera-lakshmi-margazhi",
+        reviewerSlug: "lakshmi-narayanan",
+        from: "Lakshmi Narayanan",
+        rating: 5,
+        comment:
+          "Meera's veena playing is deeply moving. She has a rare gift for communicating the essence of a raga.",
+        collab: "Margazhi Concert Prep",
+        date: "15 Feb 2025",
+      },
     ],
     links: [{ type: "Instagram", url: "https://instagram.com/meeraveena" }],
   },
   {
-    id: "5", slug: "suresh-iyer", name: "Suresh Iyer", email: "suresh@example.com",
-    province: "Gelderland", status: "active", joinedAt: "01 Nov 2024",
-    contactNumber: "+31677889900", contactType: "whatsapp", availableForCollab: false,
+    id: DEMO_ARTIST_IDS.sureshIyer,
+    slug: "suresh-iyer",
+    name: "Suresh Iyer",
+    email: "suresh@example.com",
+    province: "Gelderland",
+    status: "active",
+    joinedAt: "01 Nov 2024",
+    contactNumber: "+31677889900",
+    contactType: "whatsapp",
+    availableForCollab: false,
     specialities: [{ name: "Flute", color: "#0369A1" }],
     bio: `<p>Suresh Iyer is a classical flautist based in Nijmegen, Gelderland. He is a disciple of the legendary Shri N. Ramani, widely regarded as one of the greatest Indian classical flautists of the 20th century.</p>
 <p>Suresh's flute playing is characterised by a pure, crystalline tone, effortless breath control, and a deeply meditative quality that draws listeners into a state of contemplative stillness. He is particularly known for his renditions of ragas like Bhairavi, Todi, and Kalyani, which he approaches with a rare combination of scholarly depth and emotional spontaneity.</p>
@@ -133,18 +311,47 @@ export const DUMMY_ARTISTS: DummyArtist[] = [
 <p>In addition to performing, Suresh is deeply committed to music education. He runs a flute school in Nijmegen and has developed a method for teaching Indian classical flute to students from Western classical backgrounds, bridging the gap between two great musical traditions.</p>`,
     availabilityDates: [],
     collabs: [
-      { id: "c5", slug: "veena-flute-jugalbandi",   name: "Veena & Flute Jugalbandi",  role: "Member", status: "completed", closedAt: "Jan 2025" },
-      { id: "c2", slug: "thyagaraja-aradhana-2025", name: "Thyagaraja Aradhana 2025",  role: "Member", status: "active" },
+      {
+        id: "c5",
+        slug: "veena-flute-jugalbandi",
+        name: "Veena & Flute Jugalbandi",
+        role: "Member",
+        status: "completed",
+        closedAt: "Jan 2025",
+      },
+      {
+        id: "c2",
+        slug: "thyagaraja-aradhana-2025",
+        name: "Thyagaraja Aradhana 2025",
+        role: "Member",
+        status: "active",
+      },
     ],
     reviews: [
-      { id: "rv-suresh-meera-veena", reviewerSlug: "meera-venkatesh", from: "Meera Venkatesh", rating: 5, comment: "Suresh's flute playing is ethereal. The jugalbandi we performed together was one of the highlights of my musical career.", collab: "Veena & Flute Jugalbandi", date: "20 Jan 2025" },
+      {
+        id: "rv-suresh-meera-veena",
+        reviewerSlug: "meera-venkatesh",
+        from: "Meera Venkatesh",
+        rating: 5,
+        comment:
+          "Suresh's flute playing is ethereal. The jugalbandi we performed together was one of the highlights of my musical career.",
+        collab: "Veena & Flute Jugalbandi",
+        date: "20 Jan 2025",
+      },
     ],
     links: [{ type: "YouTube", url: "https://youtube.com/@sureshiyer_flute" }],
   },
   {
-    id: "6", slug: "priya-balakrishnan", name: "Priya Balakrishnan", email: "priya@example.com",
-    province: "Zuid-Holland", status: "active", joinedAt: "15 Nov 2024",
-    contactNumber: "+31633445566", contactType: "whatsapp", availableForCollab: true,
+    id: DEMO_ARTIST_IDS.priyaBalakrishnan,
+    slug: "priya-balakrishnan",
+    name: "Priya Balakrishnan",
+    email: "priya@example.com",
+    province: "Zuid-Holland",
+    status: "active",
+    joinedAt: "15 Nov 2024",
+    contactNumber: "+31633445566",
+    contactType: "whatsapp",
+    availableForCollab: true,
     specialities: [{ name: "Vocal", color: "#7C3AED" }],
     bio: `<p>Priya Balakrishnan is a classical vocalist based in Rotterdam, trained under the renowned Smt. Aruna Sairam. Her voice is characterised by its warmth, clarity, and remarkable range - spanning nearly three octaves with effortless ease.</p>
 <p>Priya specialises in the bhakti (devotional) tradition of South Indian classical music, with a particular focus on the compositions of Papanasam Sivan and Gopalakrishna Bharati. Her renditions of these compositions are deeply moving, combining technical precision with heartfelt devotion.</p>
@@ -155,19 +362,38 @@ export const DUMMY_ARTISTS: DummyArtist[] = [
       { from: "2025-07-15", to: "2025-08-10" },
     ],
     collabs: [
-      { id: "c4", slug: "amsterdam-rasikas-evening",  name: "Amsterdam Rasikas Evening",  role: "Owner",  status: "active" },
-      { id: "c2", slug: "thyagaraja-aradhana-2025",   name: "Thyagaraja Aradhana 2025",   role: "Member", status: "active" },
+      {
+        id: "c4",
+        slug: "amsterdam-rasikas-evening",
+        name: "Amsterdam Rasikas Evening",
+        role: "Owner",
+        status: "active",
+      },
+      {
+        id: "c2",
+        slug: "thyagaraja-aradhana-2025",
+        name: "Thyagaraja Aradhana 2025",
+        role: "Member",
+        status: "active",
+      },
     ],
     reviews: [],
     links: [
       { type: "Instagram", url: "https://instagram.com/priyavocalmusic" },
-      { type: "Facebook",  url: "https://facebook.com/priyabalakrishnanmusic" },
+      { type: "Facebook", url: "https://facebook.com/priyabalakrishnanmusic" },
     ],
   },
   {
-    id: "7", slug: "karthik-seshadri", name: "Karthik Seshadri", email: "karthik@example.com",
-    province: "Noord-Brabant", status: "active", joinedAt: "01 Dec 2024",
-    contactNumber: "+31644556677", contactType: "mobile", availableForCollab: true,
+    id: DEMO_ARTIST_IDS.karthikSeshadri,
+    slug: "karthik-seshadri",
+    name: "Karthik Seshadri",
+    email: "karthik@example.com",
+    province: "Noord-Brabant",
+    status: "active",
+    joinedAt: "01 Dec 2024",
+    contactNumber: "+31644556677",
+    contactType: "mobile",
+    availableForCollab: true,
     specialities: [{ name: "Ghatam", color: "#92400E" }],
     bio: `<p>Karthik Seshadri is a ghatam artist based in Eindhoven, Noord-Brabant. He trained under the legendary Shri T.H. Vinayakram, the artist who brought the ghatam to international prominence through his collaborations with John McLaughlin and the Shakti ensemble.</p>
 <p>The ghatam - a clay pot percussion instrument - is one of the most ancient instruments in the South Indian classical tradition. In the hands of a master like Karthik, it becomes a vehicle for extraordinary rhythmic expression, capable of producing a wide range of tones and textures.</p>
@@ -178,33 +404,74 @@ export const DUMMY_ARTISTS: DummyArtist[] = [
       { from: "2025-10-01", to: "2025-10-31" },
     ],
     collabs: [
-      { id: "c6", slug: "percussion-ensemble-nl",  name: "Percussion Ensemble NL",  role: "Owner",  status: "active" },
-      { id: "c8", slug: "navarathri-golu-concert", name: "Navarathri Golu Concert", role: "Member", status: "incomplete" },
+      {
+        id: "c6",
+        slug: "percussion-ensemble-nl",
+        name: "Percussion Ensemble NL",
+        role: "Owner",
+        status: "active",
+      },
+      {
+        id: "c8",
+        slug: "navarathri-golu-concert",
+        name: "Navarathri Golu Concert",
+        role: "Member",
+        status: "incomplete",
+      },
     ],
     reviews: [
-      { id: "rv-karthik-anand-percussion", reviewerSlug: "anand-subramanian", from: "Anand Subramanian", rating: 5, comment: "Karthik's ghatam playing is phenomenal. His rhythmic creativity and technical mastery are truly inspiring.", collab: "Percussion Ensemble NL", date: "10 Mar 2025" },
+      {
+        id: "rv-karthik-anand-percussion",
+        reviewerSlug: "anand-subramanian",
+        from: "Anand Subramanian",
+        rating: 5,
+        comment:
+          "Karthik's ghatam playing is phenomenal. His rhythmic creativity and technical mastery are truly inspiring.",
+        collab: "Percussion Ensemble NL",
+        date: "10 Mar 2025",
+      },
     ],
     links: [{ type: "YouTube", url: "https://youtube.com/@karthikghatam" }],
   },
   {
-    id: "8", slug: "divya-ramachandran", name: "Divya Ramachandran", email: "divya@example.com",
-    province: "Utrecht", status: "suspended", joinedAt: "10 Dec 2024",
-    contactNumber: "+31655667788", contactType: "whatsapp", availableForCollab: false,
+    id: DEMO_ARTIST_IDS.divyaRamachandran,
+    slug: "divya-ramachandran",
+    name: "Divya Ramachandran",
+    email: "divya@example.com",
+    province: "Utrecht",
+    status: "suspended",
+    joinedAt: "10 Dec 2024",
+    contactNumber: "+31655667788",
+    contactType: "whatsapp",
+    availableForCollab: false,
     specialities: [{ name: "Kanjira", color: "#BE185D" }],
     bio: `<p>Divya Ramachandran is a kanjira artist based in Utrecht. She trained under Shri Selvaganesh Vinayakram, a master of both the kanjira and the ghatam.</p>
 <p>The kanjira - a small frame drum with a single jingle - is one of the most challenging instruments in the South Indian classical tradition, requiring extraordinary control of both hands and a deep understanding of rhythm. Divya has mastered this instrument to a remarkable degree, producing a rich, resonant sound that belies the instrument's small size.</p>
 <p>Note: This account is currently suspended pending review.</p>`,
     availabilityDates: [],
     collabs: [
-      { id: "c6", slug: "percussion-ensemble-nl", name: "Percussion Ensemble NL", role: "Member", status: "active" },
+      {
+        id: "c6",
+        slug: "percussion-ensemble-nl",
+        name: "Percussion Ensemble NL",
+        role: "Member",
+        status: "active",
+      },
     ],
     reviews: [],
     links: [],
   },
   {
-    id: "9", slug: "srinivas-parthasarathy", name: "Srinivas Parthasarathy", email: "srinivas@example.com",
-    province: "Zuid-Holland", status: "active", joinedAt: "05 Jan 2025",
-    contactNumber: "+31666778899", contactType: "mobile", availableForCollab: true,
+    id: DEMO_ARTIST_IDS.srinivasParthasarathy,
+    slug: "srinivas-parthasarathy",
+    name: "Srinivas Parthasarathy",
+    email: "srinivas@example.com",
+    province: "Zuid-Holland",
+    status: "active",
+    joinedAt: "05 Jan 2025",
+    contactNumber: "+31666778899",
+    contactType: "mobile",
+    availableForCollab: true,
     specialities: [{ name: "Thavil", color: "#7E22CE" }],
     bio: `<p>Srinivas Parthasarathy is a thavil artist based in The Hague. He trained under Shri Valayapatti A.R. Subramaniam, one of the foremost thavil artists of his generation.</p>
 <p>The thavil is a barrel-shaped percussion instrument traditionally associated with the nadaswaram - together they form the sacred ensemble of South Indian temple music. In Srinivas's hands, the thavil transcends its traditional context to become a powerful concert instrument capable of extraordinary rhythmic expression.</p>
@@ -215,15 +482,28 @@ export const DUMMY_ARTISTS: DummyArtist[] = [
       { from: "2025-08-15", to: "2025-09-15" },
     ],
     collabs: [
-      { id: "c7", slug: "youth-music-workshop", name: "Youth Music Workshop", role: "Member", status: "active" },
+      {
+        id: "c7",
+        slug: "youth-music-workshop",
+        name: "Youth Music Workshop",
+        role: "Member",
+        status: "active",
+      },
     ],
     reviews: [],
     links: [],
   },
   {
-    id: "10", slug: "kavitha-muralidharan", name: "Kavitha Muralidharan", email: "kavitha@example.com",
-    province: "Noord-Holland", status: "active", joinedAt: "20 Jan 2025",
-    contactNumber: "+31677889911", contactType: "whatsapp", availableForCollab: false,
+    id: DEMO_ARTIST_IDS.kavithaMuralidharan,
+    slug: "kavitha-muralidharan",
+    name: "Kavitha Muralidharan",
+    email: "kavitha@example.com",
+    province: "Noord-Holland",
+    status: "active",
+    joinedAt: "20 Jan 2025",
+    contactNumber: "+31677889911",
+    contactType: "whatsapp",
+    availableForCollab: false,
     specialities: [{ name: "Nadaswaram", color: "#C2410C" }],
     bio: `<p>Kavitha Muralidharan is a nadaswaram artist based in Amsterdam - one of the very few female nadaswaram artists performing at the concert level. She trained under Shri Sheik Chinna Moulana, a legendary nadaswaram maestro.</p>
 <p>The nadaswaram is one of the loudest non-brass acoustic instruments in the world, traditionally played at Hindu temples and weddings. Its piercing, powerful sound is considered auspicious and is believed to ward off evil spirits. In Kavitha's hands, this ancient instrument becomes a vehicle for profound musical expression.</p>
@@ -231,17 +511,30 @@ export const DUMMY_ARTISTS: DummyArtist[] = [
 <p>Based in Amsterdam since 2023, Kavitha performs at temples, cultural events, and concert halls across The Netherlands. She is also working on a project to document the nadaswaram tradition and make it accessible to younger generations.</p>`,
     availabilityDates: [],
     collabs: [
-      { id: "c8", slug: "navarathri-golu-concert", name: "Navarathri Golu Concert", role: "Owner", status: "incomplete" },
+      {
+        id: "c8",
+        slug: "navarathri-golu-concert",
+        name: "Navarathri Golu Concert",
+        role: "Owner",
+        status: "incomplete",
+      },
     ],
     reviews: [],
     links: [{ type: "YouTube", url: "https://youtube.com/@kavithanadaswaram" }],
   },
   {
-    id: "11", slug: "vijay-anantharaman", name: "Vijay Anantharaman", email: "vijay@example.com",
-    province: "Overijssel", status: "active", joinedAt: "01 Feb 2025",
-    contactNumber: "+31688990011", contactType: "mobile", availableForCollab: true,
+    id: DEMO_ARTIST_IDS.vijayAnantharaman,
+    slug: "vijay-anantharaman",
+    name: "Vijay Anantharaman",
+    email: "vijay@example.com",
+    province: "Overijssel",
+    status: "active",
+    joinedAt: "01 Feb 2025",
+    contactNumber: "+31688990011",
+    contactType: "mobile",
+    availableForCollab: true,
     specialities: [
-      { name: "Violin",  color: "#B45309" },
+      { name: "Violin", color: "#B45309" },
       { name: "Morsing", color: "#065F46" },
     ],
     bio: `<p>Vijay Anantharaman is a multi-instrumentalist based in Enschede, Overijssel - one of the rare artists who has achieved mastery in both the violin and the morsing (jaw harp). He trained in violin under Shri Lalgudi G.J.R. Krishnan and in morsing under Shri Bangalore Amrit.</p>
@@ -253,16 +546,35 @@ export const DUMMY_ARTISTS: DummyArtist[] = [
       { from: "2025-09-15", to: "2025-10-15" },
     ],
     collabs: [
-      { id: "c2", slug: "thyagaraja-aradhana-2025", name: "Thyagaraja Aradhana 2025", role: "Member", status: "active" },
-      { id: "c7", slug: "youth-music-workshop",  name: "Youth Music Workshop",  role: "Member", status: "active" },
+      {
+        id: "c2",
+        slug: "thyagaraja-aradhana-2025",
+        name: "Thyagaraja Aradhana 2025",
+        role: "Member",
+        status: "active",
+      },
+      {
+        id: "c7",
+        slug: "youth-music-workshop",
+        name: "Youth Music Workshop",
+        role: "Member",
+        status: "active",
+      },
     ],
     reviews: [],
     links: [{ type: "LinkedIn", url: "https://linkedin.com/in/vijayanantharaman" }],
   },
   {
-    id: "12", slug: "nithya-subramanian", name: "Nithya Subramanian", email: "nithya@example.com",
-    province: "Gelderland", status: "active", joinedAt: "15 Feb 2025",
-    contactNumber: "+31699001122", contactType: "whatsapp", availableForCollab: true,
+    id: DEMO_ARTIST_IDS.nithyaSubramanian,
+    slug: "nithya-subramanian",
+    name: "Nithya Subramanian",
+    email: "nithya@example.com",
+    province: "Gelderland",
+    status: "active",
+    joinedAt: "15 Feb 2025",
+    contactNumber: "+31699001122",
+    contactType: "whatsapp",
+    availableForCollab: true,
     specialities: [{ name: "Vocal", color: "#7C3AED" }],
     bio: `<p>Nithya Subramanian is a classical vocalist based in Arnhem, Gelderland. She trained under Shri T.M. Krishna, one of the most innovative and intellectually rigorous musicians of his generation, known for his commitment to making classical music accessible to all.</p>
 <p>Nithya's approach to performance reflects her guru's philosophy - she is deeply committed to the classical tradition while also being open to new contexts and collaborations. Her voice is characterised by its clarity, precision, and a quality of focused intensity that draws listeners into the music.</p>
@@ -274,20 +586,34 @@ export const DUMMY_ARTISTS: DummyArtist[] = [
       { from: "2025-10-01", to: "2025-10-20" },
     ],
     collabs: [
-      { id: "c7", slug: "youth-music-workshop",  name: "Youth Music Workshop",  role: "Owner",  status: "active" },
-      { id: "c2", slug: "thyagaraja-aradhana-2025", name: "Thyagaraja Aradhana 2025", role: "Member", status: "active" },
+      {
+        id: "c7",
+        slug: "youth-music-workshop",
+        name: "Youth Music Workshop",
+        role: "Owner",
+        status: "active",
+      },
+      {
+        id: "c2",
+        slug: "thyagaraja-aradhana-2025",
+        name: "Thyagaraja Aradhana 2025",
+        role: "Member",
+        status: "active",
+      },
     ],
     reviews: [],
     links: [
       { type: "Instagram", url: "https://instagram.com/nithyavocalmusic" },
-      { type: "YouTube",   url: "https://youtube.com/@nithyasubramanian" },
+      { type: "YouTube", url: "https://youtube.com/@nithyasubramanian" },
     ],
   },
 ];
 
-export const DUMMY_ARTISTS_MAP: Record<string, DummyArtist> =
-  Object.fromEntries(DUMMY_ARTISTS.map(a => [a.id, a]));
+export const DUMMY_ARTISTS_MAP: Record<string, DummyArtist> = Object.fromEntries(
+  DUMMY_ARTISTS.map((a) => [a.id, a]),
+);
 
 /** Look up by slug (used in public URLs) */
-export const DUMMY_ARTISTS_BY_SLUG: Record<string, DummyArtist> =
-  Object.fromEntries(DUMMY_ARTISTS.map(a => [a.slug, a]));
+export const DUMMY_ARTISTS_BY_SLUG: Record<string, DummyArtist> = Object.fromEntries(
+  DUMMY_ARTISTS.map((a) => [a.slug, a]),
+);

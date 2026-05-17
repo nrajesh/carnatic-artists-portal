@@ -10,6 +10,7 @@ export type ConfirmDialogProps = {
   cancelLabel?: string;
   tone?: "default" | "danger";
   isPending?: boolean;
+  confirmFirst?: boolean;
   onConfirm: () => void;
   onCancel: () => void;
 };
@@ -22,6 +23,7 @@ export function ConfirmDialog({
   cancelLabel = "Cancel",
   tone = "default",
   isPending = false,
+  confirmFirst = false,
   onConfirm,
   onCancel,
 }: ConfirmDialogProps) {
@@ -43,6 +45,32 @@ export function ConfirmDialog({
 
   if (!open) return null;
 
+  const cancelButton = (
+    <button
+      type="button"
+      disabled={isPending}
+      onClick={onCancel}
+      className="rounded-lg border border-stone-300 bg-white px-4 py-2 text-sm font-medium text-stone-800 shadow-sm hover:bg-stone-50 disabled:opacity-50"
+    >
+      {cancelLabel}
+    </button>
+  );
+  const confirmButton = (
+    <button
+      ref={confirmRef}
+      type="button"
+      disabled={isPending}
+      onClick={onConfirm}
+      className={
+        tone === "danger"
+          ? "rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-red-700 disabled:opacity-50"
+          : "rounded-lg bg-amber-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-amber-700 disabled:opacity-50"
+      }
+    >
+      {confirmLabel}
+    </button>
+  );
+
   return (
     <div className="fixed inset-0 z-[200] flex items-end justify-center p-4 sm:items-center">
       <button
@@ -62,27 +90,8 @@ export function ConfirmDialog({
         </h2>
         <div className="mt-3 text-sm leading-relaxed text-stone-600">{message}</div>
         <div className="mt-6 flex flex-wrap justify-end gap-2">
-          <button
-            type="button"
-            disabled={isPending}
-            onClick={onCancel}
-            className="rounded-lg border border-stone-300 bg-white px-4 py-2 text-sm font-medium text-stone-800 shadow-sm hover:bg-stone-50 disabled:opacity-50"
-          >
-            {cancelLabel}
-          </button>
-          <button
-            ref={confirmRef}
-            type="button"
-            disabled={isPending}
-            onClick={onConfirm}
-            className={
-              tone === "danger"
-                ? "rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-red-700 disabled:opacity-50"
-                : "rounded-lg bg-amber-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-amber-700 disabled:opacity-50"
-            }
-          >
-            {confirmLabel}
-          </button>
+          {confirmFirst ? confirmButton : cancelButton}
+          {confirmFirst ? cancelButton : confirmButton}
         </div>
       </div>
     </div>

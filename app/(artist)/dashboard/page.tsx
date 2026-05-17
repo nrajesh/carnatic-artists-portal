@@ -1,7 +1,10 @@
 import Link from "next/link";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
-import { formatDeploymentCalendarDate, formatDeploymentDateTime } from "@/lib/format-deployment-datetime";
+import {
+  formatDeploymentCalendarDate,
+  formatDeploymentDateTime,
+} from "@/lib/format-deployment-datetime";
 import { verifySession } from "@/lib/session-jwt";
 import { getDb } from "@/lib/db";
 import { getArtistDashboardView } from "@/lib/queries/artists";
@@ -10,6 +13,7 @@ import { DashboardViewTracker, EditProfileLink } from "@/components/dashboard-tr
 import { isArtistCollabsRatingsEnabledServer } from "@/lib/feature-flags-server";
 import { ArtistAccountStatus } from "@/components/artist-account-status";
 import { PortalSectionHeading } from "@/components/portal-section-heading";
+import { canUseArtistConnections } from "@/lib/artist-connections";
 
 export default async function ArtistDashboardPage({
   searchParams,
@@ -24,9 +28,10 @@ export default async function ArtistDashboardPage({
   }
 
   const { ph_identify } = await searchParams;
-  const [view, collabsRatingsEnabled] = await Promise.all([
+  const [view, collabsRatingsEnabled, artistConnectionsEnabled] = await Promise.all([
     getArtistDashboardView(session.artistId),
     isArtistCollabsRatingsEnabledServer({ distinctId: session.artistId }),
+    canUseArtistConnections({ distinctId: session.artistId }),
   ]);
 
   // If the artist row was deleted but the session cookie is still live, drop back to login.
@@ -39,7 +44,12 @@ export default async function ArtistDashboardPage({
     : view.notifications.filter(
         (n) => n.type !== "collab_invite" && n.type !== "feedback" && n.type !== "collab_closed",
       );
-  const unreadNotificationsInView = notificationsForDisplay.filter((n) => !n.read).length;
+  const connectionFilteredNotifications = artistConnectionsEnabled
+    ? notificationsForDisplay
+    : notificationsForDisplay.filter(
+        (n) => n.type !== "connection_request" && n.type !== "connection_approved",
+      );
+  const unreadNotificationsInView = connectionFilteredNotifications.filter((n) => !n.read).length;
 
   let province: string | null = view.province;
   if (ph_identify === "1") {
@@ -90,7 +100,10 @@ export default async function ArtistDashboardPage({
               ) : null}
             </div>
             <div className="mt-4">
-              <ArtistAccountStatus isSuspended={view.isSuspended} initialMessages={view.suspensionMessages} />
+              <ArtistAccountStatus
+                isSuspended={view.isSuspended}
+                initialMessages={view.suspensionMessages}
+              />
             </div>
           </div>
           <div className="flex flex-wrap gap-3">
@@ -110,13 +123,17 @@ export default async function ArtistDashboardPage({
           <div className="mb-8 rounded-2xl border border-amber-300 bg-gradient-to-br from-amber-50 to-white p-6 shadow-sm">
             <div className="flex flex-col gap-1 sm:flex-row sm:items-start sm:justify-between">
               <div>
-                <PortalSectionHeading variant="label" className="mb-0 border-amber-500/40 text-amber-950">
+                <PortalSectionHeading
+                  variant="label"
+                  className="mb-0 border-amber-500/40 text-amber-950"
+                >
                   Admin tools
                 </PortalSectionHeading>
                 <p className="mt-1 text-sm text-stone-600 max-w-xl">
                   Jump to moderation: open an artist, then use{" "}
-                  <span className="font-medium text-stone-800">Edit profile</span> for their data and{" "}
-                  <span className="font-medium text-stone-800">Account status</span> to suspend or reactivate.
+                  <span className="font-medium text-stone-800">Edit profile</span> for their data
+                  and <span className="font-medium text-stone-800">Account status</span> to suspend
+                  or reactivate.
                 </p>
               </div>
               <Link
@@ -141,7 +158,9 @@ export default async function ArtistDashboardPage({
               >
                 <p className="text-lg mb-1">🎵</p>
                 <p className="text-sm font-semibold text-stone-800">Artists & profiles</p>
-                <p className="text-xs text-stone-500 mt-0.5">Directory, profile edits, account status</p>
+                <p className="text-xs text-stone-500 mt-0.5">
+                  Directory, profile edits, account status
+                </p>
               </Link>
               <Link
                 href="/admin/specialities"
@@ -173,7 +192,8 @@ export default async function ArtistDashboardPage({
                   Your public bio
                 </PortalSectionHeading>
                 <p className="text-xs text-stone-500 mt-1">
-                  This is what visitors read on your profile - keep it current together with your details.
+                  This is what visitors read on your profile - keep it current together with your
+                  details.
                 </p>
                 {view.hasBio ? (
                   <p className="mt-3 text-sm text-stone-700 leading-relaxed whitespace-pre-wrap border-l-2 border-amber-200 pl-4">
@@ -181,7 +201,8 @@ export default async function ArtistDashboardPage({
                   </p>
                 ) : (
                   <div className="mt-3 rounded-xl border border-amber-200 bg-amber-50/80 px-4 py-3 text-sm text-amber-950">
-                    You have not added a bio yet. A few sentences about your music helps others discover you.
+                    You have not added a bio yet. A few sentences about your music helps others
+                    discover you.
                   </div>
                 )}
               </div>
@@ -224,7 +245,9 @@ export default async function ArtistDashboardPage({
                 <div className="text-xs text-stone-500 mt-0.5">Avg rating</div>
               </div>
               <div className="bg-white rounded-xl border border-stone-200 shadow-sm p-4 text-center">
-                <div className="text-2xl font-bold text-stone-800">{view.availabilityDates.length}</div>
+                <div className="text-2xl font-bold text-stone-800">
+                  {view.availabilityDates.length}
+                </div>
                 <div className="text-xs text-stone-500 mt-0.5">Availability windows</div>
               </div>
             </>
@@ -235,7 +258,9 @@ export default async function ArtistDashboardPage({
                 <div className="text-xs text-stone-500 mt-0.5">Specialities</div>
               </div>
               <div className="bg-white rounded-xl border border-stone-200 shadow-sm p-4 text-center">
-                <div className="text-2xl font-bold text-stone-800">{view.availabilityDates.length}</div>
+                <div className="text-2xl font-bold text-stone-800">
+                  {view.availabilityDates.length}
+                </div>
                 <div className="text-xs text-stone-500 mt-0.5">Availability windows</div>
               </div>
             </>
@@ -259,7 +284,7 @@ export default async function ArtistDashboardPage({
               <p className="text-stone-400 text-sm italic">No notifications yet.</p>
             ) : (
               <div className="flex flex-col gap-3">
-                {notificationsForDisplay.map((n) => (
+                {connectionFilteredNotifications.map((n) => (
                   <Link
                     key={n.id}
                     href={n.href}
@@ -272,11 +297,13 @@ export default async function ArtistDashboardPage({
                     <span className="text-lg flex-shrink-0 mt-0.5">
                       {n.type === "collab_invite"
                         ? "💬"
-                        : n.type === "feedback"
-                          ? "⭐"
-                          : n.type === "collab_closed"
-                            ? "✅"
-                            : "🔔"}
+                        : n.type.startsWith("connection_")
+                          ? "🤝"
+                          : n.type === "feedback"
+                            ? "⭐"
+                            : n.type === "collab_closed"
+                              ? "✅"
+                              : "🔔"}
                     </span>
                     <div className="flex-1 min-w-0">
                       <p
@@ -396,6 +423,9 @@ export default async function ArtistDashboardPage({
                 ...(collabsRatingsEnabled
                   ? [{ href: "/collabs" as const, icon: "💬", label: "My collabs" }]
                   : []),
+                ...(artistConnectionsEnabled
+                  ? [{ href: "/connections" as const, icon: "🤝", label: "Connections" }]
+                  : []),
                 { href: "/profile/availability", icon: "📅", label: "Set availability" },
                 { href: "/profile/notifications", icon: "🔔", label: "Notifications" },
               ].map((item) => (
@@ -425,9 +455,8 @@ export default async function ArtistDashboardPage({
         </div>
 
         <p className="text-xs text-stone-300 text-center mt-8">
-          Logged in as{" "}
-          {session.role === "admin" ? `${view.name} (admin)` : view.name} · Session expires{" "}
-          {formatDeploymentDateTime(session.expiresAt)}
+          Logged in as {session.role === "admin" ? `${view.name} (admin)` : view.name} · Session
+          expires {formatDeploymentDateTime(session.expiresAt)}
         </p>
       </div>
     </main>

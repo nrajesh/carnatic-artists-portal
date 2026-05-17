@@ -4,3 +4,4 @@
  */
 export const POSTHOG_FLAG_ARTIST_COLLABS_RATINGS = "artist-collabs-ratings";
 export const POSTHOG_FLAG_ADMIN_PROFILE_PHOTO_REPORT_SORTING = "admin-profile-photo-report-sorting";
+export const POSTHOG_FLAG_ARTIST_CONNECTIONS = "artist-connections";

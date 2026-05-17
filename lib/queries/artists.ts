@@ -114,7 +114,7 @@ function toFeaturedArtistListing(
   const bioPlainPreview = firstLine.length > 100 ? `${firstLine.slice(0, 100)}...` : firstLine;
 
   return {
-    ...toArtistListing(a as any, listingEmail),
+    ...toArtistListing(a, listingEmail),
     profilePhotoUrl: a.profilePhotoUrl,
     activeCollabs,
     bioPlainPreview: bioPlainPreview || undefined,
@@ -287,6 +287,7 @@ export type ArtistProfileView = {
     date: string;
   }[];
   links: { type: string; url: string }[];
+  viewerHasOpenProfileReport: boolean;
 };
 
 export async function getArtistBySlug(
@@ -337,6 +338,15 @@ export async function getArtistBySlug(
   if (viewer?.artistId && viewer.role !== "admin") {
     sharesCollab = await artistsShareActiveCollab(viewer.artistId, artist.id);
   }
+  const viewerHasOpenProfileReport = viewer?.artistId
+    ? (await getDb().profilePhotoReport.count({
+        where: {
+          artistId: artist.id,
+          reporterId: viewer.artistId,
+          resolvedAt: null,
+        },
+      })) > 0
+    : false;
   const showEmail = canRevealEmail(artist.emailVisibility, ctx, sharesCollab);
   const showContact = canRevealContact(artist.contactVisibility, ctx, sharesCollab);
 
@@ -397,6 +407,7 @@ export async function getArtistBySlug(
       type: l.linkType.charAt(0).toUpperCase() + l.linkType.slice(1),
       url: l.url,
     })),
+    viewerHasOpenProfileReport,
   };
 }
 

@@ -7,19 +7,17 @@ const mockState = vi.hoisted(() => ({
     fullName: string;
     isAdmin: boolean;
     isSuspended: boolean;
-    notificationPreference?:
-      | {
-          inAppEnabled: boolean;
-          emailEnabled: boolean;
-          webPushEnabled: boolean;
-          reviewAddedEnabled: boolean;
-          reviewUpdatedEnabled: boolean;
-          reviewDeletedEnabled: boolean;
-          newRegistrationEnabled: boolean;
-          registrationApprovedEnabled: boolean;
-          registrationRejectedEnabled: boolean;
-        }
-      | null;
+    notificationPreference?: {
+      inAppEnabled: boolean;
+      emailEnabled: boolean;
+      webPushEnabled: boolean;
+      reviewAddedEnabled: boolean;
+      reviewUpdatedEnabled: boolean;
+      reviewDeletedEnabled: boolean;
+      newRegistrationEnabled: boolean;
+      registrationApprovedEnabled: boolean;
+      registrationRejectedEnabled: boolean;
+    } | null;
     pushSubscriptions?: Array<{ endpoint: string; p256dh: string; auth: string }>;
   }>,
   capturedArtistFindManyArgs: null as Record<string, unknown> | null,
@@ -216,7 +214,7 @@ describe("notifyAdminRegistrationEvent", () => {
         apiKey: "re_test_key",
         from: "noreply@example.com",
         to: "admin1@example.com",
-        subject: "Profile photo reported · Portal",
+        subject: "Profile reported · Portal",
       }),
     );
   });

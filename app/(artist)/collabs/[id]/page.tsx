@@ -12,6 +12,8 @@ import {
 } from "../actions";
 import { isArtistCollabsRatingsEnabledServer } from "@/lib/feature-flags-server";
 import { PortalSectionHeading } from "@/components/portal-section-heading";
+import { canUseArtistConnections, listApprovedMentionTargets } from "@/lib/artist-connections";
+import { MentionedText } from "@/lib/artist-mentions";
 
 interface CollabChatPageProps {
   params: Promise<{ id: string }>;
@@ -42,6 +44,10 @@ export default async function CollabChatPage({ params }: CollabChatPageProps) {
   }
 
   const others = collab.members.filter((m) => m.artistId !== session.artistId);
+  const artistConnectionsEnabled = await canUseArtistConnections({ distinctId: session.artistId });
+  const mentionTargets = artistConnectionsEnabled
+    ? await listApprovedMentionTargets(session.artistId)
+    : [];
 
   return (
     <main className="min-h-screen bg-amber-50 px-4 py-8 sm:px-8">
@@ -49,11 +55,16 @@ export default async function CollabChatPage({ params }: CollabChatPageProps) {
         <div className="rounded-2xl border border-stone-200 bg-white p-6 shadow-sm">
           <div className="mb-3 flex items-start justify-between gap-3">
             <div>
-              <Link href="/collabs" className="mb-2 inline-block text-sm text-amber-700 hover:text-amber-900">
+              <Link
+                href="/collabs"
+                className="mb-2 inline-block text-sm text-amber-700 hover:text-amber-900"
+              >
                 ← Back to collabs
               </Link>
               <h1 className="text-2xl font-bold text-stone-800">{collab.name}</h1>
-              {collab.description && <p className="mt-1 text-sm text-stone-600">{collab.description}</p>}
+              {collab.description && (
+                <p className="mt-1 text-sm text-stone-600">{collab.description}</p>
+              )}
             </div>
             <span className="rounded-full border border-stone-200 bg-stone-50 px-3 py-1 text-xs font-semibold text-stone-600">
               {collab.status}
@@ -90,12 +101,20 @@ export default async function CollabChatPage({ params }: CollabChatPageProps) {
             </PortalSectionHeading>
             <ul className="space-y-2">
               {collab.members.map((member) => (
-                <li key={member.artistId} className="rounded-lg border border-stone-100 px-3 py-2 text-sm">
+                <li
+                  key={member.artistId}
+                  className="rounded-lg border border-stone-100 px-3 py-2 text-sm"
+                >
                   <div className="flex items-center justify-between gap-3">
-                    <Link href={`/artists/${member.slug}`} className="font-medium text-stone-800 hover:text-amber-800">
+                    <Link
+                      href={`/artists/${member.slug}`}
+                      className="font-medium text-stone-800 hover:text-amber-800"
+                    >
                       {member.fullName}
                     </Link>
-                    <span className="text-xs text-stone-400">{member.isOwner ? "Owner" : "Member"}</span>
+                    <span className="text-xs text-stone-400">
+                      {member.isOwner ? "Owner" : "Member"}
+                    </span>
                   </div>
                 </li>
               ))}
@@ -113,7 +132,9 @@ export default async function CollabChatPage({ params }: CollabChatPageProps) {
                 collab.messages.map((msg) => (
                   <div key={msg.id} className="rounded-lg bg-stone-50 px-3 py-2 text-sm">
                     <p className="font-medium text-stone-800">{msg.senderName}</p>
-                    <p className="mt-0.5 text-stone-700">{msg.content}</p>
+                    <p className="mt-0.5 whitespace-pre-wrap text-stone-700">
+                      <MentionedText text={msg.content} mentionTargets={mentionTargets} />
+                    </p>
                     <p className="mt-1 text-xs text-stone-400">{msg.sentAt}</p>
                   </div>
                 ))
@@ -134,6 +155,19 @@ export default async function CollabChatPage({ params }: CollabChatPageProps) {
               >
                 Send message
               </button>
+              {mentionTargets.length > 0 && (
+                <div className="flex flex-wrap gap-1.5 pt-1">
+                  {mentionTargets.map((artist) => (
+                    <span
+                      key={artist.id}
+                      className="rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 font-mono text-xs text-amber-800"
+                      title={artist.fullName}
+                    >
+                      {artist.tag}
+                    </span>
+                  ))}
+                </div>
+              )}
             </form>
           </section>
         </div>

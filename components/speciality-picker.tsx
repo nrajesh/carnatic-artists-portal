@@ -2,6 +2,7 @@
 
 import { useRef, useEffect, useMemo, useState } from "react";
 import { normalizeSpecialityLabel } from "@/lib/speciality-catalog";
+import { rankTypeaheadMatches, splitTypeaheadHighlight } from "@/lib/typeahead-search";
 
 export type SpecialityCatalogItem = { name: string; color: string };
 
@@ -35,29 +36,29 @@ export default function SpecialityPicker({
   }, [catalog]);
 
   const available = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    if (!q) {
-      return catalog.filter((s) => !selected.some((x) => x.toLowerCase() === s.name.toLowerCase()));
-    }
-    const rows = catalog.filter(
-      (s) =>
-        !selected.some((x) => x.toLowerCase() === s.name.toLowerCase()) &&
-        s.name.toLowerCase().includes(q),
+    const unselectedCatalog = catalog.filter(
+      (s) => !selected.some((x) => x.toLowerCase() === s.name.toLowerCase()),
     );
-    // Prefer prefix matches (e.g. "vo" → "Vocal" before "Pallavi vocal workshop")
-    return [...rows].sort((a, b) => {
-      const al = a.name.toLowerCase().startsWith(q) ? 0 : 1;
-      const bl = b.name.toLowerCase().startsWith(q) ? 0 : 1;
-      if (al !== bl) return al - bl;
-      return a.name.localeCompare(b.name);
-    });
+    if (!query.trim()) {
+      return unselectedCatalog.map((item) => ({
+        item,
+        matchIndex: -1,
+        matchLength: 0,
+        wordStart: false,
+      }));
+    }
+    return rankTypeaheadMatches(unselectedCatalog, (item) => item.name, query);
   }, [catalog, query, selected]);
+
+  const availableItems = useMemo(() => {
+    return available.map(({ item }) => item);
+  }, [available]);
 
   const normalizedQuery = normalizeSpecialityLabel(query);
   /** Only offer "Add custom" when nothing in the catalogue matches  -  avoids a second panel covering matches. */
   const customEligible =
     allowCustom &&
-    available.length === 0 &&
+    availableItems.length === 0 &&
     normalizedQuery.length >= 2 &&
     normalizedQuery.length <= 80 &&
     selected.length < 3 &&
@@ -146,23 +147,36 @@ export default function SpecialityPicker({
             className="min-h-[44px] w-full rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-stone-800 placeholder:text-amber-400 focus:outline-none focus:ring-2 focus:ring-amber-400 sm:w-64"
           />
 
-          {open && catalog.length > 0 && query.trim().length >= 2 && (available.length > 0 || customEligible) && (
+          {open && catalog.length > 0 && query.trim().length >= 2 && (availableItems.length > 0 || customEligible) && (
             <ul className="absolute z-20 mt-1 max-h-52 w-full overflow-y-auto rounded-xl border border-stone-200 bg-white shadow-lg sm:w-64">
-              {available.map((s) => (
-                <li key={s.name}>
+              {availableItems.map((item) => {
+                const highlight = splitTypeaheadHighlight(item.name, query);
+                return (
+                <li key={item.name}>
                   <button
                     type="button"
                     onMouseDown={(e) => {
                       e.preventDefault();
-                      addFromCatalog(s.name);
+                      addFromCatalog(item.name);
                     }}
                     className="flex min-h-[44px] w-full items-center gap-2 px-4 py-2.5 text-left text-sm text-stone-800 hover:bg-amber-50"
                   >
-                    <span className="h-3 w-3 flex-shrink-0 rounded-full" style={{ backgroundColor: s.color }} />
-                    {s.name}
+                    <span className="h-3 w-3 flex-shrink-0 rounded-full" style={{ backgroundColor: item.color }} />
+                    <span>
+                      {highlight ? (
+                        <>
+                          {highlight.before}
+                          <strong className="font-semibold text-stone-950">{highlight.match}</strong>
+                          {highlight.after}
+                        </>
+                      ) : (
+                        item.name
+                      )}
+                    </span>
                   </button>
                 </li>
-              ))}
+                );
+              })}
               {customEligible ? (
                 <li className="border-t border-amber-100 bg-amber-50/50">
                   <button
@@ -186,7 +200,7 @@ export default function SpecialityPicker({
           {open &&
             catalog.length > 0 &&
             query.trim().length >= 2 &&
-            available.length === 0 &&
+            availableItems.length === 0 &&
             !customEligible && (
               <div className="absolute z-20 mt-1 w-full rounded-xl border border-stone-200 bg-white px-4 py-3 text-sm text-stone-400 shadow-lg sm:w-64">
                 No matching specialities

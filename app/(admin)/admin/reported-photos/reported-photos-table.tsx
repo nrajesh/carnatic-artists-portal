@@ -38,7 +38,9 @@ export function ReportedPhotosTable({
 }) {
   const router = useRouter();
   const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set());
-  const [banner, setBanner] = useState<{ type: "error" | "info" | "success"; text: string } | null>(null);
+  const [banner, setBanner] = useState<{ type: "error" | "info" | "success"; text: string } | null>(
+    null,
+  );
   const [pending, startTransition] = useTransition();
   const [confirm, setConfirm] = useState<ConfirmPanel>(closedConfirm);
   const pendingConfirmAction = useRef<(() => void) | null>(null);
@@ -74,20 +76,22 @@ export function ReportedPhotosTable({
         key: "openReportCount",
         label: "Open Reports",
         sortValue: (row) => row.openReportCount,
-        render: (row) => <span className="font-semibold text-stone-800">{row.openReportCount}</span>,
+        render: (row) => (
+          <span className="text-sm font-semibold text-stone-800">{row.openReportCount}</span>
+        ),
       },
       {
         key: "totalReportCount",
         label: "Total Reports",
         sortValue: (row) => row.totalReportCount,
-        render: (row) => <span className="text-stone-700">{row.totalReportCount}</span>,
+        render: (row) => <span className="text-sm text-stone-700">{row.totalReportCount}</span>,
       },
       {
         key: "reporters",
         label: "Recent Reporters",
         sortable: false,
         render: (row) => (
-          <div className="text-xs text-stone-600">
+          <div className="text-sm text-stone-600 sm:text-xs">
             {row.reporterNames.length > 0 ? row.reporterNames.join(", ") : "Unknown reporter"}
           </div>
         ),
@@ -96,7 +100,9 @@ export function ReportedPhotosTable({
         key: "latestReportedAt",
         label: "Latest Report",
         sortValue: (row) => row.latestReportedAt.getTime(),
-        render: (row) => <span className="text-xs text-stone-500">{row.latestReportedAtDisplay}</span>,
+        render: (row) => (
+          <span className="text-sm text-stone-500 sm:text-xs">{row.latestReportedAtDisplay}</span>
+        ),
       },
       {
         key: "status",
@@ -141,8 +147,7 @@ export function ReportedPhotosTable({
   const onToggleAllVisible = useCallback((visibleRowIds: string[]) => {
     setSelectedIds((prev) => {
       const next = new Set(prev);
-      const allSelected =
-        visibleRowIds.length > 0 && visibleRowIds.every((id) => next.has(id));
+      const allSelected = visibleRowIds.length > 0 && visibleRowIds.every((id) => next.has(id));
       if (allSelected) {
         visibleRowIds.forEach((id) => next.delete(id));
       } else {
@@ -153,7 +158,9 @@ export function ReportedPhotosTable({
   }, []);
 
   function runBulkAction(
-    action: (ids: string[]) => Promise<{ ok: true; updated: number; skipped: number } | { ok: false; error: string }>,
+    action: (
+      ids: string[],
+    ) => Promise<{ ok: true; updated: number; skipped: number } | { ok: false; error: string }>,
     confirmPanel: ConfirmPanel,
     successText: (updated: number, skipped: number) => string,
   ) {
@@ -222,7 +229,7 @@ export function ReportedPhotosTable({
                     resolveProfilePhotoReportsAction,
                     {
                       open: true,
-                      title: "Resolve profile photo reports",
+                      title: "Resolve profile reports",
                       message: `Mark reports for ${selectedIds.size} artist account${selectedIds.size === 1 ? "" : "s"} as reviewed without removing the current photo?`,
                       tone: "default",
                       confirmLabel: "Resolve",
@@ -243,13 +250,13 @@ export function ReportedPhotosTable({
                     clearReportedProfilePhotosAction,
                     {
                       open: true,
-                      title: "Clear reported profile photos",
+                      title: "Clear reported profile images",
                       message: `Remove the current photo for ${selectedIds.size} artist account${selectedIds.size === 1 ? "" : "s"} and resolve the related reports?`,
                       tone: "danger",
                       confirmLabel: "Clear photos",
                     },
                     (updated, skipped) =>
-                      `Cleared ${updated} profile photo${updated === 1 ? "" : "s"}${skipped > 0 ? `, skipped ${skipped}.` : "."}`,
+                      `Cleared ${updated} profile image${updated === 1 ? "" : "s"}${skipped > 0 ? `, skipped ${skipped}.` : "."}`,
                   )
                 }
                 className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm font-medium text-red-900 hover:bg-red-100 disabled:opacity-50"
@@ -283,11 +290,13 @@ export function ReportedPhotosTable({
 
         {sortingEnabled ? (
           <p className="text-xs text-stone-500">
-            Sorting is enabled for this queue, so you can prioritize latest reports or repeat offenders.
+            Sorting is enabled for this queue, so you can prioritize latest reports or repeat
+            offenders.
           </p>
         ) : (
           <p className="text-xs text-stone-500">
-            This queue is currently locked to newest reports first. Enable the report-sorting feature flag to prioritize repeat offenders by count.
+            This queue is currently locked to newest reports first. Enable the report-sorting
+            feature flag to prioritize repeat offenders by count.
           </p>
         )}
 
@@ -295,7 +304,7 @@ export function ReportedPhotosTable({
           columns={columns}
           rows={rows}
           rowKey={(row) => row.artistId}
-          emptyMessage="No open reported profile photos."
+          emptyMessage="No open reported profiles."
           selection={{
             selectedIds,
             onToggle,

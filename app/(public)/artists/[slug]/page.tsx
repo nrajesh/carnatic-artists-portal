@@ -6,6 +6,13 @@ import { formatDeploymentCalendarDate } from "@/lib/format-deployment-datetime";
 import { verifySession } from "@/lib/session-jwt";
 import { getThemeFromArtistSpecialities } from "@/lib/speciality-theme";
 import { getArtistBySlug } from "@/lib/queries/artists";
+import {
+  canUseArtistConnections,
+  getConnectionStatusForArtists,
+  listApprovedMentionTargets,
+} from "@/lib/artist-connections";
+import { linkApprovedMentionsInHtml } from "@/lib/artist-mentions";
+import { requestConnectionAction } from "@/app/(artist)/connections/actions";
 import { isArtistCollabsRatingsEnabledServer } from "@/lib/feature-flags-server";
 import { PortalSectionHeading } from "@/components/portal-section-heading";
 import { normalizeBioHtmlForDisplay } from "@/lib/bio-html-display";
@@ -13,6 +20,7 @@ import { ArtistExternalLinksFeed } from "@/components/artist-external-links-feed
 import { ArtistVisiblePhoneContact } from "@/components/artist-visible-phone-contact";
 import { ArtistProfileShareButton } from "@/components/artist-profile-share-button";
 import { getAbsoluteSiteUrl } from "@/lib/absolute-site-url";
+import { DisabledProfileReportButton, ProfileReportButton } from "./profile-report-button";
 import {
   getBackgroundImageObjectPosition,
   getBackgroundImageScale,
@@ -60,7 +68,7 @@ const REVIEWS_PER_PAGE = 5;
 
 interface PageProps {
   params: Promise<{ slug: string }>;
-  searchParams: Promise<{ reviewPage?: string; photo_reported?: string }>;
+  searchParams: Promise<{ reviewPage?: string; profile_reported?: string }>;
 }
 
 export default async function ArtistProfilePage({ params, searchParams }: PageProps) {
@@ -86,9 +94,6 @@ export default async function ArtistProfilePage({ params, searchParams }: PagePr
     : null;
 
   const heroTheme = getThemeFromArtistSpecialities(artist.specialities);
-  const heroBackground = heroTheme.background.startsWith("linear-gradient")
-    ? heroTheme.background
-    : `linear-gradient(135deg, ${heroTheme.background}, ${heroTheme.background}bb)`;
   const heroAvatarAccent = heroTheme.background.startsWith("linear-gradient")
     ? heroTheme.background
     : heroTheme.accentColor;
@@ -100,6 +105,22 @@ export default async function ArtistProfilePage({ params, searchParams }: PagePr
   });
   const activeCollabs = artist.collabs.filter((c) => c.status === "active");
   const completedCollabs = artist.collabs.filter((c) => c.status === "completed");
+  const viewerConnectionsEnabled = currentArtistId
+    ? await canUseArtistConnections({ distinctId: currentArtistId })
+    : false;
+  const targetConnectionsEnabled = await canUseArtistConnections({ distinctId: artist.id });
+  const isOwnProfile = currentArtistId === artist.id;
+  const artistConnectionsEnabled = viewerConnectionsEnabled && targetConnectionsEnabled;
+  const connectionStatus =
+    artistConnectionsEnabled && currentArtistId
+      ? await getConnectionStatusForArtists(currentArtistId, artist.id)
+      : "NONE";
+  const mentionTargets =
+    isLoggedIn && artistConnectionsEnabled ? await listApprovedMentionTargets(artist.id) : [];
+  const bioHtml = linkApprovedMentionsInHtml(
+    normalizeBioHtmlForDisplay(artist.bio),
+    mentionTargets,
+  );
 
   // Pagination
   const reviewPage = Math.max(1, parseInt(searchParamsResolved.reviewPage ?? "1", 10));
@@ -115,7 +136,8 @@ export default async function ArtistProfilePage({ params, searchParams }: PagePr
   const shareText = isLoggedIn
     ? `Check out ${artist.name} on the artist discovery portal`
     : "Check out this artist on the artist discovery portal";
-  const profilePhotoReported = searchParamsResolved.photo_reported === "1";
+  const profileReported =
+    searchParamsResolved.profile_reported === "1" || artist.viewerHasOpenProfileReport;
 
   return (
     <main className="min-h-screen bg-amber-50">
@@ -128,7 +150,7 @@ export default async function ArtistProfilePage({ params, searchParams }: PagePr
         <div className="mx-auto w-full max-w-5xl lg:w-[72%] xl:w-[68%]">
           <div
             className="relative min-h-[260px] overflow-hidden rounded-[2rem] border border-white/20 shadow-2xl shadow-stone-900/20 sm:min-h-[300px] md:aspect-[16/6] md:min-h-0"
-            style={!bgCover ? { background: heroBackground } : undefined}
+            style={!bgCover ? { background: heroTheme.background } : undefined}
           >
             {bgCover ? (
               <>
@@ -202,16 +224,15 @@ export default async function ArtistProfilePage({ params, searchParams }: PagePr
         </div>
       </div>
 
-      {profilePhotoReported ? (
+      {profileReported ? (
         <div className="mx-auto mt-4 max-w-3xl px-6">
           <div className="rounded-xl border border-green-200 bg-green-50 px-5 py-4 text-sm font-medium text-green-800 shadow-sm">
-            Profile photo report sent to admins.
+            Profile report sent to admins.
           </div>
         </div>
       ) : null}
 
       <div className="max-w-3xl mx-auto mt-6 px-6 pb-16">
-
         {/* Quick stats */}
         {collabsRatingsEnabled && (
           <div className="grid grid-cols-3 gap-3 mb-6">
@@ -240,16 +261,65 @@ export default async function ArtistProfilePage({ params, searchParams }: PagePr
           </div>
         )}
 
-        {isLoggedIn && artist.profilePhotoUrl ? (
-          <div className="mb-6 flex justify-end">
-            <form action={`/api/artists/${artist.id}/profile-photo-report`} method="POST">
-              <button
-                type="submit"
-                className="min-h-[40px] rounded-lg border border-stone-200 bg-white px-3 py-2 text-xs font-semibold text-stone-500 shadow-sm transition-colors hover:border-red-200 hover:text-red-700"
-              >
-                Report profile photo
-              </button>
-            </form>
+        {isLoggedIn ? (
+          <div className="mb-6 flex flex-wrap justify-center gap-2">
+            {isOwnProfile && (
+              <>
+                <button
+                  type="button"
+                  disabled
+                  aria-disabled="true"
+                  title="You cannot connect with yourself."
+                  className="inline-flex min-h-[42px] min-w-[140px] cursor-not-allowed items-center justify-center gap-2 rounded-lg border border-stone-200 bg-stone-100 px-4 py-2 text-sm font-semibold text-stone-400 shadow-sm opacity-90"
+                >
+                  Connect
+                </button>
+                <DisabledProfileReportButton
+                  label="Report"
+                  title="You cannot report your own profile."
+                />
+              </>
+            )}
+            {artistConnectionsEnabled &&
+              !isOwnProfile &&
+              (connectionStatus === "NONE" || connectionStatus === "REJECTED") && (
+                <form action={requestConnectionAction}>
+                  <input type="hidden" name="recipientId" value={artist.id} />
+                  <button
+                    type="submit"
+                    className="inline-flex min-h-[42px] min-w-[140px] items-center justify-center gap-2 rounded-lg border border-emerald-500 bg-emerald-600 px-4 py-2 text-sm font-semibold text-white shadow-sm shadow-emerald-900/20 transition-colors hover:border-emerald-600 hover:bg-emerald-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2"
+                  >
+                    Connect
+                  </button>
+                </form>
+              )}
+            {artistConnectionsEnabled &&
+              !isOwnProfile &&
+              connectionStatus === "PENDING_OUTGOING" && (
+                <span className="inline-flex min-h-[42px] min-w-[140px] cursor-not-allowed items-center justify-center rounded-lg border border-stone-200 bg-stone-100 px-4 py-2 text-sm font-semibold text-stone-400 shadow-sm opacity-90">
+                  Pending
+                </span>
+              )}
+            {artistConnectionsEnabled &&
+              !isOwnProfile &&
+              connectionStatus === "PENDING_INCOMING" && (
+                <span className="inline-flex min-h-[42px] min-w-[140px] cursor-not-allowed items-center justify-center rounded-lg border border-stone-200 bg-stone-100 px-4 py-2 text-sm font-semibold text-stone-400 shadow-sm opacity-90">
+                  Pending
+                </span>
+              )}
+            {artistConnectionsEnabled && !isOwnProfile && connectionStatus === "APPROVED" && (
+              <span className="inline-flex min-h-[42px] min-w-[140px] cursor-not-allowed items-center justify-center rounded-lg border border-green-200 bg-green-50 px-4 py-2 text-sm font-semibold text-green-700 shadow-sm">
+                Connected
+              </span>
+            )}
+            {!isOwnProfile && profileReported ? (
+              <DisabledProfileReportButton
+                label="Reported"
+                title="You already have an open report for this profile."
+              />
+            ) : !isOwnProfile ? (
+              <ProfileReportButton artistId={artist.id} />
+            ) : null}
           </div>
         ) : null}
 
@@ -258,7 +328,7 @@ export default async function ArtistProfilePage({ params, searchParams }: PagePr
           {isLoggedIn ? (
             <div
               className="max-w-measure text-left font-sans prose prose-sm prose-stone sm:prose-base [text-wrap:pretty]"
-              dangerouslySetInnerHTML={{ __html: normalizeBioHtmlForDisplay(artist.bio) }}
+              dangerouslySetInnerHTML={{ __html: bioHtml }}
             />
           ) : (
             <div className="rounded-xl border border-dashed border-amber-300 bg-amber-50 px-5 py-6 text-center">

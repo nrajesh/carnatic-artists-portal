@@ -67,17 +67,17 @@ export default function ArtistsSearch({
         </div>
 
         <SearchTypeahead
-          value={speciality}
-          onChange={(val) => updateParam("speciality", val)}
-          options={specialities}
-          placeholder="All specialities"
-        />
-
-        <SearchTypeahead
           value={location}
           onChange={(val) => updateParam("location", val)}
           options={locationOptions}
           placeholder={`All ${locationAreaLabelPlural.toLowerCase()}`}
+        />
+
+        <SearchTypeahead
+          value={speciality}
+          onChange={(val) => updateParam("speciality", val)}
+          options={specialities}
+          placeholder="All specialities"
         />
 
         {/* Clear */}

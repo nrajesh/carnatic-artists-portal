@@ -12,7 +12,7 @@ export default async function AdminSpecialitiesPage() {
         ← Dashboard
       </Link>
 
-      <div className="mb-8 flex flex-wrap items-center justify-between gap-4">
+      <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold text-stone-800">Specialities</h1>
           <p className="mt-1 text-stone-500">{specialities.length} specialities in the database</p>

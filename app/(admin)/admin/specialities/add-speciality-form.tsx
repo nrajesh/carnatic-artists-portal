@@ -76,20 +76,18 @@ export function AddSpecialityForm({
   return (
     <form
       onSubmit={onSubmit}
-      className="mb-8 rounded-xl border border-stone-200 bg-white p-5 shadow-sm"
+      className="mb-6 rounded-xl border border-stone-200 bg-white p-5 shadow-sm"
     >
-      <PortalSectionHeading variant="title" className="mb-3">
+      <PortalSectionHeading variant="title" className="mb-2">
         Add speciality
       </PortalSectionHeading>
-      {message ? (
+      {message && (
         <p className={`mb-3 text-sm ${message.type === "ok" ? "text-green-700" : "text-red-700"}`}>
           {message.text}
         </p>
-      ) : (
-        <div className="mb-3 min-h-[1.25rem]" />
       )}
-      <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end">
-        <label className="flex flex-col gap-1 text-sm text-stone-700">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-[minmax(0,1.6fr)_minmax(0,0.8fr)_minmax(0,0.8fr)]">
+        <label className="col-span-2 flex flex-col gap-1 text-sm text-stone-700 sm:col-span-3">
           Name
           <input
             name="name"
@@ -124,20 +122,22 @@ export function AddSpecialityForm({
             className="min-h-[44px] w-28 rounded-lg border border-stone-300 px-3 py-2 font-mono text-sm"
           />
         </label>
-        <button
-          type="button"
-          onClick={() => applyRandomColours()}
-          className="min-h-[44px] rounded-lg border border-stone-300 bg-white px-3 py-2 text-sm font-medium text-stone-700 shadow-sm hover:bg-stone-50"
-        >
-          Randomize colours
-        </button>
-        <button
-          type="submit"
-          disabled={pending}
-          className="rounded-lg bg-amber-700 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-amber-800 disabled:cursor-not-allowed disabled:opacity-50"
-        >
-          {pending ? "Adding…" : "Add speciality"}
-        </button>
+        <div className="col-span-2 grid grid-cols-1 gap-3 sm:col-span-3 sm:grid-cols-[minmax(0,1fr)_auto]">
+          <button
+            type="button"
+            onClick={() => applyRandomColours()}
+            className="min-h-[44px] rounded-lg border border-stone-300 bg-white px-3 py-2 text-sm font-medium text-stone-700 shadow-sm hover:bg-stone-50"
+          >
+            Randomize colours
+          </button>
+          <button
+            type="submit"
+            disabled={pending}
+            className="min-h-[44px] rounded-lg bg-amber-700 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-amber-800 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {pending ? "Adding…" : "Add speciality"}
+          </button>
+        </div>
       </div>
       <p className="mt-2 text-xs text-stone-400">Use #RRGGBB hex codes (e.g. #92400E).</p>
     </form>

@@ -126,79 +126,83 @@ export function AdminSpecialitiesGrid({ rows }: { rows: AdminSpecialityRow[] }) 
         onCancel={dismissConfirm}
       />
       <div className="space-y-4">
-      {message ? (
-        <p className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-2 text-sm text-amber-950">{message}</p>
-      ) : null}
+        {message ? (
+          <p className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-2 text-sm text-amber-950">
+            {message}
+          </p>
+        ) : null}
 
-      {rows.length > 0 ? (
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <label
-            className={`inline-flex items-center gap-2 text-sm font-medium ${
-              selectableIds.length > 0 ? "cursor-pointer text-stone-700" : "cursor-not-allowed text-stone-400"
-            }`}
-          >
-            <input
-              type="checkbox"
-              className="h-4 w-4 rounded border-stone-300 text-amber-600 focus:ring-amber-500 disabled:opacity-50"
-              disabled={selectableIds.length === 0}
-              checked={allSelected}
-              ref={(el) => {
-                if (el) el.indeterminate = someSelectableSelected;
-              }}
-              onChange={toggleAll}
-            />
-            Select all deletable ({selectableIds.length})
-          </label>
-          {effectiveSelectedIds.size > 0 ? (
-            <button
-              type="button"
-              disabled={pending}
-              onClick={onBulkDelete}
-              className="rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-red-700 disabled:opacity-50"
+        {rows.length > 0 ? (
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <label
+              className={`inline-flex items-center gap-2 text-sm font-medium ${
+                selectableIds.length > 0
+                  ? "cursor-pointer text-stone-700"
+                  : "cursor-not-allowed text-stone-400"
+              }`}
             >
-              Delete selected ({effectiveSelectedIds.size})
-            </button>
-          ) : null}
-        </div>
-      ) : null}
-
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {rows.map((row) => {
-          const canSelect = row.artistCount === 0;
-          const checked = canSelect && effectiveSelectedIds.has(row.id);
-          return (
-            <div key={row.id} className="relative">
-              <div
-                className={`absolute left-3 top-14 z-10 flex h-8 w-8 items-center justify-center rounded-md border bg-white/95 shadow-sm ${
-                  checked ? "border-amber-400 ring-2 ring-amber-200" : "border-stone-200"
-                } ${!canSelect ? "opacity-40" : ""}`}
+              <input
+                type="checkbox"
+                className="h-4 w-4 rounded border-stone-300 text-amber-600 focus:ring-amber-500 disabled:opacity-50"
+                disabled={selectableIds.length === 0}
+                checked={allSelected}
+                ref={(el) => {
+                  if (el) el.indeterminate = someSelectableSelected;
+                }}
+                onChange={toggleAll}
+              />
+              Select all deletable ({selectableIds.length})
+            </label>
+            {effectiveSelectedIds.size > 0 ? (
+              <button
+                type="button"
+                disabled={pending}
+                onClick={onBulkDelete}
+                className="rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-red-700 disabled:opacity-50"
               >
-                <input
-                  type="checkbox"
-                  className="h-4 w-4 rounded border-stone-300 text-amber-600 focus:ring-amber-500 disabled:cursor-not-allowed"
-                  disabled={!canSelect}
-                  checked={checked}
-                  onChange={() => canSelect && onToggle(row.id)}
-                  title={
-                    canSelect
-                      ? undefined
-                      : "Cannot select: artists use this speciality. Remove them before bulk delete."
-                  }
-                  aria-label={
-                    canSelect
-                      ? `Select ${row.name}`
-                      : `${row.name} cannot be selected for bulk delete while in use`
-                  }
-                />
+                Delete selected ({effectiveSelectedIds.size})
+              </button>
+            ) : null}
+          </div>
+        ) : null}
+
+        <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
+          {rows.map((row) => {
+            const canSelect = row.artistCount === 0;
+            const checked = canSelect && effectiveSelectedIds.has(row.id);
+            return (
+              <div key={row.id} className="relative">
+                <div
+                  className={`absolute left-3 top-14 z-10 flex h-8 w-8 items-center justify-center rounded-md border bg-white/95 shadow-sm ${
+                    checked ? "border-amber-400 ring-2 ring-amber-200" : "border-stone-200"
+                  } ${!canSelect ? "opacity-40" : ""}`}
+                >
+                  <input
+                    type="checkbox"
+                    className="h-4 w-4 rounded border-stone-300 text-amber-600 focus:ring-amber-500 disabled:cursor-not-allowed"
+                    disabled={!canSelect}
+                    checked={checked}
+                    onChange={() => canSelect && onToggle(row.id)}
+                    title={
+                      canSelect
+                        ? undefined
+                        : "Cannot select: artists use this speciality. Remove them before bulk delete."
+                    }
+                    aria-label={
+                      canSelect
+                        ? `Select ${row.name}`
+                        : `${row.name} cannot be selected for bulk delete while in use`
+                    }
+                  />
+                </div>
+                <div className="pl-6">
+                  <SpecialityCard row={row} allRows={rows} />
+                </div>
               </div>
-              <div className="pl-6">
-                <SpecialityCard row={row} allRows={rows} />
-              </div>
-            </div>
-          );
-        })}
+            );
+          })}
+        </div>
       </div>
-    </div>
     </>
   );
 }

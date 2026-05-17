@@ -7,8 +7,12 @@ import { ArtistListingTracker } from "./artist-listing-tracker";
 import { FeaturedArtistPhoto } from "@/components/featured-artist-photo";
 import { artistMatchesDirectoryQuery } from "@/lib/artist-directory-search";
 import { getDeploymentLocationConfig } from "@/lib/deployment-location";
+import {
+  buildDirectoryLocationOptions,
+  buildDirectorySpecialityOptions,
+} from "@/lib/directory-filter-options";
 import { normalizeLocationLabel } from "@/lib/location-display";
-import { listArtistsForDirectory } from "@/lib/queries/artists";
+import { listArtistsForDirectory, listSpecialities } from "@/lib/queries/artists";
 import { getThemeFromArtistSpecialities } from "@/lib/speciality-theme";
 import { isArtistCollabsRatingsEnabledServer } from "@/lib/feature-flags-server";
 
@@ -24,22 +28,15 @@ export default async function ArtistsPage({ searchParams }: PageProps) {
   const session = sessionCookie ? await verifySession(sessionCookie) : null;
   const isLoggedIn = !!session;
   const selectedLocation = location || province;
-  const [allArtists, collabsRatingsEnabled, locationConfig] = await Promise.all([
+  const [allArtists, allSpecialities, collabsRatingsEnabled, locationConfig] = await Promise.all([
     listArtistsForDirectory(),
+    listSpecialities(),
     isArtistCollabsRatingsEnabledServer(),
     getDeploymentLocationConfig(),
   ]);
   const normalizedSelectedLocation = normalizeLocationLabel(selectedLocation).toLocaleLowerCase();
-  const locationOptions = Array.from(
-    new Set(allArtists.map((artist) => normalizeLocationLabel(artist.province)).filter(Boolean)),
-  ).sort((a, b) => a.localeCompare(b));
-  const uniqueSpecialitiesMap = new Map<string, string>();
-  allArtists.forEach(a => a.specialities.forEach(s => uniqueSpecialitiesMap.set(s.name, s.color)));
-  const specialitiesCatalog = Array.from(uniqueSpecialitiesMap.entries())
-    .map(([name, color]) => ({ label: name, color }))
-    .sort((a, b) => a.label.localeCompare(b.label));
-
-  const locationOptionsList = locationOptions.map(label => ({ label }));
+  const locationOptionsList = buildDirectoryLocationOptions(allArtists);
+  const specialitiesCatalog = buildDirectorySpecialityOptions(allSpecialities);
 
   const filtered = allArtists.filter((a) => {
     const matchesText = !q || artistMatchesDirectoryQuery(a.keywordHaystack, q);

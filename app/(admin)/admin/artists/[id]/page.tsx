@@ -26,8 +26,8 @@ function StarRating({ rating }: { rating: number }) {
 
 function SectionCard({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <div className="mb-6 rounded-xl border border-stone-200 bg-white p-6 shadow-sm sm:mb-7 sm:p-8">
-      <PortalSectionHeading variant="label" className="mb-5">
+    <div className="mb-5 rounded-xl border border-stone-200 bg-white p-5 shadow-sm sm:mb-6 sm:p-6">
+      <PortalSectionHeading variant="label" className="mb-3">
         {title}
       </PortalSectionHeading>
       {children}
@@ -83,7 +83,7 @@ export default async function AdminArtistDetailPage({
 
   return (
     <main className="min-h-screen bg-stone-50 px-4 py-8 sm:px-8">
-      <div className="mx-auto max-w-3xl">
+      <div className="mx-auto max-w-5xl">
         {done === "login_link_sent" ? (
           <div className="mb-6 space-y-3">
             <div className="rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-950">
@@ -119,7 +119,7 @@ export default async function AdminArtistDetailPage({
 
         <div className="mb-5 overflow-hidden rounded-xl border border-stone-200 bg-white shadow-sm">
           <div
-            className="flex h-24 items-end px-6 pb-4"
+            className="flex h-24 items-end px-5 pb-4 sm:px-6"
             style={{
               background: `linear-gradient(135deg, ${primaryTint}, ${primaryTint}99)`,
             }}
@@ -131,11 +131,22 @@ export default async function AdminArtistDetailPage({
               {artist.name[0]}
             </div>
           </div>
-          <div className="px-6 pb-6 pt-10">
-            <div className="flex flex-wrap items-start justify-between gap-4">
-              <div>
-                <h1 className="text-2xl font-bold text-stone-800">{artist.name}</h1>
-                <p className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-stone-500">
+          <div className="px-5 pb-5 pt-10 sm:px-6 sm:pb-6">
+            <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+              <div className="min-w-0 flex-1">
+                <div className="flex flex-wrap items-start gap-3">
+                  <h1 className="text-2xl font-bold text-stone-800">{artist.name}</h1>
+                  <span
+                    className={`inline-flex rounded-full border px-3 py-1 text-xs font-semibold ${
+                      artist.isSuspended
+                        ? "border-red-200 bg-red-50 text-red-700"
+                        : "border-green-200 bg-green-50 text-green-700"
+                    }`}
+                  >
+                    {artist.isSuspended ? "Suspended" : "Active"}
+                  </span>
+                </div>
+                <p className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-stone-500">
                   <span className="ph-no-capture">{artist.email}</span>
                   {artist.contactNumber.trim() ? (
                     <>
@@ -152,20 +163,22 @@ export default async function AdminArtistDetailPage({
                 <p className="mt-1 text-xs text-stone-400">
                   {artist.province.trim() ? `📍 ${artist.province} · ` : ""}Joined {joinedLabel}
                 </p>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {artist.specialities.map((s) => (
+                    <span
+                      key={s.name}
+                      className="rounded-full px-3 py-1 text-xs font-semibold"
+                      style={{ backgroundColor: s.color + "22", color: s.color }}
+                    >
+                      {s.name}
+                    </span>
+                  ))}
+                </div>
               </div>
-              <div className="flex flex-col items-end gap-2">
-                <span
-                  className={`inline-block rounded-full border px-3 py-1 text-xs font-semibold ${
-                    artist.isSuspended
-                      ? "border-red-200 bg-red-50 text-red-700"
-                      : "border-green-200 bg-green-50 text-green-700"
-                  }`}
-                >
-                  {artist.isSuspended ? "Suspended" : "Active"}
-                </span>
+              <div className="flex flex-wrap items-center gap-x-4 gap-y-2 lg:max-w-xs lg:justify-end">
                 <Link
                   href={`/admin/artists/${artist.id}/edit`}
-                  className="text-xs font-medium text-amber-700 underline underline-offset-2 hover:text-amber-900"
+                  className="text-sm font-medium text-amber-700 underline underline-offset-2 hover:text-amber-900"
                 >
                   Edit profile
                 </Link>
@@ -173,31 +186,19 @@ export default async function AdminArtistDetailPage({
                   <form action={`/api/admin/artists/${artist.id}/send-login-link`} method="POST">
                     <button
                       type="submit"
-                      className="cursor-pointer border-0 bg-transparent p-0 text-xs font-medium text-amber-700 underline underline-offset-2 hover:text-amber-900"
+                      className="cursor-pointer border-0 bg-transparent p-0 text-sm font-medium text-amber-700 underline underline-offset-2 hover:text-amber-900"
                     >
                       Send sign-in link
                     </button>
                   </form>
                 ) : (
-                  <span className="text-right text-xs text-stone-400">No email on file</span>
+                  <span className="text-sm text-stone-400">No email on file</span>
                 )}
               </div>
             </div>
 
-            <div className="mt-4 flex flex-wrap gap-2">
-              {artist.specialities.map((s) => (
-                <span
-                  key={s.name}
-                  className="rounded-full px-3 py-1 text-xs font-semibold"
-                  style={{ backgroundColor: s.color + "22", color: s.color }}
-                >
-                  {s.name}
-                </span>
-              ))}
-            </div>
-
             {collabsRatingsEnabled && (
-              <div className="mt-5 grid grid-cols-3 gap-3">
+              <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-3">
                 <div className="rounded-lg bg-stone-50 p-3 text-center">
                   <div className="text-xl font-bold text-stone-800">{activeCollabs.length}</div>
                   <div className="mt-0.5 text-xs text-stone-500">Active collabs</div>
@@ -257,7 +258,7 @@ export default async function AdminArtistDetailPage({
                 {artist.collabs.map((c) => (
                   <div
                     key={c.id}
-                    className="flex items-center justify-between gap-3 rounded-lg border border-stone-100 px-4 py-3 transition-colors hover:bg-stone-50"
+                    className="flex flex-col gap-3 rounded-lg border border-stone-100 px-4 py-3 transition-colors hover:bg-stone-50 sm:flex-row sm:items-center sm:justify-between"
                   >
                     <div>
                       <p className="text-sm font-semibold text-stone-800">{c.name}</p>
@@ -266,7 +267,7 @@ export default async function AdminArtistDetailPage({
                         {c.closedAt ? ` · Closed ${c.closedAt}` : ""}
                       </p>
                     </div>
-                    <div className="flex flex-shrink-0 items-center gap-3">
+                    <div className="flex flex-wrap items-center gap-3 sm:flex-shrink-0">
                       <span
                         className={`rounded-full border px-2 py-0.5 text-xs font-semibold ${collabBadgeClass(c.status)}`}
                       >
