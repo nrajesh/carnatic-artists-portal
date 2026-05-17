@@ -3,6 +3,7 @@
   "name": "artist-discovery-portal",
   "main": ".open-next/worker.js",
   "minify": true,
+  "preview_urls": true,
   // 2025-03+ runtime: import { env } from "cloudflare:workers" (R2 secrets in lib/storage.ts)
   "compatibility_date": "2025-03-21",
   "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
@@ -13,13 +14,13 @@
       "enabled": true,
       "head_sampling_rate": 1,
       "persist": true,
-      "invocation_logs": true
+      "invocation_logs": true,
     },
     "traces": {
       "enabled": true,
       "persist": true,
-      "head_sampling_rate": 1
-    }
+      "head_sampling_rate": 1,
+    },
   },
   // PostHog Cloud ingest (EU). US projects: https://us.i.posthog.com
   // This file intentionally mirrors the production dashboard config so CLI deploys
@@ -48,23 +49,23 @@
     // Cloudflare R2 Bucket
     "R2_ACCOUNT_ID": "4a978c47ceb63bdb40ad391bfb690f83",
     "R2_BUCKET_NAME": "find-artists-media",
-    "R2_PUBLIC_URL": "https://pub-e8514cc51e324fae9be6ed35b045b6d9.r2.dev"
+    "R2_PUBLIC_URL": "https://pub-e8514cc51e324fae9be6ed35b045b6d9.r2.dev",
   },
   "routes": [
     {
       "pattern": "find-artists.com",
       "zone_name": "find-artists.com",
-      "custom_domain": true
-    }
+      "custom_domain": true,
+    },
   ],
   "assets": {
     "directory": ".open-next/assets",
-    "binding": "ASSETS"
+    "binding": "ASSETS",
   },
   "services": [
     {
       "binding": "WORKER_SELF_REFERENCE",
-      "service": "artist-discovery-portal"
-    }
-  ]
+      "service": "artist-discovery-portal",
+    },
+  ],
 }
