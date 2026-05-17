@@ -2,6 +2,7 @@
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "artist-discovery-portal",
   "main": ".open-next/worker.js",
+  "minify": true,
   // 2025-03+ runtime: import { env } from "cloudflare:workers" (R2 secrets in lib/storage.ts)
   "compatibility_date": "2025-03-21",
   "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],

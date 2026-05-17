@@ -1,25 +1,6 @@
 "use client";
 
 import { useEffect, useId, useState } from "react";
-import mermaid from "mermaid";
-
-let mermaidInitialized = false;
-
-function ensureMermaidInitialized() {
-  if (mermaidInitialized) return;
-  mermaid.initialize({
-    startOnLoad: false,
-    securityLevel: "strict",
-    theme: "neutral",
-    fontFamily: "ui-sans-serif, system-ui, sans-serif",
-    flowchart: {
-      curve: "basis",
-      useMaxWidth: true,
-      htmlLabels: false,
-    },
-  });
-  mermaidInitialized = true;
-}
 
 export function MermaidDiagram({ chart }: { chart: string }) {
   const reactId = useId();
@@ -31,9 +12,20 @@ export function MermaidDiagram({ chart }: { chart: string }) {
 
     async function renderChart() {
       try {
-        ensureMermaidInitialized();
+        const { default: m } = await import("mermaid");
+        m.initialize({
+          startOnLoad: false,
+          securityLevel: "strict",
+          theme: "neutral",
+          fontFamily: "ui-sans-serif, system-ui, sans-serif",
+          flowchart: {
+            curve: "basis",
+            useMaxWidth: true,
+            htmlLabels: false,
+          },
+        });
         const safeId = `mermaid-${reactId.replace(/[^a-zA-Z0-9_-]/g, "")}`;
-        const { svg: rendered } = await mermaid.render(safeId, chart);
+        const { svg: rendered } = await m.render(safeId, chart);
         if (!cancelled) {
           setSvg(rendered);
           setFailed(false);
