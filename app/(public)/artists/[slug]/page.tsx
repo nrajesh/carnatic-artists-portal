@@ -21,6 +21,8 @@ import { ArtistExternalLinksFeed } from "@/components/artist-external-links-feed
 import { ArtistVisiblePhoneContact } from "@/components/artist-visible-phone-contact";
 import { ArtistProfileShareButton } from "@/components/artist-profile-share-button";
 import { getAbsoluteSiteUrl } from "@/lib/absolute-site-url";
+import { buildInviteShareOptions } from "@/lib/artist-invites";
+import { getDeploymentDisplayConfig } from "@/lib/deployment-display";
 import { DisabledProfileReportButton, ProfileReportButton } from "./profile-report-button";
 import {
   getBackgroundImageObjectPosition,
@@ -65,16 +67,61 @@ function SectionCard({
   );
 }
 
+function GatedProfileActions({ inviteToken }: { inviteToken?: string | null }) {
+  const signupHref = inviteToken
+    ? `/register?invite=${encodeURIComponent(inviteToken)}`
+    : "/register";
+  return (
+    <div className="flex flex-wrap items-center justify-center gap-3">
+      <Link
+        href="/auth/login"
+        className="inline-flex min-h-[42px] items-center justify-center rounded-lg bg-amber-700 px-5 py-2 text-sm font-semibold text-white transition-colors hover:bg-amber-800"
+      >
+        Log in to view
+      </Link>
+      <Link
+        href={signupHref}
+        className="inline-flex min-h-[42px] items-center justify-center rounded-lg border border-amber-300 bg-white px-5 py-2 text-sm font-semibold text-amber-900 shadow-[inset_0_1px_0_rgba(255,255,255,0.85)] transition-colors hover:bg-amber-100"
+      >
+        Sign up
+      </Link>
+    </div>
+  );
+}
+
+function GatedProfileCard({
+  title,
+  description,
+  icon,
+  inviteToken,
+}: {
+  title: string;
+  description: string;
+  icon?: string;
+  inviteToken?: string | null;
+}) {
+  return (
+    <div className="rounded-xl border border-dashed border-amber-300 bg-amber-50 px-5 py-6 text-center">
+      {icon ? <p className="mb-2 text-2xl">{icon}</p> : null}
+      <p className="mb-1 text-sm font-semibold text-amber-800">{title}</p>
+      <p className="mb-4 text-xs text-amber-600">{description}</p>
+      <GatedProfileActions inviteToken={inviteToken} />
+    </div>
+  );
+}
+
 const REVIEWS_PER_PAGE = 5;
 
 interface PageProps {
   params: Promise<{ slug: string }>;
-  searchParams: Promise<{ reviewPage?: string; profile_reported?: string }>;
+  searchParams: Promise<{ reviewPage?: string; profile_reported?: string; invite?: string }>;
 }
 
 export default async function ArtistProfilePage({ params, searchParams }: PageProps) {
+  const displayConfig = getDeploymentDisplayConfig();
   const { slug } = await params;
   const searchParamsResolved = await searchParams;
+  const inviteToken = searchParamsResolved.invite?.trim() ?? null;
   const sessionCookie = (await cookies()).get("session")?.value ?? null;
   const session = sessionCookie ? await verifySession(sessionCookie) : null;
 
@@ -140,6 +187,15 @@ export default async function ArtistProfilePage({ params, searchParams }: PagePr
   const shareText = isLoggedIn
     ? `Check out ${artist.name} on the artist discovery portal`
     : "Check out this artist on the artist discovery portal";
+  const inviteCardConfig =
+    isOwnProfile && isLoggedIn
+      ? {
+          artistName: artist.name,
+          portalName: displayConfig.name,
+          options: buildInviteShareOptions(artist.links),
+          nudgeHref: "/profile/edit#profile-social",
+        }
+      : undefined;
   const profileReported =
     searchParamsResolved.profile_reported === "1" || artist.viewerHasOpenProfileReport;
 
@@ -219,6 +275,7 @@ export default async function ArtistProfilePage({ params, searchParams }: PagePr
                     profileUrl={profileShareUrl}
                     shareTitle={shareTitle}
                     shareText={shareText}
+                    inviteCardConfig={inviteCardConfig}
                     className="self-start sm:self-start sm:shrink-0"
                   />
                 </div>
@@ -349,18 +406,11 @@ export default async function ArtistProfilePage({ params, searchParams }: PagePr
               dangerouslySetInnerHTML={{ __html: bioHtml }}
             />
           ) : (
-            <div className="rounded-xl border border-dashed border-amber-300 bg-amber-50 px-5 py-6 text-center">
-              <p className="text-sm font-semibold text-amber-800 mb-1">Artist Bio</p>
-              <p className="text-xs text-amber-600 mb-4">
-                Sign up to read the full bio and experience.
-              </p>
-              <Link
-                href="/auth/login"
-                className="inline-block px-5 py-2 bg-amber-700 text-white text-sm font-semibold rounded-lg hover:bg-amber-800 transition-colors"
-              >
-                Log in to view
-              </Link>
-            </div>
+            <GatedProfileCard
+              title="Artist Bio"
+              description="Sign up to read the full bio and experience."
+              inviteToken={inviteToken}
+            />
           )}
         </SectionCard>
 
@@ -467,25 +517,20 @@ export default async function ArtistProfilePage({ params, searchParams }: PagePr
               </div>
             )
           ) : (
-            <div className="rounded-xl border border-dashed border-amber-300 bg-amber-50 px-5 py-6 text-center">
-              <p className="text-2xl mb-2">🔒</p>
-              <p className="text-sm font-semibold text-amber-800 mb-1">
-                {artist.availabilityDates.length > 0
+            <GatedProfileCard
+              icon="🔒"
+              title={
+                artist.availabilityDates.length > 0
                   ? `${artist.availabilityDates.length} availability window${artist.availabilityDates.length > 1 ? "s" : ""} marked`
-                  : "Availability calendar"}
-              </p>
-              <p className="text-xs text-amber-600 mb-4">
-                {collabsRatingsEnabled
+                  : "Availability calendar"
+              }
+              description={
+                collabsRatingsEnabled
                   ? "Log in as a registered artist to view exact dates and initiate a collab."
-                  : "Log in as a registered artist to view exact dates for planning meetups."}
-              </p>
-              <Link
-                href="/auth/login"
-                className="inline-block px-5 py-2 bg-amber-700 text-white text-sm font-semibold rounded-lg hover:bg-amber-800 transition-colors"
-              >
-                Log in to view
-              </Link>
-            </div>
+                  : "Log in as a registered artist to view exact dates for planning meetups."
+              }
+              inviteToken={inviteToken}
+            />
           )}
         </SectionCard>
 
@@ -621,19 +666,12 @@ export default async function ArtistProfilePage({ params, searchParams }: PagePr
             {isLoggedIn ? (
               <ArtistExternalLinksFeed links={artist.links} />
             ) : (
-              <div className="rounded-xl border border-dashed border-amber-300 bg-amber-50 px-5 py-6 text-center">
-                <p className="text-2xl mb-2">🔒</p>
-                <p className="text-sm font-semibold text-amber-800 mb-1">Social Media Channels</p>
-                <p className="text-xs text-amber-600 mb-4">
-                  Log in as a registered artist to view their social channels.
-                </p>
-                <Link
-                  href="/auth/login"
-                  className="inline-block px-5 py-2 bg-amber-700 text-white text-sm font-semibold rounded-lg hover:bg-amber-800 transition-colors"
-                >
-                  Log in to view
-                </Link>
-              </div>
+              <GatedProfileCard
+                icon="🔒"
+                title="Social Media Channels"
+                description="Log in as a registered artist to view their social channels."
+                inviteToken={inviteToken}
+              />
             )}
           </SectionCard>
         )}

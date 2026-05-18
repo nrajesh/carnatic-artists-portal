@@ -7,6 +7,7 @@ import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
 import { DevAdminBadge } from "@/components/dev-admin-badge";
 import { PrivacyNoticeBanner } from "@/components/privacy-notice-banner";
+import { AppToaster } from "@/components/app-toaster";
 import { getDeploymentDisplayConfig } from "@/lib/deployment-display";
 
 const displayConfig = getDeploymentDisplayConfig();
@@ -49,7 +50,10 @@ export default async function RootLayout({
       className={`${fontSans.variable} ${fontDisplay.variable}`}
       suppressHydrationWarning
     >
-      <body className="flex min-h-screen flex-col bg-amber-50 font-sans antialiased text-stone-900" suppressHydrationWarning>
+      <body
+        className="flex min-h-screen flex-col bg-amber-50 font-sans antialiased text-stone-900"
+        suppressHydrationWarning
+      >
         <SiteHeader />
         <div aria-hidden="true" className="h-[92px] shrink-0 sm:h-[104px]" />
         <div className="flex min-h-0 min-w-0 flex-1 flex-col bg-amber-50">
@@ -58,6 +62,7 @@ export default async function RootLayout({
         <SiteFooter />
         <PrivacyNoticeBanner />
         <DevAdminBadge />
+        <AppToaster />
       </body>
     </html>
   );

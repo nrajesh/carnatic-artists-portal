@@ -5,7 +5,9 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
+import { analyticsServer } from "@/lib/analytics-server";
 import { getDb } from "@/lib/db";
+import { getPublicArtistInviteView } from "@/lib/artist-invites";
 import {
   encryptPiiField,
   emailLookupHash,
@@ -62,6 +64,9 @@ export async function POST(request: NextRequest) {
     twitterUrl: (formData.get("twitterUrl") as string | null) ?? undefined,
     youtubeUrl: (formData.get("youtubeUrl") as string | null) ?? undefined,
     websiteUrls: formData.getAll("websiteUrls") as string[],
+    inviteToken: (formData.get("inviteToken") as string | null) ?? undefined,
+    inviteAutoConnectOptIn:
+      (formData.get("inviteAutoConnectOptIn") as string | null) ?? undefined,
   };
 
   // Server-side validation
@@ -117,6 +122,22 @@ export async function POST(request: NextRequest) {
   }
 
   const registrationId = crypto.randomUUID();
+  const invite =
+    validated.inviteToken && validated.inviteToken.length > 0
+      ? await getPublicArtistInviteView(validated.inviteToken)
+      : null;
+  if (validated.inviteToken && !invite) {
+    return NextResponse.json(
+      {
+        error: "INVALID_INVITE",
+        message: "This invite link is no longer available.",
+        fields: {
+          inviteToken: "This invite link is no longer available.",
+        },
+      },
+      { status: 400 },
+    );
+  }
   const profilePhotoUrl = validated.profilePhotoUrl;
   let backgroundImageUrl = validated.backgroundImageUrl;
   const profilePhotoFileEntry = formData.get("profilePhotoFile");
@@ -280,6 +301,8 @@ export async function POST(request: NextRequest) {
         backgroundImageUrl: backgroundImageUrl ?? undefined,
         bioRichText: validated.bioRichText,
         status: "pending",
+        inviteId: invite?.id,
+        inviteAutoConnectOptIn: invite ? validated.inviteAutoConnectOptIn : false,
         specialities: {
           create: validated.specialities.map((name) => ({ specialityName: name })),
         },
@@ -298,13 +321,31 @@ export async function POST(request: NextRequest) {
         applicantEmail: validated.email,
         baseUrl: request.nextUrl.origin,
       });
-    } catch (err) {
-      logSafeError("[api/registrations] Registration saved but admin notification failed", err, {
-        registrationId,
-      });
-    }
+      } catch (err) {
+        logSafeError("[api/registrations] Registration saved but admin notification failed", err, {
+          registrationId,
+        });
+      }
 
-    return NextResponse.json({ success: true });
+      if (invite) {
+        try {
+          analyticsServer?.capture({
+            distinctId: invite.inviterArtistId,
+            event: "invite_registration_received",
+            properties: {
+              registration_id: registrationId,
+              inviter_slug: invite.inviterSlug,
+              featured_link_type: invite.selectedLinkType,
+              featured_link_label: invite.selectedLinkLabel,
+              invite_auto_connect_opt_in: validated.inviteAutoConnectOptIn,
+            },
+          });
+        } catch {
+          //
+        }
+      }
+
+      return NextResponse.json({ success: true });
   } catch (err) {
     if (!registrationCreated) {
       await deleteManagedProfilePhotoBestEffort(uploadedProfilePhoto?.objectKey);

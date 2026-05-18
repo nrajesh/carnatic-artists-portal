@@ -2,7 +2,7 @@
 
 An artist discovery and portfolio platform built mobile-first as a Progressive Web App with speciality-based colour theming, full Indic script support, and a clean admin moderation layer.
 
-> **Live demo:** visit `/about` after starting the dev server for a maintainer walkthrough (colour examples, Unicode, auth flow, PostHog summary, live directory cards).  
+> **Live demo:** visit `/docs` after starting the dev server for a maintainer walkthrough (colour examples, Unicode, auth flow, PostHog summary, live directory cards).  
 > **Docs index:** see [`docs/README.md`](docs/README.md) (specs, screenshot checklist, copy style).  
 > **Screenshots:** add captures under [`docs/screenshots/`](docs/screenshots/) (see [`docs/screenshots/README.md`](docs/screenshots/README.md)) and link them here for release notes or the GitHub readme.
 
@@ -22,7 +22,7 @@ An artist discovery and portfolio platform built mobile-first as a Progressive W
 
 ### 🎨 Speciality-based colour theming
 
-Every artist profile is visually themed by their **stored** speciality colours (same values as admin-seeded palette). **One** speciality: solid header. **Several** specialities with **distinct** colours: diagonal `linear-gradient` so multi-instrumentalists do not look identical to peers who share only the same first instrument. Directory cards, profile hero, home featured-artist fallback, and mini-cards all use `getThemeFromArtistSpecialities()` in `lib/speciality-theme.ts`. Public **profile** speciality pills use each row’s colour (not a single frosted style). The **`/about`** page includes **illustrative** example cards for **two** and **three** specialities (the **maximum** per artist). Tests cover `getThemeFromArtistSpecialities` alongside the name-based `getThemeForSpecialities()` helper. All combinations target WCAG AA contrast, verified by property-based tests.
+Every artist profile is visually themed by their **stored** speciality colours (same values as admin-seeded palette). **One** speciality: solid header. **Several** specialities with **distinct** colours: diagonal `linear-gradient` so multi-instrumentalists do not look identical to peers who share only the same first instrument. Directory cards, profile hero, home featured-artist fallback, and mini-cards all use `getThemeFromArtistSpecialities()` in `lib/speciality-theme.ts`. Public **profile** speciality pills use each row’s colour (not a single frosted style). The **`/docs`** page includes **illustrative** example cards for **two** and **three** specialities (the **maximum** per artist). Tests cover `getThemeFromArtistSpecialities` alongside the name-based `getThemeForSpecialities()` helper. All combinations target WCAG AA contrast, verified by property-based tests.
 
 ### 🌐 Indic script & Unicode support
 
@@ -31,6 +31,15 @@ Artists can write their bio and profile text in Tamil, Kannada, Telugu, Malayala
 ### 🔒 Magic-link authentication
 
 No passwords. Artists request a link at `/auth/login`; the email points to `/auth/verify?token=…`, where a **confirm** step (POST) consumes the token so mail-client previews and prefetch GETs cannot invalidate it. Links remain valid 72 hours. Sessions are 30-day signed JWTs validated by Edge middleware - no database round-trip on every request. **Logout** is `POST /api/auth/logout` (CSRF-safe form POST from the header/footer/dashboard). Admin role is stored on the artist record via the `isAdmin` database flag.
+
+### 🤝 Peer Connections, Custom Invites, & Referral History
+
+Features a comprehensive peer-to-peer artist networking and invitation pipeline:
+* **Connections Dashboard**: View, manage, approve, reject, or remove mutual connection requests. Includes a fast, keyboard-accessible typeahead artist autocomplete search bar in the page header.
+* **Custom Invite Generation**: Generate premium profile invite URLs matching the portal brand via the connection center.
+* **Invite Landing Pages (`/invite/[token]`)**: Custom public guest landing pages displaying inviter portfolios, with automated connection logic if the recipient already has a portal account.
+* **Context Retention**: Remembers active invite context across profile view navigations (`/artists/[slug]?invite=[token]`), passing it downstream to the registration/signup forms to guarantee accurate referral tracking.
+* **Referral History**: Comprehensive sent invite tracker featuring positive green signup counts with custom pulsing heartbeat animations. Includes stacked-card mobile lists to completely avoid horizontal scroll overflows, paired with a master bulk-selection and deletion Server Action.
 
 ### 🚩 Profile reporting and moderation
 
@@ -219,10 +228,12 @@ Since magic-link email requires Resend to be configured, use these shortcuts for
 | `/`                        | Home - stats, daily featured vocalist (photo + gradient fallback), city map, preview grid                                                    |
 | `/artists`                 | Artist directory with search (name, speciality, city)                                                                                        |
 | `/artists/[slug]`          | Artist profile - bio, speciality tags, availability                                                                                          |
+| `/invite/[token]`          | Custom guest landing page displaying personalized portfolio invites, with automatic connection options for logged-in recipients              |
 | `/register`                | Artist registration - required name, email, contact, specialities; optional HTTPS profile/banner image URLs                                  |
 | `/auth/login`              | Request magic link                                                                                                                           |
 | `/auth/verify`             | Confirm magic link (token in query; POST consumes token)                                                                                     |
 | `/dashboard`               | Artist dashboard (auth required)                                                                                                             |
+| `/connections`             | Artist Connection Center - manage peer requests, generate share invites, and track referral history (auth required)                          |
 | `/profile/edit`            | Edit profile (auth required)                                                                                                                 |
 | `/profile/notifications`   | Email and push notification preferences (auth required)                                                                                      |
 | `/privacy`                 | Privacy policy, PostHog disclosure, opt-in / opt-out                                                                                         |
@@ -232,8 +243,8 @@ Since magic-link email requires Resend to be configured, use these shortcuts for
 | `/admin/artists`           | Manage all artists (edit profiles, suspension with notes)                                                                                    |
 | `/admin/reported-profiles` | Review reported profiles in bulk; resolve reports, clear images, or suspend repeat offenders                                                 |
 | `/admin/specialities`      | Manage speciality colour palette                                                                                                             |
-| `/about`                   | Maintainer showcase - USPs, speciality **colour examples** (2 and 3 instruments), Unicode samples, PostHog / privacy, tech stack, live demos |
-| `/about/connections-v1`    | Live implementation notes and design diagrams for the feature-flagged Artist Connections V1 rollout                                          |
+| `/docs`                    | Maintainer showcase - USPs, speciality **colour examples** (2 and 3 instruments), Unicode samples, PostHog / privacy, tech stack, live demos |
+| `/docs/connections-v1`     | Live implementation notes and design diagrams for the feature-flagged Artist Connections V1 rollout                                          |
 
 ---
 
@@ -263,7 +274,7 @@ app/
 │   ├── artists/       # Directory + [slug] profile
 │   ├── register/      # Registration form
 │   ├── auth/          # Login + verify (GET landing + POST consume)
-│   └── about/         # Maintainer showcase + implementation notes
+│   └── docs/          # Maintainer showcase + implementation notes
 ├── (artist)/          # Auth-protected artist routes
 │   ├── dashboard/
 │   ├── profile/       # edit, availability, notifications
@@ -365,7 +376,7 @@ Full requirements, design, and implementation plan are in `.kiro/specs/artist-di
 
 PostHog analytics, proxy behaviour, Session Replay, and privacy contracts: **`.kiro/specs/posthog-analytics/`** (plus **`.kiro/steering/posthog-admin-guide.md`** for operators).
 
-Shorter entry points: [`docs/README.md`](docs/README.md), in-app **`/about`**, and the live feature note page **[`/about/connections-v1`](/about/connections-v1)** for the current connections rollout.
+Shorter entry points: [`docs/README.md`](docs/README.md), in-app **`/docs`**, and the live feature note page **[`/docs/connections-v1`](/docs/connections-v1)** for the current connections rollout.
 
 ---
 

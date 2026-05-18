@@ -25,8 +25,8 @@ export function StaticSiteHeader() {
             <SiteBrandMark className="h-9 w-9" />
             <span className="sr-only">Home</span>
           </HardNavAnchor>
-          <HardNavAnchor href="/about" className={siteNavPillClass}>
-            <span className={siteNavTextClass}>About</span>
+          <HardNavAnchor href="/docs" className={siteNavPillClass}>
+            <span className={siteNavTextClass}>Docs</span>
           </HardNavAnchor>
           <HardNavAnchor href="/auth/login" className={siteNavPillClass}>
             <span className={siteNavTextClass}>Sign in</span>
@@ -47,8 +47,8 @@ export function StaticSiteFooter() {
           className={`${siteNavShellClass} mx-auto`}
           aria-label="Quick actions"
         >
-          <HardNavAnchor href="/about" className={siteNavPillClass}>
-            <span className={siteNavTextClass}>About</span>
+          <HardNavAnchor href="/docs" className={siteNavPillClass}>
+            <span className={siteNavTextClass}>Docs</span>
           </HardNavAnchor>
           <HardNavAnchor href="/privacy" className={siteNavPillClass}>
             <span className={siteNavTextClass}>Privacy</span>

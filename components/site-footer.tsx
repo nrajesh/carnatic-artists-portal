@@ -44,8 +44,8 @@ export async function SiteFooter() {
           className={`${siteNavShellClass} mx-auto`}
           aria-label="Quick actions"
         >
-          <Link href="/about" className={siteNavPillClass}>
-            <span className={siteNavTextClass}>About</span>
+          <Link href="/docs" className={siteNavPillClass}>
+            <span className={siteNavTextClass}>Docs</span>
           </Link>
           <Link href="/privacy" className={siteNavPillClass}>
             <span className={siteNavTextClass}>Privacy</span>
@@ -87,10 +87,10 @@ export async function SiteFooter() {
               </a>
             </p>
             {session && sessionBannerLabel ? (
-              <p className="pt-1 text-[11px] text-stone-400">
-                Logged in as {sessionBannerLabel} · Session expires{" "}
-                {formatDeploymentDateTime(session.expiresAt)}
-              </p>
+              <div className="pt-1 text-[11px] text-stone-400 space-y-0.5">
+                <p>Logged in as {sessionBannerLabel}</p>
+                <p>Session expires {formatDeploymentDateTime(session.expiresAt)}</p>
+              </div>
             ) : null}
           </div>
         </div>

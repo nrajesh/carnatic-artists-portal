@@ -361,10 +361,10 @@ export default async function PrivacyPage({
               If you have questions about how your data is handled, contact the portal operator directly. Pointers
               appear on the{" "}
               <Link
-                href="/about"
+                href="/docs"
                 className="font-medium text-amber-700 underline underline-offset-2 hover:text-amber-900"
               >
-                About
+                Docs
               </Link>{" "}
               page.
             </p>
@@ -389,8 +389,8 @@ export default async function PrivacyPage({
           <Link href="/register" className="underline underline-offset-2 hover:text-amber-900">
             Register as Artist
           </Link>
-          <Link href="/about" className="underline underline-offset-2 hover:text-amber-900">
-            About this Portal
+          <Link href="/docs" className="underline underline-offset-2 hover:text-amber-900">
+            Docs
           </Link>
         </div>
       </div>

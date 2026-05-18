@@ -65,6 +65,7 @@ model Artist {
   profilePhotoReportsResolved   ProfilePhotoReport[]    @relation("ProfilePhotoReportResolver")
   connectionRequestsSent        ArtistConnection[]      @relation("ArtistConnectionRequester")
   connectionRequestsReceived    ArtistConnection[]      @relation("ArtistConnectionRecipient")
+  inviteShares                  ArtistInvite[]          @relation("ArtistInviteInviter")
   pushSubscriptions             PushSubscription[]
   reviewedRegistrations         RegistrationRequest[]   @relation("ReviewedBy")
   sessions                      Session[]
@@ -117,6 +118,20 @@ model ExternalLink {
   artist   Artist @relation(fields: [artistId], references: [id], onDelete: Cascade)
 }
 
+model ArtistInvite {
+  id               String                @id @default(uuid())
+  token            String                @unique
+  inviterArtistId  String
+  selectedLinkType String
+  selectedLinkUrl  String
+  createdAt        DateTime              @default(now())
+  updatedAt        DateTime              @updatedAt
+  inviter          Artist                @relation("ArtistInviteInviter", fields: [inviterArtistId], references: [id], onDelete: Cascade)
+  registrations    RegistrationRequest[]
+
+  @@index([inviterArtistId, createdAt])
+}
+
 model RegistrationRequest {
   id                            String                   @id @default(uuid())
   fullName                      String
@@ -142,10 +157,15 @@ model RegistrationRequest {
   emailCipher                   String?
   emailLookupHash               String?
   contactCipher                 String?
+  inviteId                      String?
+  inviteAutoConnectOptIn        Boolean                  @default(false)
   province                      String                   @default("")
+  invite                        ArtistInvite?            @relation(fields: [inviteId], references: [id], onDelete: SetNull)
   links                         RegistrationLink[]
   reviewer                      Artist?                  @relation("ReviewedBy", fields: [reviewedBy], references: [id])
   specialities                  RegistrationSpeciality[]
+
+  @@index([inviteId, status, submittedAt])
 }
 
 model RegistrationSpeciality {

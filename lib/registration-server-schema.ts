@@ -74,6 +74,26 @@ export const registrationServerSchema = z
       },
       z.array(z.string().url("Must be a valid URL")).optional(),
     ),
+    inviteToken: z.preprocess(
+      (val: unknown) => {
+        if (typeof val !== "string") return undefined;
+        const trimmed = val.trim();
+        return trimmed.length > 0 ? trimmed : undefined;
+      },
+      z
+        .string()
+        .regex(/^[a-f0-9]{32}$/i, "Invalid invite link.")
+        .optional(),
+    ),
+    inviteAutoConnectOptIn: z.preprocess(
+      (val: unknown) => {
+        if (typeof val === "boolean") return val;
+        if (typeof val !== "string") return false;
+        const lowered = val.trim().toLowerCase();
+        return lowered === "true" || lowered === "1" || lowered === "yes" || lowered === "on";
+      },
+      z.boolean(),
+    ),
   })
   .superRefine((data, ctx) => {
     const phone = data.contactNumber.trim();
