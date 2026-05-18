@@ -1,8 +1,9 @@
 "use client";
 
-import { FormEvent, useLayoutEffect, useMemo, useRef, useState, useTransition } from "react";
+import { FormEvent, useLayoutEffect, useMemo, useRef, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { PortalSectionHeading } from "@/components/portal-section-heading";
+import { showError, showSuccess } from "@/lib/toast";
 import {
   pickRandomUniqueSpecialityColorPair,
   specialityColorPairKey,
@@ -17,7 +18,6 @@ export function AddSpecialityForm({
   const router = useRouter();
   const primaryRef = useRef<HTMLInputElement>(null);
   const textRef = useRef<HTMLInputElement>(null);
-  const [message, setMessage] = useState<{ type: "ok" | "err"; text: string } | null>(null);
   const [pending, startTransition] = useTransition();
 
   const forbiddenPairKeys = useMemo(() => {
@@ -56,11 +56,10 @@ export function AddSpecialityForm({
     e.preventDefault();
     const form = e.currentTarget;
     const fd = new FormData(form);
-    setMessage(null);
     startTransition(async () => {
       const result = await createSpecialityAction(fd);
       if (result.ok) {
-        setMessage({ type: "ok", text: "Speciality added." });
+        showSuccess("Speciality added.");
         const addedPrimary = (form.elements.namedItem("primaryColor") as HTMLInputElement).value;
         const addedText = (form.elements.namedItem("textColor") as HTMLInputElement).value;
         form.reset();
@@ -68,7 +67,7 @@ export function AddSpecialityForm({
         applyRandomColours(justAdded);
         router.refresh();
       } else {
-        setMessage({ type: "err", text: result.error });
+        showError(result.error);
       }
     });
   }
@@ -81,11 +80,6 @@ export function AddSpecialityForm({
       <PortalSectionHeading variant="title" className="mb-2">
         Add speciality
       </PortalSectionHeading>
-      {message && (
-        <p className={`mb-3 text-sm ${message.type === "ok" ? "text-green-700" : "text-red-700"}`}>
-          {message.text}
-        </p>
-      )}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-[minmax(0,1.6fr)_minmax(0,0.8fr)_minmax(0,0.8fr)]">
         <label className="col-span-2 flex flex-col gap-1 text-sm text-stone-700 sm:col-span-3">
           Name

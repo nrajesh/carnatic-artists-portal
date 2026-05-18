@@ -94,7 +94,7 @@ function Section({
 // Page
 // ---------------------------------------------------------------------------
 
-export default async function AboutPage() {
+export default async function DocsPage() {
   const allArtists = await listArtistsForDirectory();
   const sampleArtists = allArtists.slice(0, 6);
 
@@ -349,11 +349,7 @@ export default async function AboutPage() {
               <Link href="/artists" className="text-amber-700 underline underline-offset-2">
                 /artists
               </Link>{" "}
-              (public) and
-              <Link href="/search" className="text-amber-700 underline underline-offset-2 ml-1">
-                /search
-              </Link>{" "}
-              (logged-in artists, with date filters)
+              with the shared artist directory and filtering flow used across the portal.
             </p>
           </div>
           <div className="bg-green-50 border border-green-200 rounded-xl p-5 text-sm text-green-800">
@@ -788,7 +784,7 @@ export default async function AboutPage() {
               oversight details.
             </p>
             <Link
-              href="/about/connections-v1"
+              href="/docs/connections-v1"
               className="mt-4 inline-flex min-h-[42px] items-center justify-center rounded-lg border border-emerald-300 bg-white px-4 py-2 font-semibold text-emerald-900 transition-colors hover:bg-emerald-100"
             >
               Open Connections V1 notes

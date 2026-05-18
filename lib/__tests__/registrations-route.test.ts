@@ -5,6 +5,24 @@ const mockState = vi.hoisted(() => ({
   createdArgs: null as { data: Record<string, unknown> } | null,
   notifyShouldThrow: false,
   notifyCalls: [] as Array<Record<string, unknown>>,
+  inviteRow: null as
+    | {
+        id: string;
+        token: string;
+        inviterArtistId: string;
+        selectedLinkType: string;
+        selectedLinkUrl: string;
+        inviter: {
+          id: string;
+          slug: string;
+          fullName: string;
+          profilePhotoUrl: string | null;
+          isSuspended: boolean;
+          isSystemAccount: boolean;
+          specialities: Array<{ speciality: { name: string; primaryColor: string } }>;
+        };
+      }
+    | null,
 }));
 
 vi.mock("../db", () => {
@@ -18,6 +36,9 @@ vi.mock("../db", () => {
         mockState.createdArgs = args;
         return { id: args.data.id, ...args.data };
       }),
+    },
+    artistInvite: {
+      findUnique: vi.fn(async () => mockState.inviteRow),
     },
   };
 
@@ -60,6 +81,7 @@ describe("POST /api/registrations", () => {
     mockState.createdArgs = null;
     mockState.notifyShouldThrow = false;
     mockState.notifyCalls = [];
+    mockState.inviteRow = null;
   });
 
   it("still returns success when admin notification fails after the registration is saved", async () => {
@@ -86,5 +108,47 @@ describe("POST /api/registrations", () => {
     expect(json).toEqual({ success: true });
     expect(mockState.createdArgs?.data.fullName).toBe("Test Artist");
     expect(mockState.notifyCalls).toHaveLength(1);
+  });
+
+  it("persists invite metadata and auto-connect preference when the invite is valid", async () => {
+    mockState.inviteRow = {
+      id: "invite-id",
+      token: "0123456789abcdef0123456789abcdef",
+      inviterArtistId: "artist-inviter",
+      selectedLinkType: "instagram",
+      selectedLinkUrl: "https://instagram.com/inviter",
+      inviter: {
+        id: "artist-inviter",
+        slug: "inviter",
+        fullName: "Inviter Artist",
+        profilePhotoUrl: null,
+        isSuspended: false,
+        isSystemAccount: false,
+        specialities: [],
+      },
+    };
+
+    const form = new FormData();
+    form.set("fullName", "Invited Artist");
+    form.set("email", "invited@example.com");
+    form.set("province", "Haarlem");
+    form.set("contactNumber", "+31612345678");
+    form.set("contactType", "whatsapp");
+    form.append("specialities", "Vocal");
+    form.set("inviteToken", "0123456789abcdef0123456789abcdef");
+    form.set("inviteAutoConnectOptIn", "true");
+
+    const req = new NextRequest("http://localhost:3000/api/registrations", {
+      method: "POST",
+      body: form,
+    });
+
+    const res = await POST(req);
+    const json = await res.json();
+
+    expect(res.status).toBe(200);
+    expect(json).toEqual({ success: true });
+    expect(mockState.createdArgs?.data.inviteId).toBe("invite-id");
+    expect(mockState.createdArgs?.data.inviteAutoConnectOptIn).toBe(true);
   });
 });

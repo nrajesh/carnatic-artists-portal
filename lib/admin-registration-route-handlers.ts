@@ -6,6 +6,7 @@
 import { randomUUID } from "crypto";
 import { revalidatePath } from "next/cache";
 import { analyticsServer } from "@/lib/analytics-server";
+import { approveInviteAutoConnection } from "@/lib/artist-invites";
 import { revalidateHomeMarketing } from "@/lib/cache/home-marketing";
 import { buildEncryptedArtistPiiPayload, decryptRegistrationStoredContact } from "@/lib/artist-pii";
 import { issueMagicLink } from "@/lib/auth";
@@ -128,7 +129,17 @@ export async function approvePendingRegistrationRouteStyle(options: {
 
   const registration = await db.registrationRequest.findUnique({
     where: { id: registrationId },
-    include: { specialities: true, links: true },
+    include: {
+      specialities: true,
+      links: true,
+      invite: {
+        select: {
+          inviterArtistId: true,
+          selectedLinkType: true,
+          selectedLinkUrl: true,
+        },
+      },
+    },
   });
 
   if (!registration) return { ok: false, error: "NOT_FOUND" };
@@ -190,6 +201,12 @@ export async function approvePendingRegistrationRouteStyle(options: {
     });
   }
 
+  const inviteAutoConnection = await approveInviteAutoConnection({
+    inviteId: registration.inviteId,
+    artistId: artist.id,
+    autoConnectOptIn: registration.inviteAutoConnectOptIn,
+  });
+
   const magicLinkResult = await issueMagicLink(plain.email, undefined, { baseUrl });
 
   await db.registrationRequest.update({
@@ -235,6 +252,38 @@ export async function approvePendingRegistrationRouteStyle(options: {
     });
   } catch {
     /* ignore */
+  }
+
+  if (registration.invite) {
+    try {
+      analyticsServer?.capture({
+        distinctId: registration.invite.inviterArtistId,
+        event: "invite_registration_approved",
+        properties: {
+          registration_id: registrationId,
+          invited_artist_id: artist.id,
+          featured_link_type: registration.invite.selectedLinkType,
+          featured_link_url: registration.invite.selectedLinkUrl,
+          invite_auto_connect_opt_in: registration.inviteAutoConnectOptIn,
+          invite_auto_connection_status: inviteAutoConnection.status,
+        },
+      });
+
+      if (inviteAutoConnection.status === "created" || inviteAutoConnection.status === "updated") {
+        analyticsServer?.capture({
+          distinctId: registration.invite.inviterArtistId,
+          event: "invite_auto_connection_created",
+          properties: {
+            registration_id: registrationId,
+            invited_artist_id: artist.id,
+            featured_link_type: registration.invite.selectedLinkType,
+            invite_auto_connection_status: inviteAutoConnection.status,
+          },
+        });
+      }
+    } catch {
+      //
+    }
   }
 
   return { ok: true, magicLinkEmailSent: magicLinkResult.emailSent };

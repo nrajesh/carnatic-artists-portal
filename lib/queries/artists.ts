@@ -564,7 +564,6 @@ export async function getArtistDashboardView(
       receivedFeedback: { select: { starRating: true } },
       notifications: {
         orderBy: { createdAt: "desc" },
-        take: 10,
       },
     },
   });

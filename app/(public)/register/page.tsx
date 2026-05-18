@@ -5,11 +5,12 @@
  * Requirements: 1.1, 1.2, 1.3, 1.4, 1.5, 1.7, 1.8
  */
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { useForm, useFieldArray, Controller, useWatch, type Resolver } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import NextLink from "next/link";
+import { useSearchParams } from "next/navigation";
 import dynamic from "next/dynamic";
 import { usePostHog } from "posthog-js/react";
 import SpecialityPicker, { type SpecialityCatalogItem } from "@/components/speciality-picker";
@@ -17,6 +18,7 @@ import { RegistrationPrefixedUrlInput } from "@/components/registration-prefixed
 import { FormFieldNotice } from "@/components/form-field-notice";
 import { SiteBrandMark } from "@/components/site-brand-mark";
 import { CityAutocomplete } from "@/components/city-autocomplete";
+import { FeaturedArtistPhoto } from "@/components/featured-artist-photo";
 import { useTimedFieldNotice } from "@/hooks/use-timed-field-notice";
 import {
   contactNumberRestrictedHandlers,
@@ -257,7 +259,41 @@ async function processBackgroundImageFile(file: File): Promise<File> {
 // Main component
 // ---------------------------------------------------------------------------
 
-export default function RegisterPage() {
+type RegistrationInviteSummary = {
+  token: string;
+  inviterName: string;
+  inviterSlug: string;
+  inviterProfilePhotoUrl: string | null;
+  inviterSpecialities: { name: string; color: string }[];
+  selectedLinkLabel: string;
+  selectedLinkType: string;
+  selectedLinkUrl: string;
+  selectedLinkHost: string | null;
+};
+
+type InviteLookupState =
+  | {
+      status: "idle" | "loading";
+      token: string;
+      invite: null;
+      message: null;
+    }
+  | {
+      status: "loaded";
+      token: string;
+      invite: RegistrationInviteSummary;
+      message: null;
+    }
+  | {
+      status: "invalid";
+      token: string;
+      invite: null;
+      message: string;
+    };
+
+export function RegisterPageContent() {
+  const searchParams = useSearchParams();
+  const inviteToken = searchParams.get("invite")?.trim() ?? "";
   const [submitted, setSubmitted] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [currentStep, setCurrentStep] = useState(0);
@@ -282,6 +318,13 @@ export default function RegisterPage() {
   const [backgroundImageRightsConfirmed, setBackgroundImageRightsConfirmed] = useState(false);
   const [backgroundImageError, setBackgroundImageError] = useState<string | null>(null);
   const [backgroundImageProcessing, setBackgroundImageProcessing] = useState(false);
+  const [inviteState, setInviteState] = useState<InviteLookupState>({
+    status: "idle",
+    token: "",
+    invite: null,
+    message: null,
+  });
+  const [inviteAutoConnectOptIn, setInviteAutoConnectOptIn] = useState(true);
   const posthog = usePostHog();
 
   const formatNote = useTimedFieldNotice();
@@ -399,6 +442,70 @@ export default function RegisterPage() {
   }, []);
 
   useEffect(() => {
+    if (!inviteToken) return;
+
+    let active = true;
+    const loadInvite = async () => {
+      setInviteState({
+        status: "loading",
+        token: inviteToken,
+        invite: null,
+        message: null,
+      });
+      try {
+        const response = await fetch(`/api/invites/${encodeURIComponent(inviteToken)}`, {
+          cache: "no-store",
+        });
+        const data = (await response.json()) as
+          | {
+              success: true;
+              invite: RegistrationInviteSummary;
+            }
+          | {
+              success?: false;
+              message?: string;
+            };
+
+        if (!active) return;
+
+        if (!response.ok || !data || data.success !== true || !data.invite) {
+          setInviteState({
+            status: "invalid",
+            token: inviteToken,
+            invite: null,
+            message:
+              "message" in (data ?? {}) && typeof data.message === "string"
+                ? data.message
+                : "This invite link is no longer available. You can still register normally.",
+          });
+          return;
+        }
+
+        setInviteState({
+          status: "loaded",
+          token: inviteToken,
+          invite: data.invite,
+          message: null,
+        });
+      } catch {
+        if (!active) return;
+        setInviteState({
+          status: "invalid",
+          token: inviteToken,
+          invite: null,
+          message: "We could not load this invite. You can still register normally.",
+        });
+      }
+    };
+
+    void loadInvite();
+
+    return () => {
+      active = false;
+    };
+  }, [inviteToken]);
+
+  useEffect(() => {
     const clearTransientSubmitError = () => {
       setSubmitError(null);
     };
@@ -486,6 +593,10 @@ export default function RegisterPage() {
 
   const onSubmit = async (data: RegistrationFormData) => {
     setSubmitError(null);
+    if (inviteToken && inviteState.status === "loading") {
+      setSubmitError("Please wait until the invite details finish loading.");
+      return;
+    }
     if (sessionState.authenticated && !registeringSomeoneElse) {
       setSubmitError(
         'You are already signed in. Check "I am registering someone else" to continue.',
@@ -546,6 +657,10 @@ export default function RegisterPage() {
       if (data.facebookUrl) formData.append("facebookUrl", data.facebookUrl);
       if (data.twitterUrl) formData.append("twitterUrl", data.twitterUrl);
       if (data.youtubeUrl) formData.append("youtubeUrl", data.youtubeUrl);
+      if (inviteState.status === "loaded" && inviteState.invite) {
+        formData.append("inviteToken", inviteState.token);
+        formData.append("inviteAutoConnectOptIn", inviteAutoConnectOptIn ? "true" : "false");
+      }
       data.websiteUrls?.forEach((w) => {
         if (w.url) formData.append("websiteUrls", w.url);
       });
@@ -554,9 +669,24 @@ export default function RegisterPage() {
       const json = await res.json();
 
       if (json.success) {
+        const inviteProps =
+          inviteState.status === "loaded" && inviteState.invite
+            ? {
+                invite_token_present: true,
+                inviter_slug: inviteState.invite.inviterSlug,
+                featured_link_type: inviteState.invite.selectedLinkType,
+                featured_link_label: inviteState.invite.selectedLinkLabel,
+                invite_auto_connect_opt_in: inviteAutoConnectOptIn,
+              }
+            : { invite_token_present: false };
+
         posthog.capture("registration_submitted", {
           speciality_count: data.specialities.length,
+          ...inviteProps,
         });
+        if (inviteState.status === "loaded" && inviteState.invite) {
+          posthog.capture("invite_registration_submitted", inviteProps);
+        }
         setSubmitted(true);
       } else {
         if (json.fields && typeof json.fields === "object") {
@@ -617,6 +747,12 @@ export default function RegisterPage() {
             Your registration request has been submitted. An admin will review it and you&apos;ll
             receive an email once approved.
           </p>
+          {inviteState.status === "loaded" && inviteState.invite ? (
+            <p className="mt-3 text-sm leading-relaxed text-amber-800">
+              Your invite preference for {inviteState.invite.inviterName} has been saved too, so we
+              can either auto-connect you after approval or leave that decision for later.
+            </p>
+          ) : null}
           <p className="mt-3 font-semibold text-amber-950">
             Please expect an email from the <strong>imaginest.nl</strong> domain once your
             registration is approved, and make sure it does not end up in your spam folder.
@@ -631,13 +767,19 @@ export default function RegisterPage() {
       <div className="pointer-events-none absolute -left-24 top-16 h-56 w-56 rounded-full bg-orange-200/50 blur-3xl" />
       <div className="pointer-events-none absolute -right-24 top-72 h-72 w-72 rounded-full bg-yellow-300/40 blur-3xl" />
       <div className="relative mx-auto max-w-2xl min-w-0">
-        {/* Back link */}
-        <div className="mb-6">
+        {/* Top links */}
+        <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
           <NextLink
             href="/"
-            className="inline-flex items-center gap-1 text-sm text-amber-700 hover:text-amber-900 font-medium transition-colors"
+            className="inline-flex items-center gap-1 text-sm font-medium text-amber-700 transition-colors hover:text-amber-900"
           >
             ← Back to home
+          </NextLink>
+          <NextLink
+            href="/auth/login"
+            className="inline-flex min-h-[44px] items-center justify-center rounded-full border border-amber-300 bg-white px-4 py-2 text-sm font-semibold text-amber-900 shadow-sm shadow-amber-900/5 transition-all hover:border-amber-400 hover:bg-amber-50 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:ring-offset-2 focus-visible:ring-offset-[#fff7df]"
+          >
+            Already registered? Sign in
           </NextLink>
         </div>
 
@@ -653,6 +795,143 @@ export default function RegisterPage() {
             Three quick stops: who you are, what you make, and where people can follow your art.
           </p>
         </div>
+        {inviteToken ? (
+          inviteState.status === "loading" ? (
+            <div className="mb-6 rounded-[1.75rem] border border-amber-200 bg-white/90 px-5 py-5 shadow-sm">
+              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-orange-700">
+                Loading invite
+              </p>
+              <p className="mt-2 text-sm text-stone-600">
+                Pulling in the artist context from this invite before you continue.
+              </p>
+            </div>
+          ) : inviteState.status === "loaded" && inviteState.invite ? (
+            <div className="mb-6 overflow-hidden rounded-[1.9rem] border border-amber-200 bg-white/92 shadow-lg shadow-amber-900/8">
+              <div className="bg-[radial-gradient(circle_at_top_left,_rgba(251,191,36,0.18),_transparent_48%),linear-gradient(135deg,_rgba(249,115,22,0.12),_rgba(255,255,255,0.92))] px-5 py-5 sm:px-6">
+                <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
+                  <FeaturedArtistPhoto
+                    photoUrl={inviteState.invite.inviterProfilePhotoUrl ?? ""}
+                    initial={inviteState.invite.inviterName[0] ?? "?"}
+                    accentColor="linear-gradient(135deg, #d97706, #f97316)"
+                    alt={`${inviteState.invite.inviterName} profile photo`}
+                    sizeClassName="h-16 w-16 text-2xl"
+                  />
+                  <div className="min-w-0">
+                    <p className="text-xs font-semibold uppercase tracking-[0.18em] text-orange-700">
+                      Invited by {inviteState.invite.inviterName}
+                    </p>
+                    <h2 className="mt-1 font-display text-2xl font-bold tracking-tight text-stone-900">
+                      This registration will carry a real artist intro with it
+                    </h2>
+                    <p className="mt-2 text-sm leading-6 text-stone-600">
+                      You came in through {inviteState.invite.inviterName}&rsquo;s featured{" "}
+                      {inviteState.invite.selectedLinkLabel.toLowerCase()}, which gives the portal a
+                      better hand-off than a generic signup link.
+                    </p>
+                  </div>
+                </div>
+
+                {inviteState.invite.inviterSpecialities.length > 0 ? (
+                  <div className="mt-4 flex flex-wrap gap-2">
+                    {inviteState.invite.inviterSpecialities.map((speciality) => (
+                      <span
+                        key={speciality.name}
+                        className="rounded-full px-3 py-1 text-xs font-semibold text-white shadow-sm"
+                        style={{ backgroundColor: speciality.color }}
+                      >
+                        {speciality.name}
+                      </span>
+                    ))}
+                  </div>
+                ) : null}
+              </div>
+
+              <div className="grid gap-4 px-5 py-5 sm:px-6 sm:grid-cols-[1fr_1.05fr]">
+                <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-4">
+                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-orange-700">
+                    Featured link
+                  </p>
+                  <p className="mt-2 text-lg font-semibold tracking-tight text-stone-900">
+                    {inviteState.invite.selectedLinkLabel}
+                  </p>
+                  <p className="mt-1 text-sm text-stone-500">
+                    {inviteState.invite.selectedLinkHost ?? inviteState.invite.selectedLinkUrl}
+                  </p>
+                  <a
+                    href={inviteState.invite.selectedLinkUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="mt-3 inline-flex text-sm font-semibold text-amber-800 underline underline-offset-2 hover:text-amber-950"
+                  >
+                    Open featured link
+                  </a>
+                </div>
+
+                <div className="rounded-2xl border border-stone-200 bg-white px-4 py-4">
+                  <p className="text-sm font-semibold text-stone-900">
+                    Connection preference after approval
+                  </p>
+                  <p className="mt-2 text-sm leading-6 text-stone-600">
+                    Choose whether we should automatically connect you with{" "}
+                    {inviteState.invite.inviterName} once your account is approved.
+                  </p>
+                  <div className="mt-4 space-y-3">
+                    <label
+                      className={`flex cursor-pointer items-start gap-3 rounded-2xl border px-4 py-3 transition-colors ${
+                        inviteAutoConnectOptIn
+                          ? "border-amber-400 bg-amber-50"
+                          : "border-stone-200 bg-white hover:border-stone-300"
+                      }`}
+                    >
+                      <input
+                        type="radio"
+                        name="invite-auto-connect"
+                        checked={inviteAutoConnectOptIn}
+                        onChange={() => setInviteAutoConnectOptIn(true)}
+                        className="mt-1 h-4 w-4 accent-amber-700"
+                      />
+                      <span>
+                        <span className="block text-sm font-semibold text-stone-900">
+                          Connect us automatically
+                        </span>
+                        <span className="mt-1 block text-sm text-stone-500">
+                          If I am approved, create the connection right away.
+                        </span>
+                      </span>
+                    </label>
+                    <label
+                      className={`flex cursor-pointer items-start gap-3 rounded-2xl border px-4 py-3 transition-colors ${
+                        !inviteAutoConnectOptIn
+                          ? "border-amber-400 bg-amber-50"
+                          : "border-stone-200 bg-white hover:border-stone-300"
+                      }`}
+                    >
+                      <input
+                        type="radio"
+                        name="invite-auto-connect"
+                        checked={!inviteAutoConnectOptIn}
+                        onChange={() => setInviteAutoConnectOptIn(false)}
+                        className="mt-1 h-4 w-4 accent-amber-700"
+                      />
+                      <span>
+                        <span className="block text-sm font-semibold text-stone-900">
+                          I&apos;ll decide later
+                        </span>
+                        <span className="mt-1 block text-sm text-stone-500">
+                          Save the invite context, but leave the connection for later.
+                        </span>
+                      </span>
+                    </label>
+                  </div>
+                </div>
+              </div>
+            </div>
+          ) : inviteState.status === "invalid" ? (
+            <div className="mb-6 rounded-xl border border-amber-200 bg-amber-50 px-5 py-4 text-sm text-amber-800">
+              {inviteState.message}
+            </div>
+          ) : null
+        ) : null}
         {!sessionState.loading && sessionState.authenticated && (
           <div className="mb-6 rounded-xl border border-amber-200 bg-amber-50 px-5 py-4 text-sm text-amber-800">
             You are currently signed in as {sessionState.role}. By default, registration is intended
@@ -1284,5 +1563,13 @@ export default function RegisterPage() {
         </form>
       </div>
     </main>
+  );
+}
+
+export default function RegisterPage() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <RegisterPageContent />
+    </Suspense>
   );
 }

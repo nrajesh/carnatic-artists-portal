@@ -14,6 +14,7 @@ import { isArtistCollabsRatingsEnabledServer } from "@/lib/feature-flags-server"
 import { ArtistAccountStatus } from "@/components/artist-account-status";
 import { PortalSectionHeading } from "@/components/portal-section-heading";
 import { canUseArtistConnections } from "@/lib/artist-connections";
+import { NotificationsPanel } from "./notifications-panel";
 
 export default async function ArtistDashboardPage({
   searchParams,
@@ -49,7 +50,6 @@ export default async function ArtistDashboardPage({
     : notificationsForDisplay.filter(
         (n) => n.type !== "connection_request" && n.type !== "connection_approved",
       );
-  const unreadNotificationsInView = connectionFilteredNotifications.filter((n) => !n.read).length;
 
   let province: string | null = view.province;
   if (ph_identify === "1") {
@@ -269,58 +269,7 @@ export default async function ArtistDashboardPage({
 
         <div className="flex flex-col gap-6">
           {/* Notifications */}
-          <div className="bg-white rounded-2xl border border-stone-200 shadow-sm p-6">
-            <div className="mb-4 flex flex-wrap items-end justify-between gap-2 border-b border-amber-400/70 pb-2">
-              <PortalSectionHeading variant="title" textOnly className="mb-0">
-                Notifications
-                {unreadNotificationsInView > 0 && (
-                  <span className="ml-2 inline-block rounded-full bg-amber-600 px-2 py-0.5 text-xs font-bold text-white">
-                    {unreadNotificationsInView}
-                  </span>
-                )}
-              </PortalSectionHeading>
-            </div>
-            {notificationsForDisplay.length === 0 ? (
-              <p className="text-stone-400 text-sm italic">No notifications yet.</p>
-            ) : (
-              <div className="flex flex-col gap-3">
-                {connectionFilteredNotifications.map((n) => (
-                  <Link
-                    key={n.id}
-                    href={n.href}
-                    className={`flex gap-3 p-3 rounded-lg transition-all hover:shadow-sm ${
-                      n.read
-                        ? "bg-stone-50 hover:bg-stone-100"
-                        : "bg-amber-50 border border-amber-100 hover:border-amber-300"
-                    }`}
-                  >
-                    <span className="text-lg flex-shrink-0 mt-0.5">
-                      {n.type === "collab_invite"
-                        ? "💬"
-                        : n.type.startsWith("connection_")
-                          ? "🤝"
-                          : n.type === "feedback"
-                            ? "⭐"
-                            : n.type === "collab_closed"
-                              ? "✅"
-                              : "🔔"}
-                    </span>
-                    <div className="flex-1 min-w-0">
-                      <p
-                        className={`text-sm leading-snug ${
-                          n.read ? "text-stone-600" : "text-stone-800 font-medium"
-                        }`}
-                      >
-                        {n.text}
-                      </p>
-                      <p className="text-xs text-stone-400 mt-0.5">{n.time}</p>
-                    </div>
-                    <span className="text-stone-300 text-sm self-center flex-shrink-0">→</span>
-                  </Link>
-                ))}
-              </div>
-            )}
-          </div>
+          <NotificationsPanel notifications={connectionFilteredNotifications} />
 
           {/* My Collabs */}
           {collabsRatingsEnabled && (
@@ -419,7 +368,7 @@ export default async function ArtistDashboardPage({
             </PortalSectionHeading>
             <div className="grid grid-cols-2 gap-3">
               {[
-                { href: "/search", icon: "🔍", label: "Find artists" },
+                { href: "/artists", icon: "🔍", label: "Find artists" },
                 ...(collabsRatingsEnabled
                   ? [{ href: "/collabs" as const, icon: "💬", label: "My collabs" }]
                   : []),

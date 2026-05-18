@@ -3,6 +3,7 @@
 import { useMemo, useState, useTransition } from "react";
 import { usePostHog } from "posthog-js/react";
 import { PortalSectionHeading } from "@/components/portal-section-heading";
+import { showError, showSuccess } from "@/lib/toast";
 import {
   createAvailabilityWindowAction,
   deleteAvailabilityWindowAction,
@@ -21,9 +22,10 @@ type AvailabilityManagerProps = {
   /** Earliest selectable calendar day (YYYY-MM-DD) for end-date fields - server-provided deployment today. */
   minCalendarDate: string;
   /** Defaults to signed-in artist; admin pages pass actions bound to a target artist id. */
-  createWindowAction?: (
-    input: { startDate: string; endDate: string },
-  ) => Promise<AvailabilityActionResult>;
+  createWindowAction?: (input: {
+    startDate: string;
+    endDate: string;
+  }) => Promise<AvailabilityActionResult>;
   updateWindowAction?: (input: {
     id: string;
     startDate: string;
@@ -43,10 +45,16 @@ export function AvailabilityManager({
   const [entries, setEntries] = useState(initialEntries);
   const [newStartDate, setNewStartDate] = useState("");
   const [newEndDate, setNewEndDate] = useState("");
-  const [rowDrafts, setRowDrafts] = useState<Record<string, { startDate: string; endDate: string }>>(() =>
-    Object.fromEntries(initialEntries.map((entry) => [entry.id, { startDate: entry.startDate, endDate: entry.endDate }])),
+  const [rowDrafts, setRowDrafts] = useState<
+    Record<string, { startDate: string; endDate: string }>
+  >(() =>
+    Object.fromEntries(
+      initialEntries.map((entry) => [
+        entry.id,
+        { startDate: entry.startDate, endDate: entry.endDate },
+      ]),
+    ),
   );
-  const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
   const [isPending, startTransition] = useTransition();
 
   const hasEntries = entries.length > 0;
@@ -74,7 +82,6 @@ export function AvailabilityManager({
   }
 
   function handleCreateWindow() {
-    setMessage(null);
     startTransition(async () => {
       const result = await createWindowAction({
         startDate: newStartDate,
@@ -82,14 +89,14 @@ export function AvailabilityManager({
       });
 
       if (!result.ok) {
-        setMessage({ type: "error", text: result.error });
+        showError(result.error);
         return;
       }
 
       syncEntries(result.entries);
       setNewStartDate("");
       setNewEndDate("");
-      setMessage({ type: "success", text: "Availability window added." });
+      showSuccess("Availability window added.");
       posthog.capture("availability_created", { window_count: result.entries.length });
     });
   }
@@ -98,7 +105,6 @@ export function AvailabilityManager({
     const draft = rowDrafts[id];
     if (!draft) return;
 
-    setMessage(null);
     startTransition(async () => {
       const result = await updateWindowAction({
         id,
@@ -107,12 +113,12 @@ export function AvailabilityManager({
       });
 
       if (!result.ok) {
-        setMessage({ type: "error", text: result.error });
+        showError(result.error);
         return;
       }
 
       syncEntries(result.entries);
-      setMessage({ type: "success", text: "Availability window updated." });
+      showSuccess("Availability window updated.");
       posthog.capture("availability_updated", { window_count: result.entries.length });
     });
   }
@@ -133,10 +139,7 @@ export function AvailabilityManager({
     setNewEndDate(end);
   }
 
-  function updateRowDraft(
-    id: string,
-    patch: Partial<{ startDate: string; endDate: string }>,
-  ) {
+  function updateRowDraft(id: string, patch: Partial<{ startDate: string; endDate: string }>) {
     setRowDrafts((prev) => {
       const cur = prev[id];
       if (!cur) return prev;
@@ -151,40 +154,25 @@ export function AvailabilityManager({
   }
 
   function handleDeleteWindow(id: string) {
-    setMessage(null);
     startTransition(async () => {
       const result = await deleteWindowAction({ id });
       if (!result.ok) {
-        setMessage({ type: "error", text: result.error });
+        showError(result.error);
         return;
       }
 
       syncEntries(result.entries);
-      setMessage({ type: "success", text: "Availability window removed." });
+      showSuccess("Availability window removed.");
       posthog.capture("availability_deleted", { window_count: result.entries.length });
     });
   }
 
   const newStartMin = minCalendarDate;
   const newStartMax = newEndDate || undefined;
-  const newEndMin = newStartDate
-    ? maxIsoDate(minCalendarDate, newStartDate)
-    : minCalendarDate;
+  const newEndMin = newStartDate ? maxIsoDate(minCalendarDate, newStartDate) : minCalendarDate;
 
   return (
     <div className="rounded-2xl border border-stone-200 bg-white p-6 shadow-sm">
-      {message && (
-        <div
-          className={`mb-4 rounded-lg border px-4 py-3 text-sm ${
-            message.type === "success"
-              ? "border-green-200 bg-green-50 text-green-800"
-              : "border-red-200 bg-red-50 text-red-800"
-          }`}
-        >
-          {message.text}
-        </div>
-      )}
-
       <section className="space-y-3 border-b border-stone-100 pb-5">
         <PortalSectionHeading variant="label" className="mb-1">
           Add availability window
@@ -253,9 +241,7 @@ export function AvailabilityManager({
                         min={rowStartMin}
                         max={rowStartMax}
                         value={draft.startDate}
-                        onChange={(e) =>
-                          updateRowDraft(entry.id, { startDate: e.target.value })
-                        }
+                        onChange={(e) => updateRowDraft(entry.id, { startDate: e.target.value })}
                         className="rounded-lg border border-stone-300 bg-white px-3 py-2 text-sm normal-case tracking-normal text-stone-700 focus:outline-none focus:ring-2 focus:ring-amber-400"
                       />
                     </label>
@@ -265,9 +251,7 @@ export function AvailabilityManager({
                         type="date"
                         min={rowEndMin}
                         value={draft.endDate}
-                        onChange={(e) =>
-                          updateRowDraft(entry.id, { endDate: e.target.value })
-                        }
+                        onChange={(e) => updateRowDraft(entry.id, { endDate: e.target.value })}
                         className="rounded-lg border border-stone-300 bg-white px-3 py-2 text-sm normal-case tracking-normal text-stone-700 focus:outline-none focus:ring-2 focus:ring-amber-400"
                       />
                     </label>

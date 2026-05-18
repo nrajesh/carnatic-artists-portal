@@ -9,6 +9,7 @@ import SpecialityPicker from "@/components/speciality-picker";
 import { RegistrationPrefixedUrlInput } from "@/components/registration-prefixed-url-input";
 import { FormFieldNotice } from "@/components/form-field-notice";
 import { CityAutocomplete } from "@/components/city-autocomplete";
+import { StickyFormActions } from "@/components/sticky-form-actions";
 import { useTimedFieldNotice } from "@/hooks/use-timed-field-notice";
 import {
   contactNumberRestrictedHandlers,
@@ -49,6 +50,7 @@ import {
 } from "@/lib/background-image-focus";
 import { stripHtmlForSearch } from "@/lib/artist-directory-search";
 import { getThemeFromArtistSpecialities } from "@/lib/speciality-theme";
+import { showError, showSuccess } from "@/lib/toast";
 import type { ArtistEditView } from "@/lib/queries/artists";
 import type { ArtistProfileEditInput } from "@/lib/artist-profile-update-schema";
 import type { MentionableArtist } from "@/lib/artist-mentions";
@@ -374,7 +376,7 @@ function BackgroundFocusEditor({
     <div className="space-y-3">
       <div
         ref={frameRef}
-        className="relative aspect-[16/6] min-h-[180px] overflow-hidden rounded-2xl border border-stone-200 bg-stone-900 shadow-inner touch-none md:min-h-0"
+        className="relative aspect-[16/7] overflow-hidden rounded-2xl border border-stone-200 bg-stone-900 shadow-inner touch-none sm:aspect-[16/6]"
         onPointerDown={handlePointerDown}
         onPointerMove={handlePointerMove}
         onPointerUp={stopDragging}
@@ -517,7 +519,6 @@ export function ArtistProfileEditForm({
   const [pendingProfilePhotoFile, setPendingProfilePhotoFile] = useState<File | null>(null);
   const [profilePhotoRightsConfirmed, setProfilePhotoRightsConfirmed] = useState(false);
   const [photoUploadError, setPhotoUploadError] = useState<string | null>(null);
-  const [photoUploadSuccess, setPhotoUploadSuccess] = useState<string | null>(null);
   const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
   const [pendingBackgroundImageFile, setPendingBackgroundImageFile] = useState<File | null>(null);
   const pendingBackgroundPreviewUrl = useMemo(() => {
@@ -527,11 +528,9 @@ export function ArtistProfileEditForm({
 
   const [backgroundImageRightsConfirmed, setBackgroundImageRightsConfirmed] = useState(false);
   const [backgroundUploadError, setBackgroundUploadError] = useState<string | null>(null);
-  const [backgroundUploadSuccess, setBackgroundUploadSuccess] = useState<string | null>(null);
   const [isUploadingBackground, setIsUploadingBackground] = useState(false);
 
   const [errors, setErrors] = useState<Partial<Record<keyof ArtistProfileEditInput, string>>>({});
-  const [saved, setSaved] = useState(false);
   const [serverError, setServerError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
   const formatNote = useTimedFieldNotice();
@@ -685,7 +684,6 @@ export function ArtistProfileEditForm({
     e.preventDefault();
     setErrors({});
     setServerError(null);
-    setSaved(false);
 
     const payload = buildPayload();
 
@@ -696,27 +694,30 @@ export function ArtistProfileEditForm({
           : await updateAdminArtistProfile(targetArtistId ?? initial.id, payload);
 
       if (result.ok) {
-        setSaved(true);
         if (variant === "artist") posthog?.capture("profile_edit_saved");
+        showSuccess(variant === "artist" ? "Profile saved." : "Profile updated.");
         router.refresh();
-        setTimeout(() => setSaved(false), 3000);
       } else {
         setServerError(result.error);
         setErrors(result.fieldErrors ?? {});
+        showError(result.error);
       }
     });
   }
 
   async function handleProfilePhotoUpload() {
     setPhotoUploadError(null);
-    setPhotoUploadSuccess(null);
 
     if (!pendingProfilePhotoFile) {
-      setPhotoUploadError("Choose a photo first.");
+      const message = "Choose a photo first.";
+      setPhotoUploadError(message);
+      showError(message);
       return;
     }
     if (!profilePhotoRightsConfirmed) {
-      setPhotoUploadError("Confirm that you have rights to use this profile photo.");
+      const message = "Confirm that you have rights to use this profile photo.";
+      setPhotoUploadError(message);
+      showError(message);
       return;
     }
 
@@ -738,12 +739,13 @@ export function ArtistProfileEditForm({
       } | null;
 
       if (!response.ok || !body?.profilePhotoUrl) {
-        setPhotoUploadError(
+        const message =
           body?.fields?.profilePhotoFile ??
-            body?.fields?.profilePhotoRightsConfirmed ??
-            body?.message ??
-            "Profile photo upload failed.",
-        );
+          body?.fields?.profilePhotoRightsConfirmed ??
+          body?.message ??
+          "Profile photo upload failed.";
+        setPhotoUploadError(message);
+        showError(message);
         return;
       }
 
@@ -752,11 +754,12 @@ export function ArtistProfileEditForm({
       setPendingProfilePhotoFile(null);
       setProfilePhotoRightsConfirmed(false);
       if (profilePhotoInputRef.current) profilePhotoInputRef.current.value = "";
-      setPhotoUploadSuccess("Profile photo uploaded. The public card preview is now up to date.");
+      showSuccess("Profile photo uploaded.", "The public card preview is now up to date.");
     } catch (err) {
-      setPhotoUploadError(
-        err instanceof Error ? err.message : "Profile photo upload failed unexpectedly.",
-      );
+      const message =
+        err instanceof Error ? err.message : "Profile photo upload failed unexpectedly.";
+      setPhotoUploadError(message);
+      showError(message);
     } finally {
       setIsUploadingPhoto(false);
     }
@@ -764,14 +767,17 @@ export function ArtistProfileEditForm({
 
   async function handleBackgroundImageUpload() {
     setBackgroundUploadError(null);
-    setBackgroundUploadSuccess(null);
 
     if (!pendingBackgroundImageFile) {
-      setBackgroundUploadError("Choose a Header Image first.");
+      const message = "Choose a Header Image first.";
+      setBackgroundUploadError(message);
+      showError(message);
       return;
     }
     if (!backgroundImageRightsConfirmed) {
-      setBackgroundUploadError("Confirm that you have rights to use this Header Image.");
+      const message = "Confirm that you have rights to use this Header Image.";
+      setBackgroundUploadError(message);
+      showError(message);
       return;
     }
 
@@ -802,12 +808,13 @@ export function ArtistProfileEditForm({
       } | null;
 
       if (!response.ok || !body?.backgroundImageUrl) {
-        setBackgroundUploadError(
+        const message =
           body?.fields?.backgroundImageFile ??
-            body?.fields?.backgroundImageRightsConfirmed ??
-            body?.message ??
-            "Header Image upload failed.",
-        );
+          body?.fields?.backgroundImageRightsConfirmed ??
+          body?.message ??
+          "Header Image upload failed.";
+        setBackgroundUploadError(message);
+        showError(message);
         return;
       }
 
@@ -830,13 +837,15 @@ export function ArtistProfileEditForm({
       setPendingBackgroundImageFile(null);
       setBackgroundImageRightsConfirmed(false);
       if (backgroundImageInputRef.current) backgroundImageInputRef.current.value = "";
-      setBackgroundUploadSuccess(
-        "Header Image uploaded. The hero preview is now centered on your chosen focal point.",
+      showSuccess(
+        "Header Image uploaded.",
+        "The hero preview is now centered on your chosen focal point.",
       );
     } catch (err) {
-      setBackgroundUploadError(
-        err instanceof Error ? err.message : "Header Image upload failed unexpectedly.",
-      );
+      const message =
+        err instanceof Error ? err.message : "Header Image upload failed unexpectedly.";
+      setBackgroundUploadError(message);
+      showError(message);
     } finally {
       setIsUploadingBackground(false);
     }
@@ -846,7 +855,6 @@ export function ArtistProfileEditForm({
     setPendingProfilePhotoFile(null);
     setProfilePhotoRightsConfirmed(false);
     setPhotoUploadError(null);
-    setPhotoUploadSuccess(null);
     if (variant === "admin") {
       setProfilePhotoUrl("");
     }
@@ -857,7 +865,6 @@ export function ArtistProfileEditForm({
     setPendingBackgroundImageFile(null);
     setBackgroundImageRightsConfirmed(false);
     setBackgroundUploadError(null);
-    setBackgroundUploadSuccess(null);
     setBackgroundImageUrl("");
     setBackgroundImageFocusX(BACKGROUND_IMAGE_FOCUS_DEFAULTS.backgroundImageFocusX);
     setBackgroundImageFocusY(BACKGROUND_IMAGE_FOCUS_DEFAULTS.backgroundImageFocusY);
@@ -869,11 +876,6 @@ export function ArtistProfileEditForm({
 
   return (
     <>
-      {saved && (
-        <div className="mb-6 rounded-xl border border-green-200 bg-green-50 px-5 py-4 text-sm font-medium text-green-800">
-          ✓ Profile saved successfully!
-        </div>
-      )}
       {serverError ? (
         <FormFieldNotice tone="error" className="mb-6 font-medium">
           {serverError}
@@ -1162,7 +1164,7 @@ export function ArtistProfileEditForm({
           </div>
 
           <div className="grid gap-4 border-b border-stone-200 pb-4 md:grid-cols-2">
-            <div className="space-y-3">
+            <div className="min-w-0 space-y-3">
               <div className="flex items-center gap-3">
                 <FeaturedArtistPhoto
                   photoUrl={profilePhotoUrl}
@@ -1185,7 +1187,6 @@ export function ArtistProfileEditForm({
                   const nextFile = event.target.files?.[0] ?? null;
                   setPendingProfilePhotoFile(nextFile);
                   setPhotoUploadError(null);
-                  setPhotoUploadSuccess(null);
                 }}
                 className={`block min-h-[40px] w-full rounded-lg border border-stone-200 bg-white px-3 py-2 text-sm text-stone-700 focus:outline-none focus:ring-2 ${ring}`}
               />
@@ -1230,12 +1231,9 @@ export function ArtistProfileEditForm({
               {photoUploadError ? (
                 <FormFieldNotice tone="error">{photoUploadError}</FormFieldNotice>
               ) : null}
-              {photoUploadSuccess ? (
-                <FormFieldNotice tone="success">{photoUploadSuccess}</FormFieldNotice>
-              ) : null}
             </div>
 
-            <div className="border-t border-stone-200 pt-4 md:border-l md:border-t-0 md:pl-4 md:pt-0">
+            <div className="min-w-0 border-t border-stone-200 pt-4 md:border-l md:border-t-0 md:pl-4 md:pt-0">
               {variant === "admin" ? (
                 <RegistrationPrefixedUrlInput
                   id="profilePhotoUrl"
@@ -1263,7 +1261,7 @@ export function ArtistProfileEditForm({
           </div>
 
           <div className="grid gap-4 pt-4 md:grid-cols-2">
-            <div className="space-y-3">
+            <div className="min-w-0 space-y-3">
               <div className="space-y-2">
                 {backgroundImagePreviewUrl ? (
                   <BackgroundFocusEditor
@@ -1288,7 +1286,7 @@ export function ArtistProfileEditForm({
                     Upload keeps the image compact and lets you save the exact focal point later.
                   </p>
                   <p className="mt-1 text-xs font-medium text-amber-700">
-                    After panning or zooming, scroll down and hit Submit to save the change.
+                    After panning or zooming, use Save below to keep this crop.
                   </p>
                 </div>
               </div>
@@ -1300,7 +1298,6 @@ export function ArtistProfileEditForm({
                   const nextFile = event.target.files?.[0] ?? null;
                   setPendingBackgroundImageFile(nextFile);
                   setBackgroundUploadError(null);
-                  setBackgroundUploadSuccess(null);
                 }}
                 className={`block min-h-[40px] w-full rounded-lg border border-stone-200 bg-white px-3 py-2 text-sm text-stone-700 focus:outline-none focus:ring-2 ${ring}`}
               />
@@ -1341,12 +1338,9 @@ export function ArtistProfileEditForm({
               {backgroundUploadError ? (
                 <FormFieldNotice tone="error">{backgroundUploadError}</FormFieldNotice>
               ) : null}
-              {backgroundUploadSuccess ? (
-                <FormFieldNotice tone="success">{backgroundUploadSuccess}</FormFieldNotice>
-              ) : null}
             </div>
 
-            <div className="border-t border-stone-200 pt-4 md:border-l md:border-t-0 md:pl-4 md:pt-0">
+            <div className="min-w-0 border-t border-stone-200 pt-4 md:border-l md:border-t-0 md:pl-4 md:pt-0">
               <RegistrationPrefixedUrlInput
                 id="backgroundImageUrl"
                 label="Header Image URL"
@@ -1380,7 +1374,7 @@ export function ArtistProfileEditForm({
           {errors.bioRichText && <p className="mt-1 text-xs text-red-500">{errors.bioRichText}</p>}
         </div>
 
-        <div>
+        <div id="profile-social" className="scroll-mt-28">
           <label className="mb-1 block text-sm font-semibold text-stone-700">
             Website URLs <span className="font-normal text-stone-400">(up to 3)</span>
           </label>
@@ -1539,26 +1533,28 @@ export function ArtistProfileEditForm({
           </div>
         </div>
 
-        <div className="space-y-2 pt-2">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-stretch">
-            <button
-              type="submit"
-              disabled={isPending || !isDirty}
-              className="min-h-[44px] flex-1 rounded-lg bg-amber-700 py-3 font-semibold text-white transition-colors hover:bg-amber-800 disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              {isPending ? "Submitting…" : "Submit"}
-            </button>
-            <Link
-              href={variant === "artist" ? "/dashboard" : `/admin/artists/${initial.id}`}
-              className="flex min-h-[44px] items-center justify-center rounded-lg border border-stone-200 px-6 py-3 font-semibold text-stone-600 transition-colors hover:bg-stone-50 sm:px-8"
-            >
-              Cancel
-            </Link>
+        <StickyFormActions className="mt-2">
+          <div className="space-y-2">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-stretch">
+              <button
+                type="submit"
+                disabled={isPending || !isDirty}
+                className="min-h-[44px] flex-1 rounded-lg bg-amber-700 py-3 font-semibold text-white transition-colors hover:bg-amber-800 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {isPending ? "Saving…" : "Save"}
+              </button>
+              <Link
+                href={variant === "artist" ? "/dashboard" : `/admin/artists/${initial.id}`}
+                className="flex min-h-[44px] items-center justify-center rounded-lg border border-stone-200 px-6 py-3 font-semibold text-stone-600 transition-colors hover:bg-stone-50 sm:px-8"
+              >
+                Cancel
+              </Link>
+            </div>
+            {!isDirty && !isPending ? (
+              <p className="text-xs text-stone-400">Make a change above to enable save.</p>
+            ) : null}
           </div>
-          {!isDirty && !isPending && (
-            <p className="text-xs text-stone-400">Make a change above to enable submit.</p>
-          )}
-        </div>
+        </StickyFormActions>
       </form>
     </>
   );

@@ -9,6 +9,7 @@ import {
   updateConnectionRequest,
 } from "@/lib/artist-connections";
 import { verifySession } from "@/lib/session-jwt";
+import { getDb } from "@/lib/db";
 
 async function requireSessionArtistId(): Promise<string> {
   const token = (await cookies()).get("session")?.value ?? null;
@@ -66,4 +67,21 @@ export async function removeConnectionAction(formData: FormData): Promise<void> 
   revalidatePath("/connections");
   revalidatePath("/dashboard");
   revalidatePath("/profile/edit");
+}
+
+export async function deleteArtistInvitesAction(inviteIds: string[]): Promise<void> {
+  const artistId = await requireSessionArtistId();
+  await assertConnectionsAvailableForArtist(artistId);
+
+  if (!inviteIds || inviteIds.length === 0) return;
+
+  const db = getDb();
+  await db.artistInvite.deleteMany({
+    where: {
+      id: { in: inviteIds },
+      inviterArtistId: artistId,
+    },
+  });
+
+  revalidatePath("/connections");
 }

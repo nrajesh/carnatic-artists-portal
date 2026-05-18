@@ -3,10 +3,10 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { verifySession } from "@/lib/session-jwt";
 import { getDb } from "@/lib/db";
-import { updateNotificationPreferencesAction } from "./actions";
 import { PushPreferences } from "./push-preferences";
 import { isArtistCollabsRatingsEnabledServer } from "@/lib/feature-flags-server";
 import { canUseArtistConnections } from "@/lib/artist-connections";
+import { NotificationSettingsForm } from "./notification-settings-form";
 
 export default async function NotificationSettingsPage() {
   const token = (await cookies()).get("session")?.value ?? null;
@@ -67,149 +67,12 @@ export default async function NotificationSettingsPage() {
           </p>
         </div>
 
-        <form
-          action={updateNotificationPreferencesAction}
-          className="space-y-5 rounded-2xl border border-stone-200 bg-white p-6 shadow-sm"
-        >
-          <fieldset className="space-y-2">
-            <legend className="mb-2 text-sm font-semibold text-stone-700">Channels</legend>
-            <label className="flex items-center gap-2 text-sm text-stone-700">
-              <input
-                type="checkbox"
-                name="inAppEnabled"
-                defaultChecked={pref.inAppEnabled}
-                className="accent-amber-700"
-              />
-              In-app notifications (dashboard feed)
-            </label>
-            <label className="flex items-center gap-2 text-sm text-stone-700">
-              <input
-                type="checkbox"
-                name="emailEnabled"
-                defaultChecked={pref.emailEnabled}
-                className="accent-amber-700"
-              />
-              Email notifications
-            </label>
-            <label className="flex items-center gap-2 text-sm text-stone-700">
-              <input
-                type="checkbox"
-                name="webPushEnabled"
-                defaultChecked={pref.webPushEnabled}
-                className="accent-amber-700"
-              />
-              Browser push notifications
-            </label>
-          </fieldset>
-
-          {artistConnectionsEnabled && (
-            <fieldset className="space-y-2">
-              <legend className="mb-2 text-sm font-semibold text-stone-700">Connections</legend>
-              <label className="flex items-center gap-2 text-sm text-stone-700">
-                <input
-                  type="checkbox"
-                  name="connectionRequestsAllowed"
-                  defaultChecked={pref.connectionRequestsAllowed}
-                  className="accent-amber-700"
-                />
-                Allow new connection requests
-              </label>
-              <label className="flex items-center gap-2 text-sm text-stone-700">
-                <input
-                  type="checkbox"
-                  name="connectionRequestEnabled"
-                  defaultChecked={pref.connectionRequestEnabled}
-                  className="accent-amber-700"
-                />
-                Notify me when I receive a connection request
-              </label>
-              <label className="flex items-center gap-2 text-sm text-stone-700">
-                <input
-                  type="checkbox"
-                  name="connectionApprovedEnabled"
-                  defaultChecked={pref.connectionApprovedEnabled}
-                  className="accent-amber-700"
-                />
-                Notify me when someone approves my request
-              </label>
-            </fieldset>
-          )}
-
-          {collabsRatingsEnabled && (
-            <fieldset className="space-y-2">
-              <legend className="mb-2 text-sm font-semibold text-stone-700">Review events</legend>
-              <label className="flex items-center gap-2 text-sm text-stone-700">
-                <input
-                  type="checkbox"
-                  name="reviewAddedEnabled"
-                  defaultChecked={pref.reviewAddedEnabled}
-                  className="accent-amber-700"
-                />
-                When a review is added
-              </label>
-              <label className="flex items-center gap-2 text-sm text-stone-700">
-                <input
-                  type="checkbox"
-                  name="reviewUpdatedEnabled"
-                  defaultChecked={pref.reviewUpdatedEnabled}
-                  className="accent-amber-700"
-                />
-                When a review is edited
-              </label>
-              <label className="flex items-center gap-2 text-sm text-stone-700">
-                <input
-                  type="checkbox"
-                  name="reviewDeletedEnabled"
-                  defaultChecked={pref.reviewDeletedEnabled}
-                  className="accent-amber-700"
-                />
-                When a review is deleted
-              </label>
-            </fieldset>
-          )}
-
-          {session.role === "admin" && (
-            <fieldset className="space-y-2">
-              <legend className="mb-2 text-sm font-semibold text-stone-700">
-                Admin registration events
-              </legend>
-              <label className="flex items-center gap-2 text-sm text-stone-700">
-                <input
-                  type="checkbox"
-                  name="newRegistrationEnabled"
-                  defaultChecked={pref.newRegistrationEnabled}
-                  className="accent-amber-700"
-                />
-                When a new registration is submitted
-              </label>
-              <label className="flex items-center gap-2 text-sm text-stone-700">
-                <input
-                  type="checkbox"
-                  name="registrationApprovedEnabled"
-                  defaultChecked={pref.registrationApprovedEnabled}
-                  className="accent-amber-700"
-                />
-                When a registration is approved
-              </label>
-              <label className="flex items-center gap-2 text-sm text-stone-700">
-                <input
-                  type="checkbox"
-                  name="registrationRejectedEnabled"
-                  defaultChecked={pref.registrationRejectedEnabled}
-                  className="accent-amber-700"
-                />
-                When a registration is rejected
-              </label>
-            </fieldset>
-          )}
-
-          <button
-            type="submit"
-            className="rounded-lg bg-amber-700 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-amber-800"
-          >
-            Save preferences
-          </button>
-        </form>
+        <NotificationSettingsForm
+          pref={pref}
+          collabsRatingsEnabled={collabsRatingsEnabled}
+          artistConnectionsEnabled={artistConnectionsEnabled}
+          isAdmin={session.role === "admin"}
+        />
 
         <div className="mt-5">
           <PushPreferences

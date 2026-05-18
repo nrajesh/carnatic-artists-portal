@@ -11,10 +11,12 @@ function checked(formData: FormData, name: string): boolean {
   return formData.get(name) === "on";
 }
 
-export async function updateNotificationPreferencesAction(formData: FormData): Promise<void> {
+export async function updateNotificationPreferencesAction(
+  formData: FormData,
+): Promise<{ ok: true } | { ok: false; error: string }> {
   const token = (await cookies()).get("session")?.value ?? null;
   const session = token ? await verifySession(token) : null;
-  if (!session) throw new Error("UNAUTHENTICATED");
+  if (!session) return { ok: false, error: "Please sign in again." };
 
   const [collabsRatingsEnabled, artistConnectionsEnabled] = await Promise.all([
     isArtistCollabsRatingsEnabledServer({
@@ -92,4 +94,5 @@ export async function updateNotificationPreferencesAction(formData: FormData): P
 
   revalidatePath("/profile/notifications");
   revalidatePath("/dashboard");
+  return { ok: true };
 }

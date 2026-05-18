@@ -4,6 +4,13 @@ import { redirect } from "next/navigation";
 import { verifySession } from "@/lib/session-jwt";
 import { canUseArtistConnections, getArtistConnectionCenterView } from "@/lib/artist-connections";
 import { PortalSectionHeading } from "@/components/portal-section-heading";
+import { getDb } from "@/lib/db";
+import { getAbsoluteSiteUrl } from "@/lib/absolute-site-url";
+import { getDeploymentDisplayConfig } from "@/lib/deployment-display";
+import { buildInviteShareOptions } from "@/lib/artist-invites";
+import { ArtistProfileShareButton } from "@/components/artist-profile-share-button";
+import { InviteStatusesList } from "./invite-statuses-list";
+import { ArtistAutocomplete } from "@/components/artist-autocomplete";
 import { approveConnectionAction, rejectConnectionAction, removeConnectionAction } from "./actions";
 
 function ArtistLink({ artist }: { artist: { slug: string; fullName: string; tag: string } }) {
@@ -27,40 +34,114 @@ export default async function ConnectionsPage() {
 
   const view = await getArtistConnectionCenterView(session.artistId);
 
+  const db = getDb();
+  const artist = await db.artist.findUnique({
+    where: { id: session.artistId },
+    include: {
+      externalLinks: {
+        select: {
+          linkType: true,
+          url: true,
+        },
+      },
+    },
+  });
+  if (!artist) redirect("/auth/login");
+
+  const displayConfig = getDeploymentDisplayConfig();
+  const profileShareUrl = await getAbsoluteSiteUrl(`/artists/${encodeURIComponent(artist.slug)}`);
+  const shareTitle = `${artist.fullName} - Artist profile`;
+  const shareText = `Check out ${artist.fullName} on ${displayConfig.name}!`;
+
+  const inviteCardConfig = {
+    artistName: artist.fullName,
+    portalName: displayConfig.name,
+    options: buildInviteShareOptions(
+      artist.externalLinks.map((l) => ({
+        type: l.linkType,
+        url: l.url,
+      }))
+    ),
+    nudgeHref: "/profile/edit#profile-social",
+  };
+
+  const invites = await db.artistInvite.findMany({
+    where: { inviterArtistId: session.artistId },
+    include: {
+      registrations: {
+        select: {
+          fullName: true,
+          status: true,
+          submittedAt: true,
+        },
+      },
+    },
+    orderBy: { createdAt: "desc" },
+  });
+
   return (
     <main className="min-h-screen bg-amber-50 px-4 py-8 sm:px-8">
       <div className="mx-auto max-w-4xl space-y-6">
-        <div className="flex flex-wrap items-end justify-between gap-3">
-          <div>
-            <Link
-              href="/dashboard"
-              className="mb-2 inline-block text-sm text-amber-700 hover:text-amber-900"
-            >
-              ← Dashboard
-            </Link>
-            <h1 className="text-3xl font-bold text-stone-800">Artist Connections</h1>
-            <p className="mt-1 max-w-2xl text-sm text-stone-500">
-              Approved connections can mention each other with their @tag in profile bios and collab
-              messages.
+        <div className="space-y-4">
+          <Link
+            href="/dashboard"
+            className="inline-block text-sm text-amber-700 hover:text-amber-900 transition-colors"
+          >
+            ← Dashboard
+          </Link>
+
+          {/* Title & Actions Row */}
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <h1 className="text-3xl font-bold text-stone-800 tracking-tight">Artist Connections</h1>
+            <div className="flex flex-wrap items-center gap-3 w-full sm:w-auto">
+              <ArtistAutocomplete />
+              <Link
+                href="/artists"
+                className="rounded-xl bg-amber-700 px-4 py-2.5 text-sm font-semibold text-white hover:bg-amber-800 shrink-0 transition-all active:scale-[0.98]"
+              >
+                Find artists
+              </Link>
+            </div>
+          </div>
+
+          {/* Subtitle & Status block */}
+          <div className="space-y-1">
+            <p className="max-w-2xl text-sm text-stone-500 leading-relaxed">
+              Approved connections can mention each other with their @tag in profile bios and collab messages.
             </p>
-            <p className="mt-2 text-xs text-stone-500">
+            <p className="text-xs text-stone-500">
               Incoming requests are currently{" "}
               <span className="font-semibold text-stone-700">
                 {view.requestsAllowed ? "enabled" : "paused"}
               </span>
               . Manage this in{" "}
-              <Link href="/profile/notifications" className="text-amber-700 hover:text-amber-900">
+              <Link href="/profile/notifications" className="text-amber-700 hover:text-amber-900 transition-colors">
                 notification preferences
               </Link>
               .
             </p>
           </div>
-          <Link
-            href="/search"
-            className="rounded-lg bg-amber-700 px-4 py-2 text-sm font-semibold text-white hover:bg-amber-800"
-          >
-            Find artists
-          </Link>
+        </div>
+
+        <div className="rounded-[2rem] border border-amber-200 bg-[radial-gradient(circle_at_top_left,_rgba(251,191,36,0.14),_transparent_46%),linear-gradient(135deg,_rgba(217,119,6,0.06),_rgba(255,255,255,0.96))] p-6 shadow-xl shadow-amber-950/5">
+          <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+            <div className="space-y-1">
+              <h2 className="text-lg font-bold text-stone-900">Invite fellow artists & share your profile</h2>
+              <p className="text-sm leading-relaxed text-stone-600">
+                Generate a clean, personalized invite card matching the portal brand. When they register using your invite, they can automatically connect with you.
+              </p>
+            </div>
+            <div className="shrink-0">
+              <ArtistProfileShareButton
+                profileUrl={profileShareUrl}
+                shareTitle={shareTitle}
+                shareText={shareText}
+                inviteCardConfig={inviteCardConfig}
+                variant="solid"
+                className="w-full md:w-auto"
+              />
+            </div>
+          </div>
         </div>
 
         <section className="rounded-2xl border border-stone-200 bg-white p-6 shadow-sm">
@@ -158,6 +239,14 @@ export default async function ConnectionsPage() {
             </ul>
           </section>
         )}
+
+        <section className="rounded-2xl border border-stone-200 bg-white p-6 shadow-sm">
+          <PortalSectionHeading variant="title" className="mb-4">
+            Referral history
+          </PortalSectionHeading>
+
+          <InviteStatusesList initialInvites={invites} />
+        </section>
       </div>
     </main>
   );

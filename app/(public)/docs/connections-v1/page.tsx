@@ -2,16 +2,16 @@ import Link from "next/link";
 import { DynamicMermaid } from "@/components/dynamic-mermaid";
 import { PortalSectionHeading } from "@/components/portal-section-heading";
 
-export default function ConnectionsV1AboutPage() {
+export default function ConnectionsV1DocsPage() {
   return (
     <main className="min-h-screen bg-amber-50 px-4 py-8 sm:px-8">
       <div className="mx-auto max-w-4xl space-y-6">
         <div>
           <Link
-            href="/about"
+            href="/docs"
             className="mb-2 inline-block text-sm text-amber-700 hover:text-amber-900"
           >
-            ← About
+            ← Docs
           </Link>
           <h1 className="text-3xl font-bold text-stone-900">Artist Connections V1</h1>
           <p className="mt-2 text-sm text-stone-600">
@@ -110,6 +110,34 @@ export default function ConnectionsV1AboutPage() {
     bool connectionApprovedEnabled
   }`}
           />
+        </section>
+
+        <section className="rounded-2xl border border-stone-200 bg-white p-6 shadow-sm">
+          <PortalSectionHeading variant="title" className="mb-3">
+            Invite & referral system
+          </PortalSectionHeading>
+          <ul className="space-y-2 text-sm text-stone-700">
+            <li>
+              <strong>Custom Invite Landing Page</strong>: Dynamic guest view at{" "}
+              <code className="rounded bg-stone-100 px-1 text-xs">/invite/[token]</code> displaying
+              personalized inviter portfolio links, with support for automated connect actions if the
+              recipient is already logged in.
+            </li>
+            <li>
+              <strong>Context Retention</strong>: Artist profile views retain active invite tokens in the
+              URL query (<code className="rounded bg-stone-100 px-1 text-xs">/artists/[slug]?invite=[token]</code>),
+              preserving the referral downstream if the guest proceeds to the signup page.
+            </li>
+            <li>
+              <strong>Referral History</strong>: Track all generated invite links, custom targets, and active signup counts.
+            </li>
+            <li>
+              <strong>Visual Success Indicators</strong>: High-positivity green indicators highlighting referral signups, paired with a subtle, breathing green CSS heartbeat animation.
+            </li>
+            <li>
+              <strong>Mobile-Optimized Cards & Bulk Deletion</strong>: Fully responsive layout utilizing stacked mobile cards that completely bypass horizontal scroll constraints. Equipped with bulk-selection control and a secure bulk-delete Server Action.
+            </li>
+          </ul>
         </section>
 
         <section className="rounded-2xl border border-stone-200 bg-white p-6 shadow-sm">

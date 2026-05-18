@@ -18,7 +18,6 @@ export const config = {
   matcher: [
     '/dashboard/:path*',
     '/profile/:path*',
-    '/search/:path*',
     '/connections/:path*',
     '/collabs/:path*',
     '/admin/:path*',

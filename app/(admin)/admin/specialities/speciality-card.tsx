@@ -5,6 +5,7 @@ import { FormEvent, useCallback, useMemo, useRef, useState, useTransition } from
 import { ConfirmDialog } from "@/components/confirm-dialog";
 import { useRouter } from "next/navigation";
 import type { AdminSpecialityRow } from "@/lib/queries/admin-specialities";
+import { showError, showSuccess } from "@/lib/toast";
 import {
   pickRandomUniqueSpecialityColorPair,
   specialityColorPairKey,
@@ -90,9 +91,11 @@ export function SpecialityCard({
       const result = await updateSpecialityAction(fd);
       if (result.ok) {
         setEditing(false);
+        showSuccess("Speciality updated.");
         router.refresh();
       } else {
         setMessage(result.error);
+        showError(result.error);
       }
     });
   }
@@ -104,8 +107,13 @@ export function SpecialityCard({
         const fd = new FormData();
         fd.set("id", row.id);
         const result = await deleteSpecialityAction(fd);
-        if (!result.ok) setMessage(result.error);
-        else router.refresh();
+        if (!result.ok) {
+          setMessage(result.error);
+          showError(result.error);
+        } else {
+          showSuccess("Speciality deleted.");
+          router.refresh();
+        }
       });
     };
     setConfirm({
@@ -176,9 +184,7 @@ export function SpecialityCard({
                   onClick={onDelete}
                   disabled={pending || row.artistCount > 0}
                   title={
-                    row.artistCount > 0
-                      ? "Remove artists from this speciality first"
-                      : undefined
+                    row.artistCount > 0 ? "Remove artists from this speciality first" : undefined
                   }
                   className="text-xs font-medium text-red-700 underline underline-offset-2 hover:text-red-900 disabled:cursor-not-allowed disabled:opacity-40"
                 >
