@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition, useMemo } from "react";
+import { useState, useTransition } from "react";
 import { deleteArtistInvitesAction } from "./actions";
 
 type RegistrationDetail = {

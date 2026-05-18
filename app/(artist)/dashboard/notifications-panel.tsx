@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState, useTransition } from "react";
+import { useState, useTransition } from "react";
 import { PortalSectionHeading } from "@/components/portal-section-heading";
 import { showError, showSuccess } from "@/lib/toast";
 import type { DashboardNotification } from "@/lib/queries/artists";
@@ -23,12 +23,14 @@ export function NotificationsPanel({
   notifications: DashboardNotification[];
 }) {
   const [items, setItems] = useState(notifications);
+  const [prevNotifications, setPrevNotifications] = useState(notifications);
   const [page, setPage] = useState(1);
   const [isPending, startTransition] = useTransition();
 
-  useEffect(() => {
+  if (notifications !== prevNotifications) {
+    setPrevNotifications(notifications);
     setItems(notifications);
-  }, [notifications]);
+  }
 
   const unreadCount = items.filter((item) => !item.read).length;
   const totalPages = Math.max(1, Math.ceil(items.length / PAGE_SIZE));

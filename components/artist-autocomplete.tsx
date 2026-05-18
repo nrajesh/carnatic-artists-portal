@@ -22,7 +22,6 @@ export function ArtistAutocomplete() {
   useEffect(() => {
     const query = value.trim();
     if (query.length < 2) {
-      setSuggestions([]);
       return;
     }
 
@@ -72,6 +71,7 @@ export function ArtistAutocomplete() {
   const handleSelect = (suggestion: ArtistSuggestion) => {
     router.push(`/artists/${suggestion.slug}`);
     setValue("");
+    setSuggestions([]);
     setOpen(false);
     setActiveIndex(-1);
   };
@@ -98,9 +98,13 @@ export function ArtistAutocomplete() {
           type="text"
           value={value}
           onChange={(event) => {
-            setValue(event.target.value);
+            const val = event.target.value;
+            setValue(val);
             setOpen(true);
             setActiveIndex(-1);
+            if (val.trim().length < 2) {
+              setSuggestions([]);
+            }
           }}
           onFocus={() => setOpen(true)}
           onKeyDown={(event) => {
